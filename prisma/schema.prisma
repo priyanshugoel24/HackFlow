@@ -8,36 +8,79 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String?   @unique
-  emailVerified  DateTime?
-  image          String?
-  // your custom fields
-  tasks          Task[]
-  status         Status?
-  accounts       Account[]
-  sessions       Session[]
+  id              String          @id @default(cuid())
+  name            String?
+  email           String?         @unique
+  image           String?
+  emailVerified   DateTime?
+  accounts        Account[]
+  contextCards    ContextCard[]
+  createdProjects Project[]       @relation("CreatedProjects")
+  addedMembers    ProjectMember[] @relation("UserAddedMembers")
+  memberships     ProjectMember[]
+  sessions        Session[]
+  status          Status?
 }
 
-model Task {
-  id        String   @id @default(cuid())
-  title     String
-  context   String
-  status    String
+model Project {
+  id             String          @id @default(cuid())
+  name           String
+  link           String?
+  createdAt      DateTime        @default(now())
+  createdById    String
+  description    String?
+  isArchived     Boolean         @default(false)
+  lastActivityAt DateTime        @updatedAt
+  tags           String[]
+  contextCards   ContextCard[]
+  createdBy      User            @relation("CreatedProjects", fields: [createdById], references: [id], onDelete: Cascade)
+  members        ProjectMember[]
+}
+
+model ProjectMember {
+  id        String       @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
+  projectId String
+  role      ProjectRole
+  status    MemberStatus @default(ACTIVE)
+  joinedAt  DateTime     @default(now())
+  addedById String?
+  addedBy   User?        @relation("UserAddedMembers", fields: [addedById], references: [id])
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+
+model ContextCard {
+  id           String        @id @default(cuid())
+  title        String
+  content      String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  isPinned     Boolean       @default(false)
+  userId       String
+  projectId    String
+  attachments  String[]
+  isArchived   Boolean       @default(false)
+  issues       String?
+  linkedCardId String?
+  slackLinks   String[]
+  type         CardType      @default(TASK)
+  visibility   Visibility    @default(PRIVATE)
+  why          String?
+  linkedCard   ContextCard?  @relation("LinkedCards", fields: [linkedCardId], references: [id])
+  linkedFrom   ContextCard[] @relation("LinkedCards")
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Status {
-  id             String   @id @default(cuid())
-  type           String
-  currentFile    String?
-  currentProject String?
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id])
-  updatedAt      DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  updatedAt DateTime @updatedAt
+  state     String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Account {
@@ -53,8 +96,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -73,4 +115,25 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+enum ProjectRole {
+  MANAGER
+  MEMBER
+}
+
+enum MemberStatus {
+  INVITED
+  ACTIVE
+}
+
+enum CardType {
+  TASK
+  INSIGHT
+  DECISION
+}
+
+enum Visibility {
+  PRIVATE
+  PUBLIC
 }
