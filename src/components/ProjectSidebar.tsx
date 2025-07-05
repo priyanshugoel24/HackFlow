@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ProjectModal from "./ProjectModal";
@@ -15,6 +16,7 @@ export default function ProjectSidebar({ onSelect }: { onSelect: (id: string) =>
   const [loading, setLoading] = useState(true);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const isResizing = useRef(false);
+  const router = useRouter();
 
   const handleProjectCreated = () => {
     fetchProjects(); // Refresh projects after creation
@@ -61,6 +63,7 @@ export default function ProjectSidebar({ onSelect }: { onSelect: (id: string) =>
   const handleProjectSelect = (projectId: string) => {
     setSelectedProjectId(projectId);
     onSelect(projectId);
+    router.push(`/projects/${projectId}`);
   };
 
   const activeProjects = projects.filter(p => !p.isArchived);

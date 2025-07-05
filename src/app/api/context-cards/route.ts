@@ -59,35 +59,26 @@ export async function GET(req: NextRequest) {
 // CREATE a new context card
 export async function POST(req: NextRequest) {
   const token = await getToken({ req });
-  if (!token?.sub) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (!token?.sub) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
 
   try {
-    // First, ensure the user exists in the database
-    const user = await prisma.user.upsert({
-      where: { id: token.sub },
-      update: {},
-      create: {
-        id: token.sub,
-        email: token.email,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const formData = await req.formData();
 
-    const body = await req.json();
-    const { 
-      title, 
-      content, 
-      projectId, 
-      type = "TASK", 
-      visibility = "PRIVATE",
-      attachments = [],
-      slackLinks = [],
-      issues,
-      why,
-      linkedCardId
-    } = body;
+    const title = formData.get("title") as string;
+    const content = formData.get("content") as string;
+    const projectId = formData.get("projectId") as string;
+    const type = (formData.get("type") as string) || "TASK";
+    const visibility = (formData.get("visibility") as string) || "PRIVATE";
+    const why = formData.get("why") as string | null;
+    const issues = formData.get("issues") as string | null;
+    const mention = formData.get("mention") as string | null;
 
+    // const tags = formData.getAll("tags").filter(Boolean) as string[];
+    const attachments = formData.getAll("attachments") as File[];
+
+    // Basic validation
     if (!title?.trim() || !content?.trim()) {
       return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
     }
@@ -96,20 +87,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
     }
 
-    // Verify project exists and user has access
+    // Verify project access
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
         OR: [
           { createdById: token.sub },
-          { 
+          {
             members: {
               some: {
                 userId: token.sub,
-                status: "ACTIVE"
-              }
-            }
-          }
+                status: "ACTIVE",
+              },
+            },
+          },
         ],
         isArchived: false,
       },
@@ -119,57 +110,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
 
-    // If linkedCardId is provided, verify it exists
-    if (linkedCardId) {
-      const linkedCard = await prisma.contextCard.findFirst({
-        where: {
-          id: linkedCardId,
-          userId: token.sub,
-        },
-      });
-
-      if (!linkedCard) {
-        return NextResponse.json({ error: "Linked card not found" }, { status: 404 });
-      }
-    }
-
-    const card = await prisma.contextCard.create({
+    // Store metadata (actual upload to Supabase/S3 will be added later)
+    const savedCard = await prisma.contextCard.create({
       data: {
         title: title.trim(),
         content: content.trim(),
         userId: token.sub,
         projectId,
-        type,
-        visibility,
-        attachments,
-        slackLinks,
-        issues,
-        why,
-        linkedCardId,
+        type: type as "TASK" | "INSIGHT" | "DECISION",
+        visibility: visibility as "PRIVATE" | "PUBLIC",
+        why: why || undefined,
+        issues: issues || undefined,
+        slackLinks: mention ? [mention] : [],
+        attachments: attachments.map((f) => f.name), // placeholder, file name only
       },
       include: {
         project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        linkedCard: {
-          select: {
-            id: true,
-            title: true,
-          },
+          select: { id: true, name: true },
         },
       },
     });
 
-    // Update project's last activity
+    // Update project lastActivityAt
     await prisma.project.update({
       where: { id: projectId },
       data: { lastActivityAt: new Date() },
     });
 
-    return NextResponse.json({ card });
+    return NextResponse.json({ card: savedCard });
   } catch (error) {
     console.error("Error creating context card:", error);
     return NextResponse.json({ error: "Failed to create context card" }, { status: 500 });

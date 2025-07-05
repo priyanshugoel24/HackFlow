@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -13,6 +14,7 @@ import { ExternalLink, Folder, Users, Calendar, Archive } from "lucide-react";
 export default function ProjectCardGrid({ onSelect }: { onSelect: (id: string) => void }) {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const fetchProjects = async () => {
     try {
@@ -57,6 +59,10 @@ export default function ProjectCardGrid({ onSelect }: { onSelect: (id: string) =
     });
   };
 
+  const handleProjectClick = (projectId: string) => {
+    router.push(`/projects/${projectId}`);
+  };
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map((project) => (
@@ -66,7 +72,7 @@ export default function ProjectCardGrid({ onSelect }: { onSelect: (id: string) =
             "cursor-pointer group hover:shadow-xl hover:border-blue-500 transition border border-gray-200 h-full",
             project.isArchived && "opacity-60"
           )}
-          onClick={() => onSelect(project.id)}
+          onClick={() => handleProjectClick(project.id)}
         >
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
             <div className="flex items-center space-x-2 flex-1">

@@ -83,3 +83,16 @@ Content-Type: application/json
 - Getting context cards for a project returns only cards linked to that project
 - Deleting a project will cascade delete all linked context cards
 - Updating a context card can change its project association
+- Clicking on a project card navigates to `/projects/[id]` route showing project details and context cards
+- Project sidebar also navigates to the dynamic route when project is selected
+
+## Dynamic Routes
+
+### Project Details Page
+- **Route**: `/projects/[id]`
+- **Description**: Shows individual project details with all its context cards
+- **Features**: 
+  - Project header with name, description, members, tags
+  - Back navigation to main dashboard
+  - Context cards list for the specific project
+  - Project settings and external link access

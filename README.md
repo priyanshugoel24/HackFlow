@@ -87,6 +87,7 @@ A Next.js application with authentication and status management.
 ### Projects
 - `GET /api/projects` - Get all projects for the user
 - `POST /api/projects` - Create a new project
+- `GET /api/projects/[id]` - Get a specific project with its context cards
 - `PATCH /api/projects/[id]` - Update a project
 - `DELETE /api/projects/[id]` - Delete a project
 - `GET /api/projects/[id]/context-cards` - Get context cards for a specific project
@@ -96,6 +97,12 @@ A Next.js application with authentication and status management.
 - `POST /api/context-cards` - Create a new context card (can optionally link to a project)
 - `PATCH /api/context-cards/[id]` - Update a context card
 - `DELETE /api/context-cards/[id]` - Delete a context card
+
+## Routes
+
+### Dynamic Routes
+- `/projects/[id]` - Individual project page showing project details and context cards
+- `/` - Main dashboard with project grid and sidebar
 
 ## Project Structure
 

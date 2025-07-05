@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     const project = await prisma.project.create({
       data: {
         name,
-        link,
+        link: link?.startsWith("http") ? link : `https://${link}`,
         description,
         tags: tags || [],
         createdById: token.sub,
