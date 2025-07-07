@@ -81,25 +81,36 @@ export default function ContextCardModal({
     }
   }, [existingCard, open]);
 
+  // Upload file via API route to avoid exposing service key and for SSR security
   const uploadFileToSupabase = async (file: File) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${projectId}/${fileName}`;
-
-    const { data, error } = await supabase.storage
-      .from('context-attachments')
-      .upload(filePath, file);
-
-    if (error) {
-      console.error('Supabase upload error:', error);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+        console.error("Upload API error:", errorData);
+        toast.error(`Upload failed: ${errorData.error || "Unknown error"}`, {
+          description: `Failed to upload ${file.name}`,
+          duration: 4000,
+          position: "top-right",
+        });
+        return null;
+      }
+      const data = await res.json();
+      return data.url;
+    } catch (error) {
+      console.error("Upload API error:", error);
+      toast.error("Upload failed", {
+        description: `Network error while uploading ${file.name}`,
+        duration: 4000,
+        position: "top-right",
+      });
       return null;
     }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('context-attachments')
-      .getPublicUrl(filePath);
-
-    return publicUrlData.publicUrl;
   };
 
   const handleSubmit = async () => {
