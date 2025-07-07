@@ -26,6 +26,7 @@ model Project {
   id             String          @id @default(cuid())
   name           String
   link           String?
+  slug           String          @unique
   createdAt      DateTime        @default(now())
   createdById    String
   description    String?
@@ -61,7 +62,7 @@ model ContextCard {
   isPinned     Boolean       @default(false)
   userId       String
   projectId    String
-  attachments  String[] @default([])
+  attachments  String[]      @default([])
   isArchived   Boolean       @default(false)
   issues       String?
   status       TaskStatus?   @default(ACTIVE)

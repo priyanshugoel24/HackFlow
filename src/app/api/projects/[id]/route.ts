@@ -12,9 +12,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
 
   try {
+    // Check if the id is a UUID (legacy ID) or a slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
     const project = await prisma.project.findFirst({
       where: {
-        id,
+        ...(isUUID ? { id } : { slug: id }),
         OR: [
           { createdById: token.sub },
           { 
@@ -92,10 +95,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { name, link, description, tags, isArchived } = await req.json();
 
   try {
+    // Check if the id is a UUID (legacy ID) or a slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
     // First check if the project exists and user has permission to edit
     const existingProject = await prisma.project.findFirst({
       where: {
-        id,
+        ...(isUUID ? { id } : { slug: id }),
         OR: [
           { createdById: token.sub },
           { 
@@ -117,7 +123,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     // Update the project and return the updated data
     const updatedProject = await prisma.project.update({
-      where: { id },
+      where: { id: existingProject.id }, // Always use the actual ID for updates
       data: {
         ...(name !== undefined && { name }),
         ...(link !== undefined && { link }),
@@ -168,10 +174,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params;
 
   try {
+    // Check if the id is a UUID (legacy ID) or a slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
     // First check if the project exists and user is the creator (only creators can delete)
     const existingProject = await prisma.project.findFirst({
       where: {
-        id,
+        ...(isUUID ? { id } : { slug: id }),
         createdById: token.sub,
       },
     });
@@ -182,7 +191,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     // Delete the project (this will cascade delete all related data)
     await prisma.project.delete({
-      where: { id },
+      where: { id: existingProject.id }, // Always use the actual ID for deletes
     });
 
     return NextResponse.json({ 

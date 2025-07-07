@@ -59,8 +59,8 @@ export default function ProjectCardGrid({ onSelect }: { onSelect: (id: string) =
     });
   };
 
-  const handleProjectClick = (projectId: string) => {
-    router.push(`/projects/${projectId}`);
+  const handleProjectClick = (projectSlug: string) => {
+    router.push(`/projects/${projectSlug}`);
   };
 
   return (
@@ -72,7 +72,7 @@ export default function ProjectCardGrid({ onSelect }: { onSelect: (id: string) =
             "cursor-pointer group hover:shadow-xl hover:border-blue-500 transition border border-gray-200 h-full",
             project.isArchived && "opacity-60"
           )}
-          onClick={() => handleProjectClick(project.id)}
+          onClick={() => handleProjectClick(project.slug)}
         >
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
             <div className="flex items-center space-x-2 flex-1">

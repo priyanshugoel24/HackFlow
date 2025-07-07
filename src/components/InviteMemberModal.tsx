@@ -9,12 +9,12 @@ import { toast } from "sonner";
 export default function InviteMemberModal({
   open,
   setOpen,
-  projectId,
+  projectSlug,
   onSuccess,
 }: {
   open: boolean;
   setOpen: (val: boolean) => void;
-  projectId: string;
+  projectSlug: string;
   onSuccess?: () => void;
 }) {
   const [email, setEmail] = useState("");
@@ -25,7 +25,7 @@ export default function InviteMemberModal({
     setLoading(true);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/invite`, {
+      const res = await fetch(`/api/projects/${projectSlug}/invite`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

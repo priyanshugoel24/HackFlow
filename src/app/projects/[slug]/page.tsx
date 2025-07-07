@@ -23,12 +23,13 @@ import DebugPresence from "@/components/DebugPresence";
 import InviteMemberModal from "@/components/InviteMemberModal";
 import { usePresence } from "@/lib/socket/usePresence";
 import { useStatus } from "@/components/StatusProvider";
+import Link from "next/link";
 
 export default function ProjectPage() {
   const { data: session, status } = useSession();
   const params = useParams();
   const router = useRouter();
-  const projectId = params?.id as string;
+  const projectSlug = params?.slug as string;
   const { onlineUsers, isConnected } = usePresence();
   const { status: currentUserStatus } = useStatus();
 
@@ -39,7 +40,7 @@ export default function ProjectPage() {
 
   const fetchProject = async () => {
     try {
-      const res = await fetch(`/api/projects/${projectId}`);
+      const res = await fetch(`/api/projects/${projectSlug}`);
       if (!res.ok) {
         throw new Error("Failed to fetch project");
       }
@@ -54,10 +55,10 @@ export default function ProjectPage() {
   };
 
   useEffect(() => {
-    if (projectId) {
+    if (projectSlug) {
       fetchProject();
     }
-  }, [projectId]);
+  }, [projectSlug]);
 
   if (status === "loading") {
     return (
@@ -190,10 +191,16 @@ export default function ProjectPage() {
                   Visit
                 </Button>
               )}
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  asChild
+                >
+                  <Link href={`/projects/${projectSlug}/settings`}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </Link>
+                </Button>
             </div>
           </div>
         </div>
@@ -253,10 +260,10 @@ export default function ProjectPage() {
                 )}
               </div>
               {/* <DebugPresence /> */}
-              <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} projectId={projectId} />
+              <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} projectSlug={projectSlug} />
 <Button onClick={() => setInviteOpen(true)}>Invite Member</Button>
         {/* Context Cards */}
-        <ContextCardList projectId={projectId} />
+        <ContextCardList projectSlug={projectSlug} />
       </div>
     </div>
   );

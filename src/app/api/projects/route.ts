@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { generateSlug, generateUniqueSlug } from "@/lib/utils";
 
 // GET all projects for the user (including where they're a member)
 export async function GET(req: NextRequest) {
@@ -96,9 +97,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Generate a unique slug for the project
+    const baseSlug = generateSlug(name);
+    const existingProjects = await prisma.project.findMany({
+      select: { slug: true }
+    });
+    const existingSlugs = existingProjects.map(p => p.slug);
+    const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+
     const project = await prisma.project.create({
       data: {
         name,
+        slug: uniqueSlug,
         link: link?.startsWith("http") ? link : `https://${link}`,
         description,
         tags: tags || [],

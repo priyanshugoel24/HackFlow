@@ -19,26 +19,28 @@ import {
   Tag,
   Trash2
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSession } from "next-auth/react";
+import { useCardPresence } from "@/lib/ably/useCardPresence";
 
 export default function ContextCardModal({
   open,
   setOpen,
-  projectId,
+  projectSlug,
   existingCard,
   onSuccess
 }: {
   open: boolean;
   setOpen: (val: boolean) => void;
-  projectId: string;
+  projectSlug: string;
   existingCard?: any;
   onSuccess?: () => void;
 }) {
   const supabase = createClientComponentClient();
-
+  const { data: session } = useSession();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -54,6 +56,37 @@ export default function ContextCardModal({
   const [status, setStatus] = useState<"ACTIVE" | "CLOSED">("ACTIVE");
 
   const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  // Memoize user object to prevent unnecessary re-renders
+  const currentUser = useMemo(() => {
+    if (!session?.user) return { id: "anonymous", name: "Anonymous" };
+    return {
+      id: session.user.id,
+      name: session.user.name || "Unknown User",
+      image: session.user.image || undefined
+    };
+  }, [session?.user?.id, session?.user?.name, session?.user?.image]);
+
+  // Use card presence hook to track who's editing
+  const { editors } = useCardPresence(
+    existingCard?.id || `new-${projectSlug}`, 
+    currentUser
+  );
+
+  // Filter out current user and only show when modal is open
+  const otherEditors = open && session?.user ? 
+    editors.filter(editor => editor.id !== session.user.id) : 
+    [];
+
+  // Debug logging
+  console.log("🔍 ContextCardModal presence debug:", {
+    open,
+    editorsCount: editors.length,
+    otherEditorsCount: otherEditors.length,
+    currentUserId: session?.user?.id,
+    cardId: existingCard?.id || `new-${projectSlug}`,
+    editors: editors.map(e => ({ id: e.id, name: e.name, hasImage: !!e.image }))
+  });
 
   useEffect(() => {
     if (existingCard) {
@@ -129,7 +162,7 @@ export default function ContextCardModal({
       const formData = new FormData();
       formData.append("title", title);
       formData.append("content", content);
-      formData.append("projectId", projectId);
+      formData.append("projectId", projectSlug);
       formData.append("type", type);
       formData.append("visibility", visibility);
       formData.append("status", status);
@@ -250,6 +283,53 @@ export default function ContextCardModal({
             <DialogTitle className="sr-only">
               {/* {existingCard ? "Edit Note" : "Add a New Note"} */}
             </DialogTitle>
+            
+            {/* Show currently editing users */}
+            {otherEditors.length > 0 && (
+              <div className="flex items-center gap-3 mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                <span className="text-sm font-medium text-blue-700">Currently editing:</span>
+                <div className="flex -space-x-3">
+                  {otherEditors
+                    .slice(0, 3) // Show max 3 avatars
+                    .map((editor) => (
+                    <div
+                      key={editor.id}
+                      className="relative w-8 h-8 rounded-full border-3 border-white bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm"
+                      title={`${editor.name} is editing`}
+                    >
+                      {editor.image ? (
+                        <img
+                          src={editor.image}
+                          alt={editor.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-700">
+                          {editor.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      {/* Online indicator */}
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                    </div>
+                  ))}
+                  {otherEditors.length > 3 && (
+                    <div className="w-8 h-8 rounded-full border-3 border-white bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-600 shadow-sm">
+                      +{otherEditors.length - 3}
+                    </div>
+                  )}
+                </div>
+                <span className="text-xs text-blue-600">
+                  {otherEditors.length} user{otherEditors.length !== 1 ? 's' : ''} editing
+                </span>
+              </div>
+            )}
+            
+            {/* Debug info - remove after testing
+            {open && (
+              <div className="text-xs text-gray-400 mb-2">
+                Debug: {editors.length} total editors, {otherEditors.length} others, Card: {existingCard?.id || `new-${projectSlug}`}
+              </div>
+            )} */}
           </DialogHeader>
           <div className="flex items-center justify-between">
             <input

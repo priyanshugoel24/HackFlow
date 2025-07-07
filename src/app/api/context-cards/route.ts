@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     const title = formData.get("title") as string;
     const content = formData.get("content") as string;
-    const projectId = formData.get("projectId") as string;
+    const projectIdentifier = formData.get("projectId") as string; // Could be ID or slug
     const type = (formData.get("type") as string) || "TASK";
     const visibility = (formData.get("visibility") as string) || "PRIVATE";
     const why = formData.get("why") as string | null;
@@ -86,14 +86,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
     }
 
-    if (!projectId) {
+    if (!projectIdentifier) {
       return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
     }
+
+    // Check if the identifier is a UUID (legacy ID) or a slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectIdentifier);
 
     // Verify project access
     const project = await prisma.project.findFirst({
       where: {
-        id: projectId,
+        ...(isUUID ? { id: projectIdentifier } : { slug: projectIdentifier }),
         OR: [
           { createdById: token.sub },
           {
@@ -119,7 +122,7 @@ export async function POST(req: NextRequest) {
         title: title.trim(),
         content: content.trim(),
         userId: token.sub,
-        projectId,
+        projectId: project.id, // Use the actual project ID from the database
         type: type as "TASK" | "INSIGHT" | "DECISION",
         ...(type === "TASK" && {
       status: status as TaskStatus,
@@ -140,7 +143,7 @@ export async function POST(req: NextRequest) {
     (global as any).socketIOServer?.emit("new-context-card", savedCard);
     // Update project lastActivityAt
     await prisma.project.update({
-      where: { id: projectId },
+      where: { id: project.id },
       data: { lastActivityAt: new Date() },
     });
 

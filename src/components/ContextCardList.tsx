@@ -21,17 +21,17 @@ import {
 } from "lucide-react";
 import ContextCardModal from "./ContextCardModal";
 
-export default function ContextCardList({ projectId }: { projectId: string }) {
+export default function ContextCardList({ projectSlug }: { projectSlug: string }) {
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<any | null>(null);
 
   const fetchCards = async () => {
-    if (!projectId) return;
+    if (!projectSlug) return;
     
     try {
-      const res = await fetch(`/api/projects/${projectId}`);
+      const res = await fetch(`/api/projects/${projectSlug}`);
       const data = await res.json();
       setCards(data.project?.contextCards || []);
     } catch (error) {
@@ -43,12 +43,12 @@ export default function ContextCardList({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     fetchCards();
-  }, [projectId]);
+  }, [projectSlug]);
 
   useEffect(() => {
     // Real-time updates are now handled via Ably websockets
     console.log("📝 ContextCardList initialized with Ably real-time support");
-  }, [projectId]);
+  }, [projectSlug]);
 
   const handleCardCreated = () => {
     fetchCards(); // Refresh the cards after creating a new one
@@ -107,7 +107,7 @@ export default function ContextCardList({ projectId }: { projectId: string }) {
           <ContextCardModal 
             open={modalOpen} 
             setOpen={setModalOpen} 
-            projectId={projectId}
+            projectSlug={projectSlug}
             onSuccess={handleCardCreated}
           />
         )}
@@ -251,7 +251,7 @@ export default function ContextCardList({ projectId }: { projectId: string }) {
         <ContextCardModal 
           open={modalOpen} 
           setOpen={setModalOpen} 
-          projectId={projectId}
+          projectSlug={projectSlug}
           onSuccess={handleCardCreated}
         />
       )}
@@ -262,7 +262,7 @@ export default function ContextCardList({ projectId }: { projectId: string }) {
           setOpen={(val) => {
             if (!val) setSelectedCard(null);
           }}
-          projectId={projectId}
+          projectSlug={projectSlug}
           existingCard={selectedCard}
           onSuccess={() => {
             setSelectedCard(null);

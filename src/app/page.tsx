@@ -9,7 +9,7 @@ import { useState } from "react";
 
 export default function Home() {
   const { data: session, status } = useSession();
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedProjectSlug, setSelectedProjectSlug] = useState("");
 
   if (status === "loading") {
     return (
@@ -28,14 +28,14 @@ export default function Home() {
       <Navbar />
       <div className="flex h-[calc(100vh-60px)]">
         {/* Sidebar */}
-        <ProjectSidebar onSelect={setSelectedProjectId} />
+        <ProjectSidebar onSelect={setSelectedProjectSlug} />
 
         {/* Main area */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {selectedProjectId ? (
-            <ContextCardList projectId={selectedProjectId} />
+          {selectedProjectSlug ? (
+            <ContextCardList projectSlug={selectedProjectSlug} />
           ) : (
-            <ProjectCard onSelect={setSelectedProjectId} />
+            <ProjectCard onSelect={setSelectedProjectSlug} />
           )}
         </div>
       </div>

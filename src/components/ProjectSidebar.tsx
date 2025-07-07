@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 export default function ProjectSidebar({ onSelect }: { onSelect: (id: string) => void }) {
   const [projects, setProjects] = useState<any[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedProjectSlug, setSelectedProjectSlug] = useState<string>("");
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [width, setWidth] = useState(280); // default sidebar width
@@ -60,10 +60,10 @@ export default function ProjectSidebar({ onSelect }: { onSelect: (id: string) =>
     };
   }, [collapsed]);
 
-  const handleProjectSelect = (projectId: string) => {
-    setSelectedProjectId(projectId);
-    onSelect(projectId);
-    router.push(`/projects/${projectId}`);
+  const handleProjectSelect = (projectSlug: string) => {
+    setSelectedProjectSlug(projectSlug);
+    onSelect(projectSlug);
+    router.push(`/projects/${projectSlug}`);
   };
 
   const activeProjects = projects.filter(p => !p.isArchived);
@@ -115,10 +115,10 @@ export default function ProjectSidebar({ onSelect }: { onSelect: (id: string) =>
                       {activeProjects.map((project) => (
                         <button
                           key={project.id}
-                          onClick={() => handleProjectSelect(project.id)}
+                          onClick={() => handleProjectSelect(project.slug)}
                           className={cn(
                             "block w-full text-left hover:bg-gray-100 px-3 py-2 rounded-md transition-colors",
-                            selectedProjectId === project.id && "bg-blue-50 border-l-4 border-blue-500"
+                            selectedProjectSlug === project.slug && "bg-blue-50 border-l-4 border-blue-500"
                           )}
                         >
                           <div className="flex items-center justify-between">
@@ -169,10 +169,10 @@ export default function ProjectSidebar({ onSelect }: { onSelect: (id: string) =>
                       {archivedProjects.map((project) => (
                         <button
                           key={project.id}
-                          onClick={() => handleProjectSelect(project.id)}
+                          onClick={() => handleProjectSelect(project.slug)}
                           className={cn(
                             "block w-full text-left hover:bg-gray-100 px-3 py-2 rounded-md transition-colors opacity-60",
-                            selectedProjectId === project.id && "bg-blue-50 border-l-4 border-blue-500"
+                            selectedProjectSlug === project.slug && "bg-blue-50 border-l-4 border-blue-500"
                           )}
                         >
                           <div className="flex items-center space-x-2">
