@@ -1,10 +1,12 @@
+
 "use client";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
+import { useStatus } from "@/components/StatusProvider";
 
 export default function Navbar() {
   const { data: session } = useSession();
-  const [userStatus, setUserStatus] = useState<any>(null);
+  const { status: userStatus, updateStatus: updateUserStatus, isConnected } = useStatus();
   const [statusLoading, setStatusLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [error, setError] = useState<string>("");
@@ -16,59 +18,20 @@ export default function Navbar() {
     { value: "Focused", label: "Focused", color: "bg-red-500" },
   ];
 
-  const fetchStatus = async () => {
-    if (!session) return;
-    
-    setStatusLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/status");
-      if (response.ok) {
-        const data = await response.json();
-        setUserStatus(data.status);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to fetch status");
-      }
-    } catch (err) {
-      setError("Network error");
-    } finally {
-      setStatusLoading(false);
-    }
-  };
-
   const updateStatus = async (newState: string) => {
     setStatusLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ state: newState }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setUserStatus(data.status);
-        setDropdownOpen(false);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to update status");
-      }
+      await updateUserStatus(newState as any);
+      setDropdownOpen(false);
+      console.log("✅ Status updated via Ably:", newState);
     } catch (err) {
-      setError("Network error");
+      setError("Failed to update status");
+      console.error("❌ Error updating status:", err);
     } finally {
       setStatusLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (session) {
-      fetchStatus();
-    }
-  }, [session]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -86,7 +49,7 @@ export default function Navbar() {
     return null;
   }
 
-  const currentStatus = userStatus?.state || "Available";
+  const currentStatus = userStatus || "Available";
   const currentStatusConfig = statusOptions.find(option => option.value === currentStatus) || statusOptions[0];
 
   return (
@@ -94,6 +57,11 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex items-center">
           <h1 className="text-xl font-bold text-gray-900">Context Board</h1>
+          {!isConnected && (
+            <span className="ml-3 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded">
+              Reconnecting...
+            </span>
+          )}
         </div>
 
         <div className="flex items-center space-x-4">
@@ -155,7 +123,7 @@ export default function Navbar() {
 
           {/* Error Message */}
           {error && (
-            <div className="absolute top-full right-0 mt-2 bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm">
+            <div className="absolute top-full right-0 mt-2 bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm z-20">
               {error}
             </div>
           )}

@@ -36,6 +36,7 @@ export const authOptions: NextAuthOptions = {
       // ✅ Add user ID from token to session
       if (session.user && token.sub) {
         session.user.id = token.sub;
+        session.user.image = token.picture;
       }
       return session;
     },
@@ -49,6 +50,12 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (existingUser) {
+            if (!existingUser.image && user.image) {
+              await prisma.user.update({
+                where: { id: existingUser.id },
+                data: { image: user.image },
+              });
+            }
             // Check if this provider account is already linked
             const existingAccount = existingUser.accounts.find(
               acc => acc.provider === account.provider && acc.providerAccountId === account.providerAccountId

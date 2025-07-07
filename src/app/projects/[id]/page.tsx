@@ -14,17 +14,28 @@ import {
   Calendar,
   Archive,
   Settings,
+  User2,
+  UserRound,
 } from "lucide-react";
+import Image from "next/image";
+import OnlineUsers from "@/components/OnlineUsers";
+import DebugPresence from "@/components/DebugPresence";
+import InviteMemberModal from "@/components/InviteMemberModal";
+import { usePresence } from "@/lib/socket/usePresence";
+import { useStatus } from "@/components/StatusProvider";
 
 export default function ProjectPage() {
   const { data: session, status } = useSession();
   const params = useParams();
   const router = useRouter();
-  const projectId = params.id as string;
+  const projectId = params?.id as string;
+  const { onlineUsers, isConnected } = usePresence();
+  const { status: currentUserStatus } = useStatus();
 
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const fetchProject = async () => {
     try {
@@ -186,7 +197,64 @@ export default function ProjectPage() {
             </div>
           </div>
         </div>
-
+              {/* Online Users */}
+              <div className="bg-white border rounded-lg shadow-sm p-4 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Online Now {!isConnected && "(Reconnecting...)"}
+                </h3>
+                {onlineUsers.length === 0 ? (
+                  <div className="text-gray-500 text-sm">No users currently online</div>
+                ) : (
+                  <div className="flex flex-wrap gap-3">
+                    {onlineUsers.map((user) => {
+                      // Use current user's status from StatusProvider if it's the current user
+                      const displayStatus = user.id === session?.user?.id ? currentUserStatus : user.status;
+                      
+                      return (
+                        <div key={user.id} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md shadow-sm border border-gray-200">
+                          <div className="relative">
+                            {user.image ? (
+                              <Image
+                                src={user.image}
+                                alt={user.name}
+                                width={32}
+                                height={32}
+                                className="rounded-full object-cover border w-8 h-8"
+                                onError={(e) => {
+                                  e.currentTarget.onerror = null;
+                                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded-full border">
+                                <UserRound className="h-4 w-4 text-gray-600" />
+                              </div>
+                            )}
+                            <span 
+                              className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-2 border-white rounded-full ${
+                                displayStatus === "Available" ? "bg-green-500" :
+                                displayStatus === "Busy" ? "bg-yellow-500" :
+                                displayStatus === "Focused" ? "bg-red-500" :
+                                "bg-gray-400"
+                              }`}
+                              title={displayStatus || "Available"}
+                            />
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-800 font-medium">{user.name}</div>
+                            {displayStatus && displayStatus !== "Available" && (
+                              <div className="text-xs text-gray-500">{displayStatus}</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {/* <DebugPresence /> */}
+              <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} projectId={projectId} />
+<Button onClick={() => setInviteOpen(true)}>Invite Member</Button>
         {/* Context Cards */}
         <ContextCardList projectId={projectId} />
       </div>

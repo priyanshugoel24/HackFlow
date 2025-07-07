@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import type { TaskStatus } from "@prisma/client";
 
 // GET all context cards for logged-in user
 export async function GET(req: NextRequest) {
@@ -74,6 +75,8 @@ export async function POST(req: NextRequest) {
     const why = formData.get("why") as string | null;
     const issues = formData.get("issues") as string | null;
     const mention = formData.get("mention") as string | null;
+    const status = formData.get("status") as TaskStatus | null;
+
 
     // const tags = formData.getAll("tags").filter(Boolean) as string[];
     const attachments = formData.getAll("attachments") as File[];
@@ -118,6 +121,9 @@ export async function POST(req: NextRequest) {
         userId: token.sub,
         projectId,
         type: type as "TASK" | "INSIGHT" | "DECISION",
+        ...(type === "TASK" && {
+      status: status as TaskStatus,
+    }),
         visibility: visibility as "PRIVATE" | "PUBLIC",
         why: why || undefined,
         issues: issues || undefined,
@@ -131,6 +137,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    (global as any).socketIOServer?.emit("new-context-card", savedCard);
     // Update project lastActivityAt
     await prisma.project.update({
       where: { id: projectId },

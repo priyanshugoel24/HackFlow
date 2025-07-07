@@ -19,6 +19,8 @@
 # Misc
 .DS_Store
 *.pem
+ABLY_MIGRATION_SUMMARY.md
+SCHEMA_UPDATE_SUMMARY.md
 
 # Debug
 npm-debug.log*

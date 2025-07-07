@@ -61,9 +61,10 @@ model ContextCard {
   isPinned     Boolean       @default(false)
   userId       String
   projectId    String
-  attachments  String[]
+  attachments  String[] @default([])
   isArchived   Boolean       @default(false)
   issues       String?
+  status       TaskStatus?   @default(ACTIVE)
   linkedCardId String?
   slackLinks   String[]
   type         CardType      @default(TASK)
@@ -136,4 +137,9 @@ enum CardType {
 enum Visibility {
   PRIVATE
   PUBLIC
+}
+
+enum TaskStatus {
+  ACTIVE
+  CLOSED
 }

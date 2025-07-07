@@ -25,6 +25,7 @@ export default function ContextCardList({ projectId }: { projectId: string }) {
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<any | null>(null);
 
   const fetchCards = async () => {
     if (!projectId) return;
@@ -42,6 +43,11 @@ export default function ContextCardList({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     fetchCards();
+  }, [projectId]);
+
+  useEffect(() => {
+    // Real-time updates are now handled via Ably websockets
+    console.log("📝 ContextCardList initialized with Ably real-time support");
   }, [projectId]);
 
   const handleCardCreated = () => {
@@ -94,21 +100,15 @@ export default function ContextCardList({ projectId }: { projectId: string }) {
           <Plus className="h-4 w-4 mr-2" />
           Add Context Card
         </Button>
-        <ContextCardModal 
-          open={modalOpen} 
-          setOpen={setModalOpen} 
-          projectId={projectId}
-          onSuccess={handleCardCreated}
-        />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Context Cards</h2>
-        <Button onClick={() => setModalOpen(true)}>
+        <Button className="cursor-pointer" onClick={() => setModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Card
         </Button>
@@ -123,6 +123,7 @@ export default function ContextCardList({ projectId }: { projectId: string }) {
               card.isArchived && "opacity-60",
               card.isPinned && "ring-2 ring-blue-200"
             )}
+            onClick={() => setSelectedCard(card)}
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between space-y-0">
@@ -199,6 +200,22 @@ export default function ContextCardList({ projectId }: { projectId: string }) {
                     <span>{card.attachments.length} attachment{card.attachments.length !== 1 ? 's' : ''}</span>
                   </div>
                 )}
+
+                {card.attachments && card.attachments.length > 0 && (
+  <div className="text-xs text-blue-600 space-y-1 mt-1">
+    {card.attachments.map((url : string, i : number) => (
+      <a 
+        key={i}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline block truncate"
+      >
+        {url.split("/").pop()}
+      </a>
+    ))}
+  </div>
+)}
                 
                 {card.slackLinks && card.slackLinks.length > 0 && (
                   <div className="flex items-center space-x-1 text-xs text-gray-500">
@@ -217,11 +234,26 @@ export default function ContextCardList({ projectId }: { projectId: string }) {
         ))}
       </div>
       
+      {!selectedCard && (
+        <ContextCardModal 
+          open={modalOpen} 
+          setOpen={setModalOpen} 
+          projectId={projectId}
+          onSuccess={handleCardCreated}
+        />
+      )}
+      
       <ContextCardModal 
-        open={modalOpen} 
-        setOpen={setModalOpen} 
+        open={!!selectedCard}
+        setOpen={(val) => {
+          if (!val) setSelectedCard(null);
+        }}
         projectId={projectId}
-        onSuccess={handleCardCreated}
+        existingCard={selectedCard}
+        onSuccess={() => {
+          setSelectedCard(null);
+          fetchCards();
+        }}
       />
     </div>
   );

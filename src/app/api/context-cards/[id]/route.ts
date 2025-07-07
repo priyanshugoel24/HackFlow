@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { TaskStatus } from "@prisma/client";
 
 // PATCH: Update a context card
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -10,6 +11,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
+  const body = await req.json();
+  console.log("📝 PATCH /api/context-cards/[id] - ID:", id);
+  console.log("📝 PATCH body:", body);
+  
   const { 
     title, 
     content, 
@@ -22,8 +27,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     issues, 
     why, 
     linkedCardId, 
-    isArchived 
-  } = await req.json();
+    isArchived,
+    status 
+  } = body;
 
   try {
     // First check if the card exists and belongs to the user
@@ -35,8 +41,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
 
     if (!existing) {
+      console.log("❌ Card not found or not owned by user. ID:", id, "User:", token.sub);
       return NextResponse.json({ error: "Card not found or not owned by user" }, { status: 404 });
     }
+
+    console.log("✅ Found existing card:", existing.id, existing.title);
 
     // If projectId is being changed, verify new project exists and user has access
     if (projectId !== undefined && projectId !== existing.projectId) {
@@ -94,6 +103,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...(why !== undefined && { why }),
         ...(linkedCardId !== undefined && { linkedCardId }),
         ...(isArchived !== undefined && { isArchived }),
+        ...(status !== undefined && { status: status as TaskStatus }),
       },
       include: {
         project: {
@@ -123,11 +133,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         where: { id: updatedCard.projectId },
         data: { lastActivityAt: new Date() },
       });
+      (global as any).io?.emit("card:update", updatedCard);
     }
 
+    console.log("📊 Update successful. Card:", updatedCard.id);
     return NextResponse.json({ success: true, card: updatedCard });
   } catch (error) {
-    console.error("PATCH error:", error);
+    console.error("❌ PATCH error:", error);
     return NextResponse.json({ error: "Failed to update card" }, { status: 500 });
   }
 }
@@ -158,6 +170,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await prisma.contextCard.delete({
       where: { id },
     });
+    (global as any).socketIOServer?.emit("card:delete", existing);
 
     return NextResponse.json({ 
       success: true, 
