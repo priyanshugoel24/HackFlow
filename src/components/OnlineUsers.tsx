@@ -27,7 +27,6 @@ const OnlineUsers = () => {
       case "Available": return "bg-green-500";
       case "Busy": return "bg-yellow-500";
       case "Focused": return "bg-red-500";
-      case "Away": return "bg-gray-400";
       default: return "bg-green-500";
     }
   };

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
+import { getAblyClient } from "@/lib/ably";
 
 export default function ProjectSettingsPage() {
   const { slug: projectSlug } = useParams();
@@ -31,6 +32,44 @@ export default function ProjectSettingsPage() {
         setDescription(data.project.description || "");
         setLink(data.project.link || "");
         setTags(data.project.tags || []);
+
+        const ably = getAblyClient();
+        const channel = ably.channels.get(`project:${data.project.id}`);
+
+        const handleProjectUpdate = (msg: any) => {
+          const updated = msg.data;
+          setProject((prev: any) => ({
+            ...prev,
+            ...updated,
+          }));
+          setName(updated.name || "");
+          setDescription(updated.description || "");
+          setLink(updated.link || "");
+          setTags(updated.tags || []);
+        };
+
+        channel.subscribe("project:updated", handleProjectUpdate);
+
+        channel.subscribe("member:removed", (msg: any) => {
+          setProject((prev: any) => ({
+            ...prev,
+            members: prev.members.filter((m: any) => m.user.id !== msg.data.userId),
+          }));
+        });
+
+        channel.subscribe("member:added", (msg: any) => {
+          setProject((prev: any) => ({
+            ...prev,
+            members: [...prev.members, msg.data],
+          }));
+        });
+
+        return () => {
+          channel.unsubscribe("project:updated", handleProjectUpdate);
+          channel.unsubscribe("member:removed");
+          channel.unsubscribe("member:added");
+          ably.channels.release(`project:${data.project.id}`);
+        };
       } catch (error) {
         toast.error("Failed to fetch project");
       } finally {
@@ -168,6 +207,9 @@ export default function ProjectSettingsPage() {
                             ...prev,
                             members: prev.members.filter((m: any) => m.user.id !== member.user.id),
                           }));
+                          const ably = getAblyClient();
+                          const channel = ably.channels.get(`project:${project.id}`);
+                          channel.publish("member:removed", { userId: member.user.id });
                         } else {
                           toast.error("Failed to remove member");
                         }

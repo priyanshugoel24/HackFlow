@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { getAblyServer } from "@/lib/ably";
 
 // GET: Get a single project with its context cards
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -152,6 +153,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           },
         },
       },
+    });
+
+        await getAblyServer().channels.get(`project:${existingProject.id}`).publish("project:updated", {
+      id: existingProject.id,
+      name: updatedProject.name,
+      description: updatedProject.description,
+      updatedAt: updatedProject.lastActivityAt,
     });
 
     return NextResponse.json({ 

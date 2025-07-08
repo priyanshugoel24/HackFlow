@@ -14,7 +14,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchComments = async (cursor?: string) => {
     setIsLoading(true);
