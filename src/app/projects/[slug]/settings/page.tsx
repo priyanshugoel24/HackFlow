@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
 import { getAblyClient } from "@/lib/ably";
+import { useSession } from "next-auth/react";
 
 export default function ProjectSettingsPage() {
+  const { data: session } = useSession();
   const { slug: projectSlug } = useParams();
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -268,6 +270,78 @@ export default function ProjectSettingsPage() {
             </ul>
           </section>
         )}
+
+        <section className="pt-8 border-t border-gray-200">
+          <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6">Project Status</h2>
+          <div className="mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-md font-medium">
+                  {project?.isArchived ? "Archived Project" : "Active Project"}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {project?.isArchived 
+                    ? "This project is currently archived. Unarchive to make it active again." 
+                    : "Archive this project to hide it from active views."}
+                </p>
+              </div>
+              {/* Only show if user is project creator or manager */}
+              {(project?.createdById === session?.user?.id || 
+                project?.members?.some((m: any) => 
+                  m.user.id === session?.user?.id && m.role === "MANAGER" && m.status === "ACTIVE"
+                )) && (
+                <Button
+                  variant="outline"
+                  className={`transition-all focus:ring-2 ${
+                    project?.isArchived 
+                      ? "text-green-600 hover:text-green-800 focus:ring-green-500" 
+                      : "text-orange-600 hover:text-orange-800 focus:ring-orange-500"
+                  }`}
+                  onClick={async () => {
+                    const action = project?.isArchived ? "unarchive" : "archive";
+                    if (!confirm(`Are you sure you want to ${action} this project?`)) {
+                      return;
+                    }
+
+                    try {
+                      const res = await fetch(`/api/projects/${project.id}/archive`, {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          isArchived: !project.isArchived,
+                        }),
+                      });
+
+                      if (res.ok) {
+                        setProject({
+                          ...project,
+                          isArchived: !project.isArchived,
+                        });
+                        toast.success(`Project ${action}d`, {
+                          description: `The project has been ${action}d successfully.`,
+                        });
+                      } else {
+                        const errorData = await res.json();
+                        toast.error(`Failed to ${action} project`, {
+                          description: errorData.error || `Unable to ${action} the project. Please try again.`,
+                        });
+                      }
+                    } catch (err) {
+                      console.error(`Error ${action}ing project:`, err);
+                      toast.error(`Error ${action}ing project`, {
+                        description: "An unexpected error occurred. Please try again.",
+                      });
+                    }
+                  }}
+                >
+                  {project?.isArchived ? "Unarchive Project" : "Archive Project"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </section>
 
         <div className="pt-8 flex justify-end">
           <Button onClick={handleSave} disabled={saving} className="transition-all focus:ring-2 focus:ring-indigo-500">

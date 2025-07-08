@@ -26,14 +26,23 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<any | null>(null);
+  const [project, setProject] = useState<any | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [allCards, setAllCards] = useState<any[]>([]);
 
   const fetchCards = async () => {
     if (!projectSlug) return;
     
     try {
-      const res = await fetch(`/api/projects/${projectSlug}`);
+      const res = await fetch(`/api/projects/${projectSlug}?includeArchived=true`);
       const data = await res.json();
-      setCards(data.project?.contextCards || []);
+      setAllCards(data.project?.contextCards || []);
+      // Filter cards based on showArchived state
+      const filteredCards = data.project?.contextCards?.filter((card: any) => 
+        showArchived ? true : !card.isArchived
+      ) || [];
+      setCards(filteredCards);
+      setProject(data.project);
     } catch (error) {
       console.error("Error fetching cards:", error);
     } finally {
@@ -45,6 +54,16 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
     fetchCards();
   }, [projectSlug]);
 
+  // Update displayed cards when showArchived changes
+  useEffect(() => {
+    if (allCards.length > 0) {
+      const filteredCards = allCards.filter((card: any) => 
+        showArchived ? true : !card.isArchived
+      );
+      setCards(filteredCards);
+    }
+  }, [showArchived, allCards]);
+
   useEffect(() => {
     // Real-time updates are now handled via Ably websockets
     console.log("📝 ContextCardList initialized with Ably real-time support");
@@ -53,6 +72,16 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
   const handleCardCreated = () => {
     fetchCards(); // Refresh the cards after creating a new one
   };
+
+  useEffect(() => {
+    // Filter cards based on showArchived state whenever it changes
+    if (allCards.length > 0) {
+      const filteredCards = allCards.filter((card) => 
+        showArchived ? true : !card.isArchived
+      );
+      setCards(filteredCards);
+    }
+  }, [showArchived, allCards]);
 
   if (loading) {
     return (
@@ -90,7 +119,9 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
     });
   };
 
-  if (cards.length === 0) {
+  const displayedCards = showArchived ? allCards : cards;
+
+  if (displayedCards.length === 0) {
     return (
       <>
         <div className="text-center text-gray-500 mt-10">
@@ -108,6 +139,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
             open={modalOpen} 
             setOpen={setModalOpen} 
             projectSlug={projectSlug}
+            project={project}
             onSuccess={handleCardCreated}
           />
         )}
@@ -119,7 +151,23 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
     <>
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Context Cards</h2>
+          <div className="flex items-center space-x-4">
+            <h2 className="text-xl font-semibold">Context Cards</h2>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="flex items-center space-x-1 text-xs"
+              onClick={() => setShowArchived(!showArchived)}
+            >
+              <Archive className="h-3.5 w-3.5 mr-1" />
+              {showArchived ? "Hide Archived" : "Show Archived"}
+            </Button>
+            {showArchived && allCards.some(card => card.isArchived) && (
+              <span className="text-xs text-gray-500">
+                Showing {allCards.filter(card => card.isArchived).length} archived cards
+              </span>
+            )}
+          </div>
           <Button className="cursor-pointer" onClick={() => setModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Card
@@ -127,7 +175,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {cards.map((card) => (
+          {displayedCards.map((card) => (
             <Card
               key={card.id}
               className={cn(
@@ -217,7 +265,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
     <div className="text-xs text-blue-600 space-y-1 mt-1">
       {card.attachments.map((url : string, i : number) => (
         <a 
-          key={i}
+          key={`${card.id}-attachment-${i}-${url.split("/").pop()}`}
           href={url}
           target="_blank"
           rel="noopener noreferrer"
@@ -252,6 +300,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
           open={modalOpen} 
           setOpen={setModalOpen} 
           projectSlug={projectSlug}
+          project={project}
           onSuccess={handleCardCreated}
         />
       )}
@@ -263,6 +312,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
             if (!val) setSelectedCard(null);
           }}
           projectSlug={projectSlug}
+          project={project}
           existingCard={selectedCard}
           onSuccess={() => {
             setSelectedCard(null);

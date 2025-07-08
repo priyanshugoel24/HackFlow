@@ -32,16 +32,29 @@ export function useAblyPresence(options: UseAblyPresenceOptions = {}) {
       name: (m.data as AblyPresenceData)?.name 
     })));
     
-    return members.map((member) => {
+    // Create a map to deduplicate users by clientId (in case same user appears multiple times)
+    const userMap = new Map<string, PresenceUser>();
+    
+    members.forEach((member) => {
+      if (!member.clientId) return;
+      
       const data = member.data as AblyPresenceData;
-      return {
-        id: member.clientId!,
+      const user: PresenceUser = {
+        id: member.clientId,
         name: data.name,
         image: data.image,
         status: data.status,
         lastSeen: data.lastSeen,
       };
+      
+      // Only keep the most recent entry for each user
+      const existing = userMap.get(member.clientId);
+      if (!existing || new Date(data.lastSeen) > new Date(existing.lastSeen)) {
+        userMap.set(member.clientId, user);
+      }
     });
+    
+    return Array.from(userMap.values());
   }, []);
 
   // Update presence data for current user

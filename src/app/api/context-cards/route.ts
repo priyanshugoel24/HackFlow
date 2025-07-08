@@ -78,6 +78,7 @@ export async function POST(req: NextRequest) {
     const issues = formData.get("issues") as string | null;
     const mention = formData.get("mention") as string | null;
     const status = formData.get("status") as TaskStatus | null;
+    const notifyUserId = formData.get("notifyUserId") as string | null;
 
 
     // const tags = formData.getAll("tags").filter(Boolean) as string[];
@@ -174,6 +175,48 @@ export async function POST(req: NextRequest) {
       });
       
       console.log("📡 Published activity:created event to Ably for project:", project.id);
+      
+      // Handle notification for mentioned user
+      if (notifyUserId) {
+        try {
+          // Find the mentioned user
+          const mentionedUser = await prisma.user.findUnique({
+            where: { id: notifyUserId },
+            select: { id: true, name: true, email: true }
+          });
+
+          if (mentionedUser) {
+            // Log a specific mention activity
+            await logActivity({
+              type: "USER_MENTIONED",
+              description: `mentioned ${mentionedUser.name || 'a team member'} in "${title.trim()}"`,
+              metadata: { 
+                cardId: savedCard.id,
+                mentionedUserId: mentionedUser.id,
+                mentionedUserName: mentionedUser.name
+              },
+              userId: token.sub,
+              projectId: project.id,
+            });
+
+            // Send a direct notification to the mentioned user
+            const userChannel = ably.channels.get(`user:${mentionedUser.id}`);
+            await userChannel.publish("notification", {
+              id: `notification_${Date.now()}`,
+              type: "MENTION",
+              message: `You were mentioned in a new card "${title.trim()}"`,
+              createdAt: new Date().toISOString(),
+              metadata: {
+                cardId: savedCard.id,
+                projectId: project.id,
+                mentionedBy: token.sub
+              }
+            });
+          }
+        } catch (mentionError) {
+          console.error("Error processing mention notification:", mentionError);
+        }
+      }
     } catch (ablyError) {
       console.error("❌ Failed to publish activity to Ably:", ablyError);
     }

@@ -138,9 +138,19 @@ export default function Navbar() {
         )}
       </div>
       {showNotifications && (
-        <div className="fixed top-16 right-0 w-[350px] max-h-[calc(100vh-64px)] shadow-lg border-l bg-white z-50 p-4 overflow-y-auto animate-slide-in">
-          <div className="font-semibold text-lg mb-2">Activity Feed</div>
-          <ActivityFeed slug={slug} />
+        <div className="fixed top-16 right-0 w-[380px] max-h-[calc(100vh-64px)] shadow-lg border-l bg-white z-50 flex flex-col animate-slide-in transition-all duration-300">
+          <div className="flex items-center justify-between px-4 py-3 border-b">
+            <h2 className="text-lg font-semibold text-gray-800">Activity Feed</h2>
+            <button onClick={() => setShowNotifications(false)} className="text-gray-500 hover:text-black transition">
+              <span className="sr-only">Close</span>
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="overflow-y-auto px-4 py-2 flex-1">
+            <ActivityFeed slug={slug} />
+          </div>
         </div>
       )}
     </nav>

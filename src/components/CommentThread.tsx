@@ -7,10 +7,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { getAblyClient } from "@/lib/ably";
+import type * as Ably from 'ably';
+
+interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: {
+    id: string;
+    name: string;
+    image?: string;
+  };
+}
 
 export default function CommentThread({ cardId }: { cardId: string }) {
   const { data: session } = useSession();
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -34,7 +46,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
             });
             
             // Add new comments
-            data.comments.forEach((comment: any) => {
+            data.comments.forEach((comment: Comment) => {
               commentMap.set(comment.id, comment);
             });
             
@@ -67,7 +79,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
     const ably = getAblyClient();
     const channel = ably.channels.get(`card:${cardId}:comments`);
 
-    const handleNewComment = (msg: any) => {
+    const handleNewComment = (msg: Ably.Message) => {
       setComments((prev) => {
         // Create a Map for O(1) lookup performance and deduplication
         const commentMap = new Map();
@@ -78,7 +90,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
         });
         
         // Add or update the new comment - msg.data contains the comment data
-        const commentData = msg.data || msg;
+        const commentData = msg.data as Comment;
         commentMap.set(commentData.id, commentData);
         
         // Convert back to array and sort by createdAt

@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { TaskStatus } from "@prisma/client";
 import { logActivity } from "@/lib/logActivity";
+import { getAblyServer } from "@/lib/ably";
 
 // PATCH: Update a context card
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -29,21 +30,50 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     why, 
     linkedCardId, 
     isArchived,
-    status 
+    status,
+    notifyUserId 
   } = body;
 
   try {
-    // First check if the card exists and belongs to the user
+    // First check if the card exists and user has access to the project
     const existing = await prisma.contextCard.findFirst({
-      where: {
-        id,
-        userId: token.sub,
-      },
+      where: { id },
+      include: {
+        project: {
+          include: {
+            members: {
+              where: {
+                userId: token.sub,
+                status: "ACTIVE"
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!existing) {
-      console.log("❌ Card not found or not owned by user. ID:", id, "User:", token.sub);
-      return NextResponse.json({ error: "Card not found or not owned by user" }, { status: 404 });
+      console.log("❌ Card not found. ID:", id);
+      return NextResponse.json({ error: "Card not found" }, { status: 404 });
+    }
+
+    // Check if user has access to the project (either as creator or member)
+    const hasProjectAccess = existing.project.createdById === token.sub || existing.project.members.length > 0;
+    
+    if (!hasProjectAccess) {
+      return NextResponse.json({ error: "Access denied. You must be a member of this project." }, { status: 403 });
+    }
+
+    // Determine if this is a content/structure edit vs a status/meta update
+    const isContentEdit = title !== undefined || content !== undefined || isPinned !== undefined || 
+                         projectId !== undefined || type !== undefined || visibility !== undefined || 
+                         attachments !== undefined || slackLinks !== undefined || issues !== undefined || 
+                         why !== undefined || linkedCardId !== undefined || isArchived !== undefined;
+    
+    // Only card creator can edit content/structure, but any project member can update status
+    if (isContentEdit && existing.userId !== token.sub) {
+      console.log("❌ Only card creator can edit content. Card creator:", existing.userId, "Current user:", token.sub);
+      return NextResponse.json({ error: "Only the card creator can edit card content" }, { status: 403 });
     }
 
     console.log("✅ Found existing card:", existing.id, existing.title);
@@ -89,6 +119,55 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
+    // Helper function to check if arrays are equal
+    const arraysEqual = (a: unknown[], b: unknown[]) => {
+      if (a === b) return true;
+      if (!a || !b) return false;
+      if (a.length !== b.length) return false;
+      // Sort both arrays before comparing to handle order differences
+      const sortedA = [...a].sort();
+      const sortedB = [...b].sort();
+      return JSON.stringify(sortedA) === JSON.stringify(sortedB);
+    };
+
+    // Helper function to check if values are equal (handles different types)
+    const valuesEqual = (a: unknown, b: unknown) => {
+      if (a === b) return true;
+      if (a === null && b === undefined) return true;
+      if (a === undefined && b === null) return true;
+      if (Array.isArray(a) && Array.isArray(b)) {
+        return arraysEqual(a, b);
+      }
+      // Handle null/undefined comparisons
+      if ((a === null || a === undefined) && (b === null || b === undefined)) return true;
+      return JSON.stringify(a) === JSON.stringify(b);
+    };
+
+    // Check if any fields have actually changed with proper type handling
+    const hasChanges = (
+      (title !== undefined && title.trim() !== existing.title.trim()) ||
+      (content !== undefined && content.trim() !== existing.content.trim()) ||
+      (isPinned !== undefined && isPinned !== existing.isPinned) ||
+      (projectId !== undefined && projectId !== existing.projectId) ||
+      (type !== undefined && type !== existing.type) ||
+      (visibility !== undefined && visibility !== existing.visibility) ||
+      (attachments !== undefined && !valuesEqual(attachments, existing.attachments)) ||
+      (slackLinks !== undefined && !valuesEqual(slackLinks, existing.slackLinks)) ||
+      (issues !== undefined && (issues || '').trim() !== (existing.issues || '').trim()) ||
+      (why !== undefined && (why || '').trim() !== (existing.why || '').trim()) ||
+      (linkedCardId !== undefined && linkedCardId !== existing.linkedCardId) ||
+      (isArchived !== undefined && isArchived !== existing.isArchived) ||
+      (status !== undefined && status !== existing.status)
+    );
+
+    if (!hasChanges) {
+      console.log("✅ No changes detected, returning existing card");
+      return NextResponse.json({ card: existing });
+    }
+
+    console.log("📝 Applying updates to card");
+
+    // Update the card with only the provided fields
     const updatedCard = await prisma.contextCard.update({
       where: { id },
       data: {
@@ -134,22 +213,86 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         where: { id: updatedCard.projectId },
         data: { lastActivityAt: new Date() },
       });
-      (global as any).io?.emit("card:update", updatedCard);
+      (global as { io?: { emit: (event: string, data: unknown) => void } }).io?.emit("card:update", updatedCard);
     }
 
     // Log the activity
     await logActivity({
-    type: "CARD_UPDATED",
-    description: `Updated card "${updatedCard.title}"`,
-    metadata: { cardId: updatedCard.id },
-    userId: token.sub,
-    projectId: updatedCard.projectId,
-  });
+      type: "CARD_UPDATED",
+      description: `Updated card "${updatedCard.title}"`,
+      metadata: { cardId: updatedCard.id },
+      userId: token.sub,
+      projectId: updatedCard.projectId,
+    });
 
-    console.log("📊 Update successful. Card:", updatedCard.id);
-    return NextResponse.json({ success: true, card: updatedCard });
+    // Send notification if a user was mentioned
+    if (notifyUserId) {
+      try {
+        // Find the mentioned user
+        const mentionedUser = await prisma.user.findUnique({
+          where: { id: notifyUserId },
+          select: { id: true, name: true, email: true }
+        });
+
+        if (mentionedUser) {
+          // Log a specific mention activity
+          await logActivity({
+            type: "USER_MENTIONED",
+            description: `mentioned ${mentionedUser.name || 'a team member'} in "${updatedCard.title}"`,
+            metadata: { 
+              cardId: updatedCard.id,
+              mentionedUserId: mentionedUser.id,
+              mentionedUserName: mentionedUser.name
+            },
+            userId: token.sub,
+            projectId: updatedCard.projectId,
+          });
+
+          // Send real-time notification via Ably if available
+          try {
+            const ably = getAblyServer();
+            if (ably) {
+              // Send notification to the project channel
+              const projectChannel = ably.channels.get(`project:${updatedCard.projectId}`);
+              await projectChannel.publish("activity:created", {
+                id: `activity_${Date.now()}`,
+                type: "USER_MENTIONED",
+                description: `mentioned ${mentionedUser.name || 'a team member'} in "${updatedCard.title}"`,
+                createdAt: new Date().toISOString(),
+                userId: token.sub,
+                projectId: updatedCard.projectId,
+                metadata: { 
+                  cardId: updatedCard.id,
+                  mentionedUserId: mentionedUser.id
+                }
+              });
+              
+              // Send a direct notification to the mentioned user
+              const userChannel = ably.channels.get(`user:${mentionedUser.id}`);
+              await userChannel.publish("notification", {
+                id: `notification_${Date.now()}`,
+                type: "MENTION",
+                message: `You were mentioned in "${updatedCard.title}"`,
+                createdAt: new Date().toISOString(),
+                metadata: {
+                  cardId: updatedCard.id,
+                  projectId: updatedCard.projectId,
+                  mentionedBy: token.sub
+                }
+              });
+            }
+          } catch (ablyError) {
+            console.error("Failed to send Ably notification:", ablyError);
+          }
+        }
+      } catch (mentionError) {
+        console.error("Error processing mention notification:", mentionError);
+      }
+    }
+
+    return NextResponse.json({ card: updatedCard });
   } catch (error) {
-    console.error("❌ PATCH error:", error);
+    console.error("PATCH error:", error);
     return NextResponse.json({ error: "Failed to update card" }, { status: 500 });
   }
 }
@@ -180,7 +323,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await prisma.contextCard.delete({
       where: { id },
     });
-    (global as any).socketIOServer?.emit("card:delete", existing);
+    (global as { socketIOServer?: { emit: (event: string, data: unknown) => void } }).socketIOServer?.emit("card:delete", existing);
 
     // Log the activity
     await logActivity({

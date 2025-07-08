@@ -5,6 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAblyServer } from "@/lib/ably";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const token = await getToken({ req });
+  if (!token?.sub) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
   const { id: cardId } = await params;
 
   if (!cardId || typeof cardId !== "string") {
@@ -17,14 +20,32 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const cursor = searchParams.get("cursor");
 
   try {
-    // Ensure the context card exists
+    // Ensure the context card exists and user has access to the project
     const card = await prisma.contextCard.findUnique({
       where: { id: cardId },
-      select: { id: true },
+      include: {
+        project: {
+          include: {
+            members: {
+              where: {
+                userId: token.sub,
+                status: "ACTIVE"
+              }
+            }
+          }
+        }
+      },
     });
 
     if (!card) {
       return NextResponse.json({ error: "Context card not found" }, { status: 404 });
+    }
+
+    // Check if user has access to the project (either as creator or member)
+    const hasAccess = card.project.createdById === token.sub || card.project.members.length > 0;
+    
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Access denied. You must be a member of this project to view comments." }, { status: 403 });
     }
 
     // Fetch comments with author info, paginated
@@ -75,14 +96,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   try {
-    // Ensure card exists
+    // Ensure card exists and user has access to the project
     const card = await prisma.contextCard.findUnique({
       where: { id: cardId },
-      select: { id: true },
+      include: {
+        project: {
+          include: {
+            members: {
+              where: {
+                userId: token.sub,
+                status: "ACTIVE"
+              }
+            }
+          }
+        }
+      },
     });
 
     if (!card) {
       return NextResponse.json({ error: "Context card not found" }, { status: 404 });
+    }
+
+    // Check if user has access to the project (either as creator or member)
+    const hasAccess = card.project.createdById === token.sub || card.project.members.length > 0;
+    
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Access denied. You must be a member of this project to comment." }, { status: 403 });
     }
 
     // Create comment
@@ -103,19 +142,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     });
 
-    // Get card project details
-    const cardProject = await prisma.contextCard.findUnique({
-      where: { id: cardId },
-      select: { projectId: true },
-    });
-
     // Log comment activity
     await logActivity({
       type: "COMMENT_CREATED",
       description: `Added a comment to card`,
       metadata: { cardId, commentId: newComment.id },
       userId: token.sub,
-      projectId: cardProject?.projectId || "", // Provide fallback empty string if undefined
+      projectId: card.project.id, // Use the project ID from the card we already fetched
     });
 
     const ably = getAblyServer();
@@ -129,21 +162,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     // Publish to project activity feed
-    if (cardProject?.projectId) {
-      await ably.channels.get(`project:${cardProject.projectId}`).publish("activity:created", {
-        id: Date.now(), // temporary ID for real-time display
-        type: "COMMENT_CREATED",
-        description: `Added a comment to card`,
-        user: {
-          id: token.sub,
-          name: token.name,
-          image: token.picture,
-        },
-        createdAt: new Date().toISOString(),
-        projectId: cardProject.projectId,
-        metadata: { cardId, commentId: newComment.id },
-      });
-    }
+    await ably.channels.get(`project:${card.project.id}`).publish("activity:created", {
+      id: Date.now(), // temporary ID for real-time display
+      type: "COMMENT_CREATED",
+      description: `Added a comment to card`,
+      user: {
+        id: token.sub,
+        name: token.name,
+        image: token.picture,
+      },
+      createdAt: new Date().toISOString(),
+      projectId: card.project.id,
+      metadata: { cardId, commentId: newComment.id },
+    });
 
     return NextResponse.json({ comment: newComment });
   } catch (error) {

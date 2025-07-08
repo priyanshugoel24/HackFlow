@@ -30,9 +30,11 @@ export default function ProjectSidebar({
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch("/api/projects");
+      const res = await fetch("/api/projects?includeArchived=false");
       const data = await res.json();
-      setProjects(data.projects || []);
+      // Make sure we're only showing active projects in the sidebar
+      const activeProjects = data.projects?.filter((project: any) => !project.isArchived) || [];
+      setProjects(activeProjects);
     } catch (error) {
       console.error("Error fetching projects:", error);
     } finally {

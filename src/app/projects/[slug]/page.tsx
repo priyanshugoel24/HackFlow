@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import LoginPage from "@/components/LoginPage";
@@ -14,16 +14,29 @@ import {
   Calendar,
   Archive,
   Settings,
-  User2,
   UserRound,
 } from "lucide-react";
 import Image from "next/image";
-import OnlineUsers from "@/components/OnlineUsers";
-import DebugPresence from "@/components/DebugPresence";
 import InviteMemberModal from "@/components/InviteMemberModal";
 import { usePresence } from "@/lib/socket/usePresence";
 import { useStatus } from "@/components/StatusProvider";
 import Link from "next/link";
+
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  isArchived: boolean;
+  members?: Array<{
+    id: string;
+    userId: string;
+    role: string;
+    status: string;
+  }>;
+  lastActivityAt: string;
+  tags?: string[];
+  link?: string;
+}
 
 export default function ProjectPage() {
   const { data: session, status } = useSession();
@@ -33,12 +46,12 @@ export default function ProjectPage() {
   const { onlineUsers, isConnected } = usePresence();
   const { status: currentUserStatus } = useStatus();
 
-  const [project, setProject] = useState<any>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       const res = await fetch(`/api/projects/${projectSlug}`);
       if (!res.ok) {
@@ -52,13 +65,13 @@ export default function ProjectPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectSlug]);
 
   useEffect(() => {
     if (projectSlug) {
       fetchProject();
     }
-  }, [projectSlug]);
+  }, [projectSlug, fetchProject]);
 
   if (status === "loading") {
     return (
@@ -167,7 +180,7 @@ export default function ProjectPage() {
               {project.tags && project.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-4">
                   {project.tags.map((tag: string, index: number) => (
-                    <Badge key={index} variant="secondary">
+                    <Badge key={`${project.id}-tag-${index}-${tag}`} variant="secondary">
                       {tag}
                     </Badge>
                   ))}
@@ -181,10 +194,12 @@ export default function ProjectPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const url = project.link.startsWith("http")
-                      ? project.link
-                      : `https://${project.link}`;
-                    window.open(url, "_blank");
+                    if (project.link) {
+                      const url = project.link.startsWith("http")
+                        ? project.link
+                        : `https://${project.link}`;
+                      window.open(url, "_blank");
+                    }
                   }}
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
@@ -213,12 +228,13 @@ export default function ProjectPage() {
                   <div className="text-gray-500 text-sm">No users currently online</div>
                 ) : (
                   <div className="flex flex-wrap gap-3">
-                    {onlineUsers.map((user) => {
+                    {Array.from(new Map(onlineUsers.map(user => [user.id, user])).values())
+                      .map((user, index) => {
                       // Use current user's status from StatusProvider if it's the current user
                       const displayStatus = user.id === session?.user?.id ? currentUserStatus : user.status;
                       
                       return (
-                        <div key={user.id} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md shadow-sm border border-gray-200 hover:shadow transition-all">
+                        <div key={`${user.id}-${index}`} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md shadow-sm border border-gray-200 hover:shadow transition-all">
                           <div className="relative">
                             {user.image ? (
                               <Image

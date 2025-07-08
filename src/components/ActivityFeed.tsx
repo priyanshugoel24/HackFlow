@@ -5,6 +5,7 @@ import { getAblyClient } from "@/lib/ably";
 import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from "framer-motion";
 import type * as Ably from 'ably';
 
 interface ActivityFeedProps {
@@ -97,38 +98,47 @@ export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1 custom-scrollbar">
       {activities.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-12 text-gray-400 text-sm">
           <p>No activity yet. Start by creating context cards or adding comments!</p>
         </div>
       ) : (
-        activities.map((activity) => (
-          <div key={activity.id} className="flex items-start gap-3">
-            {activity.user?.image ? (
-              <Image
-                src={activity.user.image}
-                alt={activity.user.name}
-                width={32}
-                height={32}
-                className="rounded-full"
-              />
-            ) : (
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-white text-sm">
-                {activity.user?.name?.[0] || "?"}
-              </div>
-            )}
+        <AnimatePresence initial={false}>
+          {activities.map((activity) => (
+            <motion.div
+              key={activity.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+              className="flex items-start gap-3 bg-white shadow-sm rounded-lg p-4 border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all"
+            >
+              {activity.user?.image ? (
+                <Image
+                  src={activity.user.image}
+                  alt={activity.user.name}
+                  width={32}
+                  height={32}
+                  className="rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold">
+                  👤
+                </div>
+              )}
 
-            <div>
-              <p className="text-sm text-gray-700">
-                <span className="font-medium">{activity.user?.name}</span> {activity.description}
-              </p>
-              <p className="text-xs text-gray-400">
-                {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
-              </p>
-            </div>
-          </div>
-        ))
+              <div>
+                <p className="text-sm text-gray-800 leading-tight">
+                  <span className="font-semibold text-gray-900">{activity.user?.name}</span> {activity.description}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       )}
     </div>
   );

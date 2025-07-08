@@ -16,31 +16,57 @@ import {
   EyeOff,
   Paperclip,
   AtSign,
-  Tag,
   Trash2,
+  Archive,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useSession } from "next-auth/react";
 import { useCardPresence } from "@/lib/ably/useCardPresence";
 import CommentThread from "./CommentThread";
+
+interface ExistingCard {
+  id: string;
+  title: string;
+  content: string;
+  type: "TASK" | "INSIGHT" | "DECISION";
+  visibility: "PRIVATE" | "PUBLIC";
+  why?: string;
+  issues?: string;
+  slackLinks?: string[];
+  attachments?: string[];
+  status: "ACTIVE" | "CLOSED";
+  isArchived?: boolean;
+  userId?: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  createdById: string;
+  members: Array<{
+    userId: string;
+    role: "MANAGER" | "MEMBER";
+    status: "ACTIVE" | "PENDING";
+  }>;
+}
 
 export default function ContextCardModal({
   open,
   setOpen,
   projectSlug,
+  project,
   existingCard,
   onSuccess,
 }: {
   open: boolean;
   setOpen: (val: boolean) => void;
   projectSlug: string;
-  existingCard?: any;
+  project?: Project;
+  existingCard?: ExistingCard & { createdById?: string };
   onSuccess?: () => void;
 }) {
-  const supabase = createClientComponentClient();
   const { data: session } = useSession();
 
   const [title, setTitle] = useState("");
@@ -55,6 +81,23 @@ export default function ContextCardModal({
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState(existingCard ? true : false);
   const [status, setStatus] = useState<"ACTIVE" | "CLOSED">("ACTIVE");
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [filteredMembers, setFilteredMembers] = useState<
+    Array<{ userId: string; name?: string; email?: string; image?: string }>
+  >([]);
+
+  // Track original values to detect changes
+  const [originalValues, setOriginalValues] = useState<{
+    title: string;
+    content: string;
+    type: "TASK" | "INSIGHT" | "DECISION";
+    visibility: "PRIVATE" | "PUBLIC";
+    why: string;
+    issues: string;
+    mention: string;
+    existingAttachments: string[];
+    status: "ACTIVE" | "CLOSED";
+  } | null>(null);
 
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
@@ -67,6 +110,19 @@ export default function ContextCardModal({
       image: session.user.image || undefined,
     };
   }, [session?.user?.id, session?.user?.name, session?.user?.image]);
+
+  // Check if the current user has permission to archive/unarchive this card
+  const canArchive = useMemo(() => {
+    if (!existingCard || !session?.user?.id || !project) return false;
+    
+    const isCardCreator = existingCard.userId === session.user.id;
+    const isProjectCreator = project.createdById === session.user.id;
+    const isManager = project.members.some(
+      member => member.userId === session.user.id && member.role === "MANAGER" && member.status === "ACTIVE"
+    );
+    
+    return isCardCreator || isProjectCreator || isManager;
+  }, [existingCard, session?.user?.id, project]);
 
   // Use card presence hook to track who's editing
   const { editors } = useCardPresence(
@@ -96,16 +152,31 @@ export default function ContextCardModal({
 
   useEffect(() => {
     if (existingCard) {
-      setTitle(existingCard.title || "");
-      setContent(existingCard.content || "");
-      setType(existingCard.type || "TASK");
-      setVisibility(existingCard.visibility || "PRIVATE");
-      setWhy(existingCard.why || "");
-      setIssues(existingCard.issues || "");
-      setStatus(existingCard.status || "ACTIVE");
-      setMention(existingCard.slackLinks?.[0] || "");
-      setExistingAttachments(existingCard.attachments || []);
+      const initialValues = {
+        title: existingCard.title || "",
+        content: existingCard.content || "",
+        type: existingCard.type || "TASK",
+        visibility: existingCard.visibility || "PRIVATE",
+        why: existingCard.why || "",
+        issues: existingCard.issues || "",
+        mention: existingCard.slackLinks?.[0] || "",
+        existingAttachments: existingCard.attachments || [],
+        status: existingCard.status || "ACTIVE",
+      };
+
+      setTitle(initialValues.title);
+      setContent(initialValues.content);
+      setType(initialValues.type as "TASK" | "INSIGHT" | "DECISION");
+      setVisibility(initialValues.visibility as "PRIVATE" | "PUBLIC");
+      setWhy(initialValues.why);
+      setIssues(initialValues.issues);
+      setStatus(initialValues.status as "ACTIVE" | "CLOSED");
+      setMention(initialValues.mention);
+      setExistingAttachments(initialValues.existingAttachments);
       setAttachments([]);
+      
+      // Store original values for change detection
+      setOriginalValues(initialValues);
     } else {
       setTitle("");
       setContent("");
@@ -117,8 +188,134 @@ export default function ContextCardModal({
       setMention("");
       setAttachments([]);
       setExistingAttachments([]);
+      setOriginalValues(null);
     }
   }, [existingCard, open]);
+
+  // Get project members for mention dropdown
+  useEffect(() => {
+    if (project && project.members) {
+      // Transform the project members into a format suitable for the dropdown
+      const members = project.members
+        .filter(m => m.status === "ACTIVE") // Only include active members
+        .map(member => {
+          const user = (member as any).user || {};
+          return {
+            userId: member.userId,
+            name: user.name,
+            email: user.email,
+            image: user.image
+          };
+        });
+      setFilteredMembers(members);
+    }
+  }, [project]);
+
+  // Filter members based on search input
+  const filterMembers = (input: string) => {
+    if (!project || !project.members) return;
+    
+    setMention(input);
+    
+    if (!input.trim()) {
+      setShowMemberDropdown(false);
+      return;
+    }
+    
+    const searchTerm = input.toLowerCase().trim();
+    const members = project.members
+      .filter(m => m.status === "ACTIVE")
+      .map(member => {
+        const user = (member as any).user || {};
+        return {
+          userId: member.userId,
+          name: user.name,
+          email: user.email,
+          image: user.image
+        };
+      })
+      .filter(member => 
+        (member.name && member.name.toLowerCase().includes(searchTerm)) ||
+        (member.email && member.email.toLowerCase().includes(searchTerm))
+      );
+      
+    setFilteredMembers(members);
+    setShowMemberDropdown(members.length > 0);
+  };
+
+  // Handle selecting a member from the dropdown
+  const handleSelectMember = (member: {userId: string; name?: string; email?: string}) => {
+    setMention(member.name || member.email || member.userId);
+    setShowMemberDropdown(false);
+  };
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowMemberDropdown(false);
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+
+  // Helper function to check if arrays are equal
+  const arraysEqual = (a: string[], b: string[]) => {
+    if (a.length !== b.length) return false;
+    // Sort both arrays before comparing to handle order differences
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return JSON.stringify(sortedA) === JSON.stringify(sortedB);
+  };
+
+  // Check if any values have changed from original
+  const hasChanges = () => {
+    if (!originalValues || !existingCard) return true; // For new cards or when original values aren't set
+    
+    const currentValues = {
+      title,
+      content,
+      type,
+      visibility,
+      why,
+      issues,
+      mention,
+      existingAttachments,
+      status,
+    };
+
+    // Check each field for changes
+    const changes = {
+      title: currentValues.title.trim() !== originalValues.title.trim(),
+      content: currentValues.content.trim() !== originalValues.content.trim(),
+      type: currentValues.type !== originalValues.type,
+      visibility: currentValues.visibility !== originalValues.visibility,
+      why: (currentValues.why || '').trim() !== (originalValues.why || '').trim(),
+      issues: (currentValues.issues || '').trim() !== (originalValues.issues || '').trim(),
+      mention: (currentValues.mention || '').trim() !== (originalValues.mention || '').trim(),
+      status: currentValues.status !== originalValues.status,
+      existingAttachments: !arraysEqual(currentValues.existingAttachments, originalValues.existingAttachments),
+      newAttachments: attachments.length > 0,
+    };
+
+    const hasAnyChanges = Object.values(changes).some(Boolean);
+    
+    if (hasAnyChanges) {
+      const changedFields = Object.entries(changes).filter(([, changed]) => changed).map(([field]) => field);
+      console.log("📝 Changes detected in fields:", changedFields);
+    } else {
+      console.log("📝 No changes detected");
+    }
+    
+    return hasAnyChanges;
+  };
+  
+  // Validate the form before submission
+  const isFormValid = () => {
+    return title.trim().length > 0 && content.trim().length > 0;
+  };
 
   // Upload file via API route to avoid exposing service key and for SSR security
   const uploadFileToSupabase = async (file: File) => {
@@ -156,7 +353,30 @@ export default function ContextCardModal({
 
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) return;
+    
+    // For existing cards, check if there are any changes
+    if (existingCard && !hasChanges()) {
+      console.log("✅ No changes detected, closing modal without update");
+      setOpen(false);
+      return;
+    }
+    
     setIsLoading(true);
+    let notifyUserId = null;
+
+    // Check if we need to notify someone (when a user is mentioned)
+    if (mention && mention.trim() && project?.members) {
+      // Try to find the mentioned user in project members
+      const mentionedMember = project.members.find(
+        m => {
+          const user = (m as any).user || {};
+          return user.name === mention.trim() || user.email === mention.trim();
+        }
+      );
+      if (mentionedMember) {
+        notifyUserId = mentionedMember.userId;
+      }
+    }
 
     try {
       const uploadedUrls: string[] = [...existingAttachments];
@@ -166,39 +386,37 @@ export default function ContextCardModal({
         if (url) uploadedUrls.push(url);
       }
 
-      // Use FormData for file uploads and other fields
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("content", content);
-      formData.append("projectId", projectSlug);
-      formData.append("type", type);
-      formData.append("visibility", visibility);
-      formData.append("status", status);
-      if (why) formData.append("why", why);
-      if (issues) formData.append("issues", issues);
-      if (mention) formData.append("mention", mention);
-      for (const file of attachments) {
-        formData.append("attachments", file);
-      }
-      existingAttachments.forEach((url) => {
-        formData.append("existingAttachments", url);
-      });
-
       let res;
       if (existingCard) {
-        // Update existing card
+        // Update existing card - only send fields that have actually changed
         console.log("📝 Updating existing card:", existingCard.id);
-        const updateData = {
-          title,
-          content,
-          type,
-          visibility,
-          status,
-          why: why || undefined,
-          issues: issues || undefined,
-          slackLinks: mention ? [mention] : [],
-          attachments: uploadedUrls,
-        };
+        const updateData: any = {};
+        
+        // Only include changed fields with proper trimming and comparison
+        if (title.trim() !== originalValues?.title.trim()) updateData.title = title.trim();
+        if (content.trim() !== originalValues?.content.trim()) updateData.content = content.trim();
+        if (type !== originalValues?.type) updateData.type = type;
+        if (visibility !== originalValues?.visibility) updateData.visibility = visibility;
+        if (status !== originalValues?.status) updateData.status = status;
+        if ((why || '').trim() !== (originalValues?.why || '').trim()) updateData.why = why ? why.trim() : undefined;
+        if ((issues || '').trim() !== (originalValues?.issues || '').trim()) updateData.issues = issues ? issues.trim() : undefined;
+        if ((mention || '').trim() !== (originalValues?.mention || '').trim()) updateData.slackLinks = mention ? [mention.trim()] : [];
+        if (!arraysEqual(uploadedUrls, originalValues?.existingAttachments || [])) {
+          updateData.attachments = uploadedUrls;
+        }
+
+        // Only make API call if there are actual changes to send
+        if (Object.keys(updateData).length === 0) {
+          console.log("✅ No changes to send to server, closing modal");
+          setOpen(false);
+          setIsLoading(false);
+          return;
+        }
+
+        // Include notification info if someone is mentioned
+        if (notifyUserId) {
+          updateData.notifyUserId = notifyUserId;
+        }
 
         res = await fetch(`/api/context-cards/${existingCard.id}`, {
           method: "PATCH",
@@ -210,6 +428,28 @@ export default function ContextCardModal({
       } else {
         // Create new card
         console.log("✨ Creating new card");
+        const formData = new FormData();
+        formData.append("title", title);
+        formData.append("content", content);
+        formData.append("projectId", projectSlug);
+        formData.append("type", type);
+        formData.append("visibility", visibility);
+        formData.append("status", status);
+        if (why) formData.append("why", why);
+        if (issues) formData.append("issues", issues);
+        if (mention) formData.append("mention", mention);
+        for (const file of attachments) {
+          formData.append("attachments", file);
+        }
+        existingAttachments.forEach((url) => {
+          formData.append("existingAttachments", url);
+        });
+        
+        // Include notification info if someone is mentioned
+        if (notifyUserId) {
+          formData.append("notifyUserId", notifyUserId);
+        }
+
         res = await fetch("/api/context-cards", {
           method: "POST",
           body: formData,
@@ -279,8 +519,17 @@ export default function ContextCardModal({
     <Dialog
       open={open}
       onOpenChange={(val) => {
-        if (!val && existingCard) handleSubmit();
-        setOpen(val);
+        if (!val && existingCard && hasChanges()) {
+          // If closing modal with unsaved changes, show a warning or save them
+          const shouldSave = confirm("You have unsaved changes. Would you like to save them before closing?");
+          if (shouldSave) {
+            handleSubmit();
+          } else {
+            setOpen(val);
+          }
+        } else {
+          setOpen(val);
+        }
       }}
     >
       <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl p-6 space-y-4">
@@ -352,44 +601,92 @@ export default function ContextCardModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
-            {existingCard && (
-              <button
-                onClick={async () => {
-                  if (!confirm("Are you sure you want to delete this card?"))
-                    return;
-                  try {
-                    const res = await fetch(
-                      `/api/context-cards/${existingCard.id}`,
-                      {
-                        method: "DELETE",
+            {existingCard && canArchive && (
+              <div className="flex items-center space-x-2 ml-2">
+                <button
+                  onClick={async () => {
+                    const action = existingCard.isArchived ? "unarchive" : "archive";
+                    if (!confirm(`Are you sure you want to ${action} this card?`))
+                      return;
+                    try {
+                      const res = await fetch(
+                        `/api/context-cards/${existingCard.id}/archive`,
+                        {
+                          method: "PATCH",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({ 
+                            isArchived: !existingCard.isArchived 
+                          }),
+                        }
+                      );
+                      if (res.ok) {
+                        setOpen(false);
+                        onSuccess?.();
+                        toast.success(`Card ${action}d`, {
+                          description: `The context card has been ${action}d.`,
+                          duration: 4000,
+                          position: "top-right",
+                        });
+                      } else {
+                        const errorData = await res.json();
+                        console.error(`Failed to ${action} card:`, errorData);
+                        toast.error(`Failed to ${action} card`, {
+                          description: errorData.error || `Unable to ${action} the card. Please try again later.`,
+                          duration: 4000,
+                          position: "top-right",
+                        });
                       }
-                    );
-                    if (res.ok) {
-                      setOpen(false);
-                      onSuccess?.();
-                      toast.success("Card deleted", {
-                        description: "The context card has been removed.",
-                        duration: 4000,
-                        position: "top-right",
-                      });
-                    } else {
-                      console.error("Failed to delete card");
-                      toast.error("Failed to delete card", {
-                        description:
-                          "Unable to remove the card. Please try again later.",
-                        duration: 4000,
-                        position: "top-right",
-                      });
+                    } catch (err) {
+                      console.error(`Error ${action}ing card:`, err);
                     }
-                  } catch (err) {
-                    console.error("Error deleting card:", err);
-                  }
-                }}
-                title="Delete Card"
-                className="ml-2"
-              >
-                <Trash2 className="h-5 w-5 text-red-600 hover:text-red-800 cursor-pointer" />
-              </button>
+                  }}
+                  title={existingCard.isArchived ? "Unarchive Card" : "Archive Card"}
+                >
+                  <Archive className={`h-5 w-5 cursor-pointer ${
+                    existingCard.isArchived 
+                      ? "text-green-600 hover:text-green-800" 
+                      : "text-orange-600 hover:text-orange-800"
+                  }`} />
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm("Are you sure you want to delete this card?"))
+                      return;
+                    try {
+                      const res = await fetch(
+                        `/api/context-cards/${existingCard.id}`,
+                        {
+                          method: "DELETE",
+                        }
+                      );
+                      if (res.ok) {
+                        setOpen(false);
+                        onSuccess?.();
+                        toast.success("Card deleted", {
+                          description: "The context card has been removed.",
+                          duration: 4000,
+                          position: "top-right",
+                        });
+                      } else {
+                        console.error("Failed to delete card");
+                        toast.error("Failed to delete card", {
+                          description:
+                            "Unable to remove the card. Please try again later.",
+                          duration: 4000,
+                          position: "top-right",
+                        });
+                      }
+                    } catch (err) {
+                      console.error("Error deleting card:", err);
+                    }
+                  }}
+                  title="Delete Card"
+                >
+                  <Trash2 className="h-5 w-5 text-red-600 hover:text-red-800 cursor-pointer" />
+                </button>
+              </div>
             )}
           </div>
 
@@ -519,14 +816,51 @@ export default function ContextCardModal({
             onChange={(e) => setIssues(e.target.value)}
           />
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 relative">
             <AtSign className="h-4 w-4 text-gray-500" />
-            <input
-              className="w-full border rounded-md p-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 cursor-pointer"
-              placeholder="Mention team member (optional)"
-              value={mention}
-              onChange={(e) => setMention(e.target.value)}
-            />
+            <div className="w-full relative">
+              <input
+                className="w-full border rounded-md p-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 cursor-pointer"
+                placeholder="Mention team member (optional)"
+                value={mention}
+                onChange={(e) => filterMembers(e.target.value)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMemberDropdown(filteredMembers.length > 0);
+                }}
+              />
+              
+              {showMemberDropdown && filteredMembers.length > 0 && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {filteredMembers.map((member) => (
+                    <div
+                      key={member.userId}
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectMember(member);
+                      }}
+                    >
+                      {member.image ? (
+                        <img 
+                          src={member.image} 
+                          alt={member.name || member.email || 'User'} 
+                          className="w-6 h-6 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs text-gray-600">
+                          {member.name ? member.name[0].toUpperCase() : '@'}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-medium">{member.name || 'User'}</div>
+                        {member.email && <div className="text-xs text-gray-500">{member.email}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Existing attachments preview */}
@@ -603,12 +937,6 @@ export default function ContextCardModal({
             </div>
           )}
 
-          {existingCard && (
-            <div className="pt-4 border-t border-gray-700">
-              <CommentThread cardId={existingCard.id} />
-            </div>
-          )}
-
           {!existingCard && (
             <div className="flex justify-end gap-2 mt-4">
               <Button
@@ -620,11 +948,48 @@ export default function ContextCardModal({
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={!title.trim() || !content.trim() || isLoading}
+                disabled={!isFormValid() || isLoading}
                 className="bg-yellow-500 hover:bg-yellow-600 text-white"
               >
                 {isLoading ? "Creating..." : "Create Card"}
               </Button>
+            </div>
+          )}
+          
+          {existingCard && (
+            <div className="flex justify-between mt-6 border-t border-gray-200 pt-4">
+              <div>
+                {/* Confirmation of card status */}
+                <div className="text-sm text-gray-500">
+                  {existingCard.isArchived ? (
+                    <span className="flex items-center text-amber-600">
+                      <Archive className="h-4 w-4 mr-1" /> Archived
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!isFormValid() || isLoading || !hasChanges()}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  {isLoading ? "Updating..." : "Update Card"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {existingCard && (
+            <div className="pt-4 border-t border-gray-700 mt-6">
+              <CommentThread cardId={existingCard.id} />
             </div>
           )}
         </motion.div>

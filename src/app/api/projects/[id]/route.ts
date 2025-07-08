@@ -11,6 +11,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const { id } = await params;
+  
+  // Check if we should include archived cards
+  const includeArchived = req.nextUrl.searchParams.get("includeArchived") === "true";
 
   try {
     // Check if the id is a CUID (database ID) or a slug
@@ -30,7 +33,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             }
           }
         ],
-        isArchived: false,
       },
       include: {
         createdBy: {
@@ -54,7 +56,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           },
         },
         contextCards: {
-          where: { isArchived: false },
+          where: includeArchived ? {} : { isArchived: false },
           orderBy: { updatedAt: "desc" },
           include: {
             linkedCard: {

@@ -40,7 +40,12 @@ const OnlineUsers = () => {
         </span>
       </div>
       <ul className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-        {onlineUsers.map((user) => {
+        {onlineUsers
+          // Deduplicate users by ID to prevent duplicate keys
+          .filter((user, index, array) => 
+            array.findIndex(u => u.id === user.id) === index
+          )
+          .map((user) => {
           const displayStatus = user.id === session?.user?.id ? currentUserStatus : user.status;
           const statusColor = getStatusColor(displayStatus);
           const initials = user.name

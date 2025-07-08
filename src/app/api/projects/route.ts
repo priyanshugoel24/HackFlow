@@ -14,6 +14,9 @@ export async function GET(req: NextRequest) {
   try {
     console.log(`🔍 Fetching projects for user: ${token.sub} (${token.email})`);
     
+    // Check if we should include archived projects
+    const includeArchived = req.nextUrl.searchParams.get("includeArchived") === "true";
+    
     // First, ensure the user exists in the database
     const user = await prisma.user.upsert({
       where: { id: token.sub },
@@ -38,7 +41,8 @@ export async function GET(req: NextRequest) {
               }
             }
           }
-        ]
+        ],
+        ...(includeArchived ? {} : { isArchived: false }),
       },
       include: {
         members: {
