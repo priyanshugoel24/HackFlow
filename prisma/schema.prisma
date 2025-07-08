@@ -20,6 +20,7 @@ model User {
   memberships     ProjectMember[]
   sessions        Session[]
   status          Status?
+  comments        Comment[]       @relation("UserComments")
 }
 
 model Project {
@@ -75,6 +76,7 @@ model ContextCard {
   linkedFrom   ContextCard[] @relation("LinkedCards")
   project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments     Comment[]     @relation("CardComments")
 }
 
 model Status {
@@ -83,6 +85,22 @@ model Status {
   updatedAt DateTime @updatedAt
   state     String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id       String      @id @default(cuid())
+  card     ContextCard @relation("CardComments", fields: [cardId], references: [id], onDelete: Cascade)
+  cardId   String
+  author   User        @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+
+  content  String
+  parent   Comment?  @relation("ThreadedComments", fields: [parentId], references: [id])
+  parentId String?
+  children Comment[] @relation("ThreadedComments")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Account {

@@ -3,7 +3,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ import {
   Paperclip,
   AtSign,
   Tag,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
@@ -25,13 +25,14 @@ import ReactMarkdown from "react-markdown";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useSession } from "next-auth/react";
 import { useCardPresence } from "@/lib/ably/useCardPresence";
+import CommentThread from "./CommentThread";
 
 export default function ContextCardModal({
   open,
   setOpen,
   projectSlug,
   existingCard,
-  onSuccess
+  onSuccess,
 }: {
   open: boolean;
   setOpen: (val: boolean) => void;
@@ -63,20 +64,21 @@ export default function ContextCardModal({
     return {
       id: session.user.id,
       name: session.user.name || "Unknown User",
-      image: session.user.image || undefined
+      image: session.user.image || undefined,
     };
   }, [session?.user?.id, session?.user?.name, session?.user?.image]);
 
   // Use card presence hook to track who's editing
   const { editors } = useCardPresence(
-    existingCard?.id || `new-${projectSlug}`, 
+    existingCard?.id || `new-${projectSlug}`,
     currentUser
   );
 
   // Filter out current user and only show when modal is open
-  const otherEditors = open && session?.user ? 
-    editors.filter(editor => editor.id !== session.user.id) : 
-    [];
+  const otherEditors =
+    open && session?.user
+      ? editors.filter((editor) => editor.id !== session.user.id)
+      : [];
 
   // Debug logging
   console.log("🔍 ContextCardModal presence debug:", {
@@ -85,7 +87,11 @@ export default function ContextCardModal({
     otherEditorsCount: otherEditors.length,
     currentUserId: session?.user?.id,
     cardId: existingCard?.id || `new-${projectSlug}`,
-    editors: editors.map(e => ({ id: e.id, name: e.name, hasImage: !!e.image }))
+    editors: editors.map((e) => ({
+      id: e.id,
+      name: e.name,
+      hasImage: !!e.image,
+    })),
   });
 
   useEffect(() => {
@@ -124,7 +130,9 @@ export default function ContextCardModal({
         body: formData,
       });
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+        const errorData = await res
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
         console.error("Upload API error:", errorData);
         toast.error(`Upload failed: ${errorData.error || "Unknown error"}`, {
           description: `Failed to upload ${file.name}`,
@@ -189,7 +197,7 @@ export default function ContextCardModal({
           why: why || undefined,
           issues: issues || undefined,
           slackLinks: mention ? [mention] : [],
-          attachments: uploadedUrls
+          attachments: uploadedUrls,
         };
 
         res = await fetch(`/api/context-cards/${existingCard.id}`, {
@@ -197,21 +205,21 @@ export default function ContextCardModal({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(updateData)
+          body: JSON.stringify(updateData),
         });
       } else {
         // Create new card
         console.log("✨ Creating new card");
         res = await fetch("/api/context-cards", {
           method: "POST",
-          body: formData
+          body: formData,
         });
       }
 
       if (res.ok) {
         const responseData = await res.json();
         console.log("📊 Response data:", responseData);
-        
+
         setOpen(false);
         onSuccess?.();
         toast.success(existingCard ? "Card updated" : "Card created", {
@@ -253,10 +261,13 @@ export default function ContextCardModal({
 
   const getTypeIcon = (cardType: string) => {
     switch (cardType) {
-      case 'INSIGHT': return <Lightbulb className="h-4 w-4" />;
-      case 'DECISION': return <CheckCircle className="h-4 w-4" />;
-      case 'TASK':
-      default: return <FileText className="h-4 w-4" />;
+      case "INSIGHT":
+        return <Lightbulb className="h-4 w-4" />;
+      case "DECISION":
+        return <CheckCircle className="h-4 w-4" />;
+      case "TASK":
+      default:
+        return <FileText className="h-4 w-4" />;
     }
   };
 
@@ -283,35 +294,37 @@ export default function ContextCardModal({
             <DialogTitle className="sr-only">
               {/* {existingCard ? "Edit Note" : "Add a New Note"} */}
             </DialogTitle>
-            
+
             {/* Show currently editing users */}
             {otherEditors.length > 0 && (
               <div className="flex items-center gap-3 mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
-                <span className="text-sm font-medium text-blue-700">Currently editing:</span>
+                <span className="text-sm font-medium text-blue-700">
+                  Currently editing:
+                </span>
                 <div className="flex -space-x-3">
                   {otherEditors
                     .slice(0, 3) // Show max 3 avatars
                     .map((editor) => (
-                    <div
-                      key={editor.id}
-                      className="relative w-8 h-8 rounded-full border-3 border-white bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm"
-                      title={`${editor.name} is editing`}
-                    >
-                      {editor.image ? (
-                        <img
-                          src={editor.image}
-                          alt={editor.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-sm font-semibold text-gray-700">
-                          {editor.name.charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                      {/* Online indicator */}
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                    </div>
-                  ))}
+                      <div
+                        key={editor.id}
+                        className="relative w-8 h-8 rounded-full border-3 border-white bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm"
+                        title={`${editor.name} is editing`}
+                      >
+                        {editor.image ? (
+                          <img
+                            src={editor.image}
+                            alt={editor.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-semibold text-gray-700">
+                            {editor.name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        {/* Online indicator */}
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                      </div>
+                    ))}
                   {otherEditors.length > 3 && (
                     <div className="w-8 h-8 rounded-full border-3 border-white bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-600 shadow-sm">
                       +{otherEditors.length - 3}
@@ -319,11 +332,12 @@ export default function ContextCardModal({
                   )}
                 </div>
                 <span className="text-xs text-blue-600">
-                  {otherEditors.length} user{otherEditors.length !== 1 ? 's' : ''} editing
+                  {otherEditors.length} user
+                  {otherEditors.length !== 1 ? "s" : ""} editing
                 </span>
               </div>
             )}
-            
+
             {/* Debug info - remove after testing
             {open && (
               <div className="text-xs text-gray-400 mb-2">
@@ -341,11 +355,15 @@ export default function ContextCardModal({
             {existingCard && (
               <button
                 onClick={async () => {
-                  if (!confirm("Are you sure you want to delete this card?")) return;
+                  if (!confirm("Are you sure you want to delete this card?"))
+                    return;
                   try {
-                    const res = await fetch(`/api/context-cards/${existingCard.id}`, {
-                      method: "DELETE",
-                    });
+                    const res = await fetch(
+                      `/api/context-cards/${existingCard.id}`,
+                      {
+                        method: "DELETE",
+                      }
+                    );
                     if (res.ok) {
                       setOpen(false);
                       onSuccess?.();
@@ -357,7 +375,8 @@ export default function ContextCardModal({
                     } else {
                       console.error("Failed to delete card");
                       toast.error("Failed to delete card", {
-                        description: "Unable to remove the card. Please try again later.",
+                        description:
+                          "Unable to remove the card. Please try again later.",
                         duration: 4000,
                         position: "top-right",
                       });
@@ -400,7 +419,9 @@ export default function ContextCardModal({
 
           <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
             <div className="space-y-2 w-full">
-              <label className="text-sm font-semibold text-gray-700">Type</label>
+              <label className="text-sm font-semibold text-gray-700">
+                Type
+              </label>
               <div className="flex gap-2 flex-wrap">
                 {["TASK", "INSIGHT", "DECISION"].map((cardType) => (
                   <Badge
@@ -419,7 +440,9 @@ export default function ContextCardModal({
             </div>
 
             <div className="space-y-2 w-full">
-              <label className="text-sm font-semibold text-gray-700">Visibility</label>
+              <label className="text-sm font-semibold text-gray-700">
+                Visibility
+              </label>
               <div className="flex gap-2 flex-wrap">
                 {["PRIVATE", "PUBLIC"].map((vis) => (
                   <Badge
@@ -447,7 +470,9 @@ export default function ContextCardModal({
 
           {type === "TASK" && (
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Task Status</label>
+              <label className="text-sm font-semibold text-gray-700">
+                Task Status
+              </label>
               <div className="flex gap-2">
                 {["ACTIVE", "CLOSED"].map((statusOption) => (
                   <Badge
@@ -507,7 +532,9 @@ export default function ContextCardModal({
           {/* Existing attachments preview */}
           {existingAttachments.length > 0 && (
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-700">Existing Attachments</label>
+              <label className="text-sm font-semibold text-gray-700">
+                Existing Attachments
+              </label>
               <ul className="list-disc list-inside text-sm text-gray-700">
                 {existingAttachments.map((url, idx) => (
                   <li key={idx} className="flex items-center justify-between">
@@ -517,7 +544,7 @@ export default function ContextCardModal({
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline truncate max-w-xs"
                     >
-                      {url.split('/').pop()}
+                      {url.split("/").pop()}
                     </a>
                     <button
                       type="button"
@@ -551,11 +578,15 @@ export default function ContextCardModal({
           {/* New attachments preview */}
           {attachments.length > 0 && (
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-700">New Attachments</label>
+              <label className="text-sm font-semibold text-gray-700">
+                New Attachments
+              </label>
               <ul className="list-disc list-inside text-sm text-gray-700">
                 {attachments.map((file, idx) => (
                   <li key={idx} className="flex items-center justify-between">
-                    <span className="truncate max-w-xs text-sm">{file.name}</span>
+                    <span className="truncate max-w-xs text-sm">
+                      {file.name}
+                    </span>
                     <button
                       type="button"
                       onClick={() =>
@@ -572,9 +603,19 @@ export default function ContextCardModal({
             </div>
           )}
 
+          {existingCard && (
+            <div className="pt-4 border-t border-gray-700">
+              <CommentThread cardId={existingCard.id} />
+            </div>
+          )}
+
           {!existingCard && (
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+              <Button
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isLoading}
+              >
                 Cancel
               </Button>
               <Button
