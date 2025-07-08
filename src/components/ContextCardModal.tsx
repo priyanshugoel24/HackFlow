@@ -19,12 +19,14 @@ import {
   Trash2,
   Archive,
 } from "lucide-react";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
 import { useSession } from "next-auth/react";
 import { useCardPresence } from "@/lib/ably/useCardPresence";
 import CommentThread from "./CommentThread";
+import RichTextEditor from "./RichTextEditor";
+import { sanitizeText, validateInput, contextCardSchema, validateFileUpload } from "@/lib/security";
+import { sanitizeHtml } from "@/lib/security-client";
 
 interface ExistingCard {
   id: string;
@@ -79,7 +81,6 @@ export default function ContextCardModal({
   const [attachments, setAttachments] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [preview, setPreview] = useState(existingCard ? true : false);
   const [status, setStatus] = useState<"ACTIVE" | "CLOSED">("ACTIVE");
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [filteredMembers, setFilteredMembers] = useState<
@@ -99,30 +100,30 @@ export default function ContextCardModal({
     status: "ACTIVE" | "CLOSED";
   } | null>(null);
 
-  const contentRef = useRef<HTMLTextAreaElement>(null);
-
   // Memoize user object to prevent unnecessary re-renders
   const currentUser = useMemo(() => {
     if (!session?.user) return { id: "anonymous", name: "Anonymous" };
+    const user = session.user as { id: string; name?: string | null; email?: string | null; image?: string | null };
     return {
-      id: session.user.id,
-      name: session.user.name || "Unknown User",
-      image: session.user.image || undefined,
+      id: user.id,
+      name: user.name || "Unknown User",
+      image: user.image || undefined,
     };
-  }, [session?.user?.id, session?.user?.name, session?.user?.image]);
+  }, [session?.user]);
 
   // Check if the current user has permission to archive/unarchive this card
   const canArchive = useMemo(() => {
-    if (!existingCard || !session?.user?.id || !project) return false;
+    if (!existingCard || !session?.user || !project) return false;
     
-    const isCardCreator = existingCard.userId === session.user.id;
-    const isProjectCreator = project.createdById === session.user.id;
+    const user = session.user as { id: string; name?: string | null; email?: string | null; image?: string | null };
+    const isCardCreator = existingCard.userId === user.id;
+    const isProjectCreator = project.createdById === user.id;
     const isManager = project.members.some(
-      member => member.userId === session.user.id && member.role === "MANAGER" && member.status === "ACTIVE"
+      member => member.userId === user.id && member.role === "MANAGER" && member.status === "ACTIVE"
     );
     
     return isCardCreator || isProjectCreator || isManager;
-  }, [existingCard, session?.user?.id, project]);
+  }, [existingCard, session?.user, project]);
 
   // Use card presence hook to track who's editing
   const { editors } = useCardPresence(
@@ -133,7 +134,10 @@ export default function ContextCardModal({
   // Filter out current user and only show when modal is open
   const otherEditors =
     open && session?.user
-      ? editors.filter((editor) => editor.id !== session.user.id)
+      ? editors.filter((editor) => {
+          const user = session.user as { id: string; name?: string | null; email?: string | null; image?: string | null };
+          return editor.id !== user.id;
+        })
       : [];
 
   // Debug logging
@@ -141,7 +145,7 @@ export default function ContextCardModal({
     open,
     editorsCount: editors.length,
     otherEditorsCount: otherEditors.length,
-    currentUserId: session?.user?.id,
+    currentUserId: session?.user ? (session.user as { id: string }).id : 'anonymous',
     cardId: existingCard?.id || `new-${projectSlug}`,
     editors: editors.map((e) => ({
       id: e.id,
@@ -199,7 +203,7 @@ export default function ContextCardModal({
       const members = project.members
         .filter(m => m.status === "ACTIVE") // Only include active members
         .map(member => {
-          const user = (member as any).user || {};
+          const user = (member as { user?: { name?: string; email?: string; image?: string } }).user || {};
           return {
             userId: member.userId,
             name: user.name,
@@ -226,7 +230,7 @@ export default function ContextCardModal({
     const members = project.members
       .filter(m => m.status === "ACTIVE")
       .map(member => {
-        const user = (member as any).user || {};
+        const user = (member as { user?: { name?: string; email?: string; image?: string } }).user || {};
         return {
           userId: member.userId,
           name: user.name,
@@ -354,6 +358,31 @@ export default function ContextCardModal({
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) return;
     
+    // Client-side validation and sanitization
+    const sanitizedData = {
+      title: sanitizeText(title.trim()),
+      content: sanitizeHtml(content.trim()),
+      type,
+      visibility,
+      status,
+      why: why ? sanitizeText(why.trim()) : undefined,
+      issues: issues ? sanitizeText(issues.trim()) : undefined,
+      mention: mention ? sanitizeText(mention.trim()) : undefined,
+      projectId: projectSlug
+    };
+
+    // Validate input
+    const validationResult = validateInput(contextCardSchema, sanitizedData);
+    if (!validationResult.isValid) {
+      toast.error("Invalid input", {
+        description: validationResult.errors?.[0] || "Please check your input and try again",
+        duration: 4000,
+        position: "top-right",
+      });
+      setIsLoading(false);
+      return;
+    }
+    
     // For existing cards, check if there are any changes
     if (existingCard && !hasChanges()) {
       console.log("✅ No changes detected, closing modal without update");
@@ -369,7 +398,7 @@ export default function ContextCardModal({
       // Try to find the mentioned user in project members
       const mentionedMember = project.members.find(
         m => {
-          const user = (m as any).user || {};
+          const user = (m as { user?: { name?: string; email?: string; image?: string } }).user || {};
           return user.name === mention.trim() || user.email === mention.trim();
         }
       );
@@ -390,17 +419,28 @@ export default function ContextCardModal({
       if (existingCard) {
         // Update existing card - only send fields that have actually changed
         console.log("📝 Updating existing card:", existingCard.id);
-        const updateData: any = {};
+        const updateData: {
+          title?: string;
+          content?: string;
+          type?: "TASK" | "INSIGHT" | "DECISION";
+          visibility?: "PRIVATE" | "PUBLIC";
+          status?: "ACTIVE" | "CLOSED";
+          why?: string;
+          issues?: string;
+          slackLinks?: string[];
+          attachments?: string[];
+          notifyUserId?: string;
+        } = {};
         
         // Only include changed fields with proper trimming and comparison
-        if (title.trim() !== originalValues?.title.trim()) updateData.title = title.trim();
-        if (content.trim() !== originalValues?.content.trim()) updateData.content = content.trim();
+        if (sanitizedData.title !== originalValues?.title.trim()) updateData.title = sanitizedData.title;
+        if (sanitizedData.content !== originalValues?.content.trim()) updateData.content = sanitizedData.content;
         if (type !== originalValues?.type) updateData.type = type;
         if (visibility !== originalValues?.visibility) updateData.visibility = visibility;
         if (status !== originalValues?.status) updateData.status = status;
-        if ((why || '').trim() !== (originalValues?.why || '').trim()) updateData.why = why ? why.trim() : undefined;
-        if ((issues || '').trim() !== (originalValues?.issues || '').trim()) updateData.issues = issues ? issues.trim() : undefined;
-        if ((mention || '').trim() !== (originalValues?.mention || '').trim()) updateData.slackLinks = mention ? [mention.trim()] : [];
+        if ((sanitizedData.why || '') !== (originalValues?.why || '').trim()) updateData.why = sanitizedData.why;
+        if ((sanitizedData.issues || '') !== (originalValues?.issues || '').trim()) updateData.issues = sanitizedData.issues;
+        if ((sanitizedData.mention || '') !== (originalValues?.mention || '').trim()) updateData.slackLinks = sanitizedData.mention ? [sanitizedData.mention] : [];
         if (!arraysEqual(uploadedUrls, originalValues?.existingAttachments || [])) {
           updateData.attachments = uploadedUrls;
         }
@@ -429,15 +469,15 @@ export default function ContextCardModal({
         // Create new card
         console.log("✨ Creating new card");
         const formData = new FormData();
-        formData.append("title", title);
-        formData.append("content", content);
+        formData.append("title", sanitizedData.title);
+        formData.append("content", sanitizedData.content);
         formData.append("projectId", projectSlug);
         formData.append("type", type);
         formData.append("visibility", visibility);
         formData.append("status", status);
-        if (why) formData.append("why", why);
-        if (issues) formData.append("issues", issues);
-        if (mention) formData.append("mention", mention);
+        if (sanitizedData.why) formData.append("why", sanitizedData.why);
+        if (sanitizedData.issues) formData.append("issues", sanitizedData.issues);
+        if (sanitizedData.mention) formData.append("mention", sanitizedData.mention);
         for (const file of attachments) {
           formData.append("attachments", file);
         }
@@ -481,7 +521,6 @@ export default function ContextCardModal({
           setAttachments([]);
           setExistingAttachments([]);
           setStatus("ACTIVE");
-          setPreview(false);
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -600,6 +639,7 @@ export default function ContextCardModal({
               placeholder="Card title *"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onBlur={(e) => setTitle(sanitizeText(e.target.value))}
             />
             {existingCard && canArchive && (
               <div className="flex items-center space-x-2 ml-2">
@@ -690,28 +730,18 @@ export default function ContextCardModal({
             )}
           </div>
 
-          <div className="relative">
-            {!preview ? (
-              <textarea
-                ref={contentRef}
-                className="w-full text-base text-gray-800 placeholder:text-gray-400 bg-gray-50 border rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"
-                rows={3}
-                placeholder="Add your context *"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-              />
-            ) : (
-              <div className="p-2 rounded-md bg-gray-50 border text-sm prose max-w-none">
-                <ReactMarkdown>{content}</ReactMarkdown>
-              </div>
-            )}
-            <button
-              onClick={() => setPreview((prev) => !prev)}
-              className="absolute top-0 right-0 mt-1 mr-1 text-xs text-blue-600 hover:underline cursor-pointer"
-              type="button"
-            >
-              {preview ? "Edit" : "Preview"}
-            </button>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Content *
+            </label>
+            <RichTextEditor
+              value={content}
+              onChange={setContent}
+              placeholder="Add your context content here... Support for **bold**, *italic*, [links](url), lists, and more!"
+              className="focus-within:ring-2 focus-within:ring-yellow-400"
+              minHeight={120}
+              initialPreview={!!existingCard}
+            />
           </div>
 
           <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
@@ -723,7 +753,7 @@ export default function ContextCardModal({
                 {["TASK", "INSIGHT", "DECISION"].map((cardType) => (
                   <Badge
                     key={cardType}
-                    onClick={() => setType(cardType as any)}
+                    onClick={() => setType(cardType as "TASK" | "INSIGHT" | "DECISION")}
                     className={`px-2 py-1 rounded-full text-xs font-semibold ${
                       type === cardType
                         ? "bg-blue-100 text-blue-700"
@@ -744,7 +774,7 @@ export default function ContextCardModal({
                 {["PRIVATE", "PUBLIC"].map((vis) => (
                   <Badge
                     key={vis}
-                    onClick={() => setVisibility(vis as any)}
+                    onClick={() => setVisibility(vis as "PRIVATE" | "PUBLIC")}
                     className={`px-2 py-1 rounded-full text-xs font-semibold ${
                       visibility === vis
                         ? vis === "PRIVATE"
@@ -774,7 +804,7 @@ export default function ContextCardModal({
                 {["ACTIVE", "CLOSED"].map((statusOption) => (
                   <Badge
                     key={statusOption}
-                    onClick={() => setStatus(statusOption as any)}
+                    onClick={() => setStatus(statusOption as "ACTIVE" | "CLOSED")}
                     className={`px-2 py-1 rounded-full text-xs font-semibold ${
                       status === statusOption
                         ? statusOption === "ACTIVE"
@@ -800,21 +830,33 @@ export default function ContextCardModal({
             </div>
           )}
 
-          <textarea
-            className="w-full bg-gray-50 border p-3 rounded-md text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"
-            rows={3}
-            placeholder="Why is this important? (optional)"
-            value={why}
-            onChange={(e) => setWhy(e.target.value)}
-          />
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Why is this important? (optional)
+            </label>
+            <textarea
+              value={why}
+              onChange={(e) => setWhy(e.target.value)}
+              onBlur={(e) => setWhy(sanitizeText(e.target.value))}
+              placeholder="Explain why this is important..."
+              className="w-full bg-gray-50 border border-gray-300 rounded-md p-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"
+              rows={3}
+            />
+          </div>
 
-          <textarea
-            className="w-full bg-gray-50 border p-3 rounded-md text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"
-            rows={3}
-            placeholder="Any blockers/issues? (optional)"
-            value={issues}
-            onChange={(e) => setIssues(e.target.value)}
-          />
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Any blockers/issues? (optional)
+            </label>
+            <textarea
+              value={issues}
+              onChange={(e) => setIssues(e.target.value)}
+              onBlur={(e) => setIssues(sanitizeText(e.target.value))}
+              placeholder="Describe any blockers or issues..."
+              className="w-full bg-gray-50 border border-gray-300 rounded-md p-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"
+              rows={3}
+            />
+          </div>
 
           <div className="flex items-center gap-2 relative">
             <AtSign className="h-4 w-4 text-gray-500" />
@@ -899,12 +941,25 @@ export default function ContextCardModal({
             <input
               type="file"
               multiple
-              onChange={(e) =>
-                setAttachments((prev) => [
-                  ...prev,
-                  ...Array.from(e.target.files || []),
-                ])
-              }
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                const validFiles: File[] = [];
+                
+                for (const file of files) {
+                  const validation = validateFileUpload(file);
+                  if (validation.isValid) {
+                    validFiles.push(file);
+                  } else {
+                    toast.error(`File "${file.name}" rejected`, {
+                      description: validation.error,
+                      duration: 4000,
+                      position: "top-right",
+                    });
+                  }
+                }
+                
+                setAttachments((prev) => [...prev, ...validFiles]);
+              }}
               className="text-sm text-gray-600"
             />
           </div>

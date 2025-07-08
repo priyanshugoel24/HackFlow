@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { 
@@ -14,21 +13,21 @@ import {
   FileText,
   Lightbulb,
   CheckCircle,
-  ExternalLink,
   Paperclip,
   AlertTriangle,
   Plus
 } from "lucide-react";
 import ContextCardModal from "./ContextCardModal";
+import { ContextCardWithRelations, ProjectWithRelations } from "@/types";
 
 export default function ContextCardList({ projectSlug }: { projectSlug: string }) {
-  const [cards, setCards] = useState<any[]>([]);
+  const [cards, setCards] = useState<ContextCardWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<any | null>(null);
-  const [project, setProject] = useState<any | null>(null);
+  const [selectedCard, setSelectedCard] = useState<ContextCardWithRelations | null>(null);
+  const [project, setProject] = useState<ProjectWithRelations | null>(null);
   const [showArchived, setShowArchived] = useState(false);
-  const [allCards, setAllCards] = useState<any[]>([]);
+  const [allCards, setAllCards] = useState<ContextCardWithRelations[]>([]);
 
   const fetchCards = async () => {
     if (!projectSlug) return;
@@ -110,8 +109,9 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateString: string | Date) => {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -139,7 +139,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
             open={modalOpen} 
             setOpen={setModalOpen} 
             projectSlug={projectSlug}
-            project={project}
+            project={project as any}
             onSuccess={handleCardCreated}
           />
         )}
@@ -300,7 +300,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
           open={modalOpen} 
           setOpen={setModalOpen} 
           projectSlug={projectSlug}
-          project={project}
+          project={project as any}
           onSuccess={handleCardCreated}
         />
       )}
@@ -312,8 +312,15 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
             if (!val) setSelectedCard(null);
           }}
           projectSlug={projectSlug}
-          project={project}
-          existingCard={selectedCard}
+          project={project as any || undefined}
+          existingCard={selectedCard ? {
+            ...selectedCard,
+            why: selectedCard.why || undefined,
+            issues: selectedCard.issues || undefined,
+            slackLinks: selectedCard.slackLinks || undefined,
+            attachments: selectedCard.attachments || undefined,
+            status: selectedCard.status || "ACTIVE"
+          } as any : undefined}
           onSuccess={() => {
             setSelectedCard(null);
             fetchCards();

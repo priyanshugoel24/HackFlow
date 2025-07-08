@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (!comment) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ comment });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Error fetching comment" }, { status: 500 });
   }
 }
@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
 
     return NextResponse.json({ comment: updated });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to update comment" }, { status: 500 });
   }
 }
@@ -63,7 +63,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     await prisma.comment.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
   }
 }

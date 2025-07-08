@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     console.log(`🔍 Fetching invitations for user: ${token.sub}`);
     
     // First, ensure the user exists in the database
-    const user = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { id: token.sub },
       update: {},
       create: {

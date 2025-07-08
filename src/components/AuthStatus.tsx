@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 
 export default function AuthStatus() {
   const { data: session, status } = useSession();
-  const [userStatus, setUserStatus] = useState<any>(null);
+  const [userStatus, setUserStatus] = useState<{ state: string; updatedAt: string } | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
@@ -22,7 +22,7 @@ export default function AuthStatus() {
         const errorData = await response.json();
         setError(errorData.error || "Failed to fetch status");
       }
-    } catch (err) {
+    } catch {
       setError("Network error");
     } finally {
       setStatusLoading(false);
@@ -48,7 +48,7 @@ export default function AuthStatus() {
         const errorData = await response.json();
         setError(errorData.error || "Failed to update status");
       }
-    } catch (err) {
+    } catch {
       setError("Network error");
     } finally {
       setStatusLoading(false);

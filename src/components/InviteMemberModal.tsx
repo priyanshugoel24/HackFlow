@@ -42,7 +42,7 @@ export default function InviteMemberModal({
       } else {
         toast.error(data.error || "Failed to invite user");
       }
-    } catch (error) {
+    } catch {
       toast.error("Unexpected error");
     } finally {
       setLoading(false);

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { getAblyServer, CHANNELS } from "@/lib/ably";
 
 // In-memory store for online users (in production, use Redis)
 const onlineUsers = new Map<string, { name: string; image?: string; lastSeen: Date }>();
@@ -16,7 +15,7 @@ const cleanupOldUsers = () => {
 };
 
 // GET: Get current online users (legacy endpoint for backward compatibility)
-export async function GET(req: NextRequest) {
+export async function GET() {
   cleanupOldUsers();
   
   return NextResponse.json({

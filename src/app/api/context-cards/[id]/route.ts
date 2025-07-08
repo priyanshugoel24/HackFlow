@@ -4,12 +4,27 @@ import { prisma } from "@/lib/prisma";
 import { TaskStatus } from "@prisma/client";
 import { logActivity } from "@/lib/logActivity";
 import { getAblyServer } from "@/lib/ably";
+import { 
+  contextCardSchema, 
+  validateInput, 
+  sanitizeText, 
+  sanitizeHtml, 
+  createRateLimiter 
+} from "@/lib/security";
+
+// Rate limiter: 30 requests per minute per user for updates
+const rateLimiter = createRateLimiter(60 * 1000, 30);
 
 // PATCH: Update a context card
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const token = await getToken({ req });
   if (!token?.sub) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // Rate limiting
+  if (!rateLimiter(token.sub)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   const { id } = await params;
@@ -33,6 +48,34 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     status,
     notifyUserId 
   } = body;
+
+  // Sanitize and validate inputs
+  const sanitizedData = {
+    title: title ? sanitizeText(title) : undefined,
+    content: content ? sanitizeHtml(content) : undefined,
+    type: type || undefined,
+    visibility: visibility || undefined,
+    status: status || undefined,
+    why: why ? sanitizeText(why) : undefined,
+    issues: issues ? sanitizeText(issues) : undefined,
+    projectId: projectId ? sanitizeText(projectId) : undefined
+  };
+
+  // Remove undefined values for partial validation
+  const filteredData = Object.fromEntries(
+    Object.entries(sanitizedData).filter(([, value]) => value !== undefined)
+  );
+
+  // Validate only the fields that are being updated
+  if (Object.keys(filteredData).length > 0) {
+    const validationResult = validateInput(contextCardSchema.partial(), filteredData);
+    if (!validationResult.isValid) {
+      return NextResponse.json({ 
+        error: "Invalid input", 
+        details: validationResult.errors 
+      }, { status: 400 });
+    }
+  }
 
   try {
     // First check if the card exists and user has access to the project

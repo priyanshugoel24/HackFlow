@@ -4,12 +4,23 @@ import { prisma } from "@/lib/prisma";
 import { generateSlug, generateUniqueSlug } from "@/lib/utils";
 import { logActivity } from "@/lib/logActivity";
 import { getAblyServer } from "@/lib/ably";
+import { 
+  createRateLimiter 
+} from "@/lib/security";
+
+// Rate limiter: 10 requests per minute per user for project operations
+const rateLimiter = createRateLimiter(60 * 1000, 10);
 
 // GET all projects for the user (including where they're a member)
 export async function GET(req: NextRequest) {
   const token = await getToken({ req });
   if (!token?.sub)
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  // Rate limiting
+  if (!rateLimiter(token.sub)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   try {
     console.log(`🔍 Fetching projects for user: ${token.sub} (${token.email})`);
@@ -18,7 +29,7 @@ export async function GET(req: NextRequest) {
     const includeArchived = req.nextUrl.searchParams.get("includeArchived") === "true";
     
     // First, ensure the user exists in the database
-    const user = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { id: token.sub },
       update: {},
       create: {
@@ -96,7 +107,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // First, ensure the user exists in the database
-    const user = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { id: token.sub },
       update: {},
       create: {

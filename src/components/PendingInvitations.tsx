@@ -72,7 +72,7 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
         const data = await res.json();
         toast.error(data.error || "Failed to accept invitation");
       }
-    } catch (error) {
+    } catch {
       toast.error("Error accepting invitation");
     } finally {
       setProcessingIds(prev => {
@@ -99,7 +99,7 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
         const data = await res.json();
         toast.error(data.error || "Failed to decline invitation");
       }
-    } catch (error) {
+    } catch {
       toast.error("Error declining invitation");
     } finally {
       setProcessingIds(prev => {
@@ -131,7 +131,7 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
       <div className="text-center text-gray-500 py-8">
         <Mail className="h-12 w-12 mx-auto mb-4 text-gray-300" />
         <p className="text-lg font-medium">No pending invitations</p>
-        <p className="text-sm">You're all caught up!</p>
+        <p className="text-sm">You&apos;re all caught up!</p>
       </div>
     );
   }
@@ -212,7 +212,7 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
               </div>
             )}
 
-            <div className="flex gap-2 pt-1 border-t pt-3">
+            <div className="flex gap-2  border-t pt-3">
               <Button
                 size="sm"
                 onClick={() => handleAccept(invitation.project.slug, invitation.id)}

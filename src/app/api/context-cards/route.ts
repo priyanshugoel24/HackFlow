@@ -1,10 +1,20 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import type { TaskStatus } from "@prisma/client";
 import { logActivity } from "@/lib/logActivity";
 import { getAblyServer } from "@/lib/ably";
+import { 
+  contextCardSchema, 
+  validateInput, 
+  sanitizeText, 
+  sanitizeHtml, 
+  createRateLimiter,
+  validateFileUpload 
+} from "@/lib/security";
+
+// Rate limiter: 20 requests per minute per user
+const rateLimiter = createRateLimiter(60 * 1000, 20);
 
 // GET all context cards for logged-in user
 export async function GET(req: NextRequest) {
@@ -13,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // First, ensure the user exists in the database
-    const user = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { id: token.sub },
       update: {},
       create: {
@@ -66,6 +76,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // Rate limiting
+  if (!rateLimiter(token.sub)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   try {
     const formData = await req.formData();
 
@@ -80,17 +95,36 @@ export async function POST(req: NextRequest) {
     const status = formData.get("status") as TaskStatus | null;
     const notifyUserId = formData.get("notifyUserId") as string | null;
 
-
-    // const tags = formData.getAll("tags").filter(Boolean) as string[];
     const attachments = formData.getAll("attachments") as File[];
 
-    // Basic validation
-    if (!title?.trim() || !content?.trim()) {
-      return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
+    // Validate input using security schema
+    const validationResult = validateInput(contextCardSchema, {
+      title: sanitizeText(title),
+      content: sanitizeHtml(content),
+      type,
+      visibility,
+      status: status || "ACTIVE",
+      why: why ? sanitizeText(why) : undefined,
+      issues: issues ? sanitizeText(issues) : undefined,
+      mention: mention ? sanitizeText(mention) : undefined,
+      projectId: sanitizeText(projectIdentifier)
+    });
+
+    if (!validationResult.isValid) {
+      return NextResponse.json({ 
+        error: "Invalid input", 
+        details: validationResult.errors 
+      }, { status: 400 });
     }
 
-    if (!projectIdentifier) {
-      return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
+    // Validate file uploads
+    for (const file of attachments) {
+      const fileValidation = validateFileUpload(file);
+      if (!fileValidation.isValid) {
+        return NextResponse.json({ 
+          error: `File validation failed: ${fileValidation.error}` 
+        }, { status: 400 });
+      }
     }
 
     // Check if the identifier is a UUID (legacy ID) or a slug
