@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { generateSlug, generateUniqueSlug } from "@/lib/utils";
+import { logActivity } from "@/lib/logActivity";
+import { getAblyServer } from "@/lib/ably";
 
 // GET all projects for the user (including where they're a member)
 export async function GET(req: NextRequest) {
@@ -148,6 +150,36 @@ export async function POST(req: NextRequest) {
         }
       }
     });
+
+    // Log activity
+    await logActivity({
+      type: "PROJECT_CREATED",
+      description: `created project "${name}"`,
+      userId: token.sub,
+      projectId: project.id,
+      metadata: { projectName: name, projectSlug: uniqueSlug },
+    });
+
+    // Publish to Ably
+    try {
+      const ably = getAblyServer();
+      const channel = ably.channels.get(`project:${project.id}`);
+      await channel.publish("activity:created", {
+        id: Date.now(), // temporary ID for real-time display
+        type: "PROJECT_CREATED",
+        description: `created project "${name}"`,
+        user: {
+          id: token.sub,
+          name: token.name,
+          image: token.picture,
+        },
+        createdAt: new Date().toISOString(),
+        projectId: project.id,
+        metadata: { projectName: name, projectSlug: uniqueSlug },
+      });
+    } catch (error) {
+      console.error("Failed to publish project creation activity to Ably:", error);
+    }
 
     return NextResponse.json({ project });
   } catch (error) {

@@ -33,32 +33,40 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-100">
       <Navbar />
       <div className="flex h-[calc(100vh-60px)]">
         {/* Sidebar */}
-        <ProjectSidebar 
-          onSelect={setSelectedProjectSlug} 
-          onRefreshNeeded={(refreshFn: () => void) => {
-            refreshSidebarRef.current = refreshFn;
-          }}
-        />
+        <div className="w-64 bg-white border-r shadow-sm">
+          <ProjectSidebar 
+            onSelect={setSelectedProjectSlug} 
+            onRefreshNeeded={(refreshFn: () => void) => {
+              refreshSidebarRef.current = refreshFn;
+            }}
+          />
+        </div>
 
         {/* Main area */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {selectedProjectSlug ? (
-            <ContextCardList projectSlug={selectedProjectSlug} />
-          ) : (
-            <div className="space-y-6">
-              <PendingInvitations onInvitationAccepted={handleInvitationAccepted} />
-              <ProjectCard 
-                onSelect={setSelectedProjectSlug} 
-                onRefreshNeeded={(refreshFn: () => void) => {
-                  refreshProjectsRef.current = refreshFn;
-                }}
-              />
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col items-center">
+          <div className="w-full max-w-5xl space-y-6">
+            {selectedProjectSlug ? (
+              <ContextCardList projectSlug={selectedProjectSlug} />
+            ) : (
+              <>
+                <div className="bg-white shadow-md rounded-lg p-6 border border-gray-200">
+                  <PendingInvitations onInvitationAccepted={handleInvitationAccepted} />
+                </div>
+                <div className="bg-white shadow-md rounded-lg p-6 border border-gray-200">
+                  <ProjectCard 
+                    onSelect={setSelectedProjectSlug} 
+                    onRefreshNeeded={(refreshFn: () => void) => {
+                      refreshProjectsRef.current = refreshFn;
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

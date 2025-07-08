@@ -141,40 +141,56 @@ export default function ProjectSettingsPage() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10 px-4">
-      <div className="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold mb-8">Project Settings</h1>
+    <div className="bg-background min-h-screen py-16 px-6 sm:px-8 md:px-12">
+      <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-zinc-800">
+        <h1 className="text-4xl font-bold mb-10 text-zinc-800 dark:text-zinc-100 tracking-tight">Project Settings</h1>
 
-        <section className="border-b border-gray-200 pb-6 mb-6">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Project Info</h2>
-          <div className="space-y-4">
+        <section className="border-b border-gray-200 pb-8 mb-10">
+          <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6">Project Info</h2>
+          <div className="space-y-6">
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Project Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} className="rounded-lg shadow-sm" />
+              <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2 block">Project Name</label>
+              <Input 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                className="rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500" 
+              />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Description</label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="rounded-lg shadow-sm" />
+              <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2 block">Description</label>
+              <Textarea 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)} 
+                className="rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500" 
+              />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Link</label>
-              <Input value={link} onChange={(e) => setLink(e.target.value)} className="rounded-lg shadow-sm" />
+              <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2 block">Link</label>
+              <Input 
+                value={link} 
+                onChange={(e) => setLink(e.target.value)} 
+                className="rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500" 
+              />
             </div>
           </div>
         </section>
 
-        <section className="border-b border-gray-200 pb-6 mb-6">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Tags</h2>
-          <div className="flex items-center gap-2 mb-4">
+        <section className="border-b border-gray-200 pb-8 mb-10">
+          <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6">Tags</h2>
+          <div className="flex items-center gap-3 mb-5">
             <Input
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
               placeholder="Add tag"
-              className="flex-1 rounded-lg shadow-sm"
+              className="flex-1 rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500"
             />
-            <Button variant="outline" onClick={handleAddTag}>
+            <Button 
+              variant="outline" 
+              onClick={handleAddTag} 
+              className="transition-all focus:ring-2 focus:ring-indigo-500 px-4 py-2"
+            >
               Add
             </Button>
           </div>
@@ -193,19 +209,19 @@ export default function ProjectSettingsPage() {
         </section>
 
         {project?.members && (
-          <section className="pb-6">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4 border-b border-gray-200 pb-2">Team Members</h2>
-            <ul className="space-y-3">
+          <section className="pb-8">
+            <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6 border-b border-gray-200 dark:border-zinc-700 pb-3">Team Members</h2>
+            <ul className="space-y-4">
               {project.members.map((member: any) => (
                 <li
                   key={member.user.id}
-                  className="flex items-center justify-between bg-muted px-4 py-2 rounded hover:bg-gray-100 transition-colors gap-4"
+                  className="flex items-center justify-between border border-gray-200 dark:border-zinc-700 bg-muted px-5 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition gap-5 hover:ring-1 hover:ring-indigo-500"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-5">
                     <img
                       src={member.user.image || "/fallback-avatar.png"}
                       alt={member.user.name}
-                      className="w-8 h-8 rounded-full object-cover"
+                      className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-300 dark:ring-zinc-600"
                     />
                     <div>
                       <p className="text-sm font-medium">{member.user.name || member.user.email}</p>
@@ -215,7 +231,7 @@ export default function ProjectSettingsPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-red-600 hover:bg-red-100"
+                    className="text-red-600 hover:bg-red-100 text-xs px-2 py-1 rounded-md"
                     onClick={async () => {
                       // Confirm before removing
                       if (!confirm("Are you sure you want to remove this member?")) return;
@@ -253,8 +269,8 @@ export default function ProjectSettingsPage() {
           </section>
         )}
 
-        <div className="pt-4">
-          <Button onClick={handleSave} disabled={saving}>
+        <div className="pt-8 flex justify-end">
+          <Button onClick={handleSave} disabled={saving} className="transition-all focus:ring-2 focus:ring-indigo-500">
             {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             {!saving && <Save className="h-4 w-4 mr-2" />}
             Save Changes

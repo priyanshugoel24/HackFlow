@@ -143,35 +143,51 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
       </h2>
       
       {invitations.map((invitation) => (
-        <Card key={invitation.id} className="border-orange-200 bg-orange-50">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
+        <Card
+          key={invitation.id}
+          className="border border-orange-200 bg-orange-50 shadow-sm rounded-lg"
+        >
+          <CardHeader className="pb-2 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                {invitation.addedBy?.image ? (
+                  <img
+                    src={invitation.addedBy.image}
+                    alt="avatar"
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-orange-300 text-white rounded-full flex items-center justify-center text-sm">
+                    {invitation.addedBy?.name?.[0] || "?"}
+                  </div>
+                )}
+              </div>
+              <div>
                 <CardTitle className="text-base font-semibold text-gray-900">
                   {invitation.project.name}
                 </CardTitle>
                 {invitation.project.description && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    {invitation.project.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{invitation.project.description}</p>
                 )}
               </div>
-              <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
-                Pending
-              </Badge>
             </div>
+            <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 self-start mt-2 sm:mt-0">
+              Pending
+            </Badge>
           </CardHeader>
-          
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <div className="flex items-center space-x-4">
+
+          <CardContent className="space-y-4 text-sm text-gray-600">
+            <div className="gap-2 sm:flex justify-between items-center">
+              <div className="flex items-center flex-wrap gap-3">
                 {invitation.addedBy && (
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center gap-1">
                     <User className="h-3 w-3" />
-                    <span>Invited by {invitation.addedBy.name || invitation.addedBy.email}</span>
+                    <span>
+                      Invited by {invitation.addedBy.name || invitation.addedBy.email}
+                    </span>
                   </div>
                 )}
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   <span>{formatDate(invitation.joinedAt)}</span>
                 </div>
@@ -180,7 +196,7 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
                 {invitation.role}
               </Badge>
             </div>
-            
+
             {invitation.project.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {invitation.project.tags.slice(0, 3).map((tag, index) => (
@@ -195,8 +211,8 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
                 )}
               </div>
             )}
-            
-            <div className="flex gap-2 pt-2">
+
+            <div className="flex gap-2 pt-1 border-t pt-3">
               <Button
                 size="sm"
                 onClick={() => handleAccept(invitation.project.slug, invitation.id)}

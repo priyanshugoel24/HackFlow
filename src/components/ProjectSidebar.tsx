@@ -81,18 +81,19 @@ export default function ProjectSidebar({
     <>
       <div
         ref={sidebarRef}
-        className={`h-full border-r bg-white flex flex-col transition-all duration-200 ${
-          collapsed ? "w-14" : "w-[var(--sidebar-width)]"
-        }`}
-        style={{ "--sidebar-width": `${width}px` } as React.CSSProperties}
+        className={cn(
+          "h-full border-r bg-white flex flex-col transition-all duration-200",
+          collapsed ? "w-[48px]" : ""
+        )}
+        style={!collapsed ? { width: `${width}px` } : undefined}
       >
         <div className="p-3 space-y-4 flex-1 overflow-y-auto">
           {/* Header */}
           <div className="flex justify-between items-center">
             {!collapsed && (
               <div>
-                <h2 className="font-semibold text-lg">Projects</h2>
-                <p className="text-xs text-gray-500">
+                <h2 className="font-semibold text-base text-gray-800">Projects</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
                   {activeProjects.length} active
                   {archivedProjects.length > 0 && `, ${archivedProjects.length} archived`}
                 </p>
@@ -125,8 +126,8 @@ export default function ProjectSidebar({
                           key={project.id}
                           onClick={() => handleProjectSelect(project.slug)}
                           className={cn(
-                            "block w-full text-left hover:bg-gray-100 px-3 py-2 rounded-md transition-colors",
-                            selectedProjectSlug === project.slug && "bg-blue-50 border-l-4 border-blue-500"
+                            "block w-full text-left bg-white hover:shadow-md border border-gray-200 px-4 py-3 rounded-lg transition-all",
+                            selectedProjectSlug === project.slug && "ring-2 ring-blue-500"
                           )}
                         >
                           <div className="flex items-center justify-between">
@@ -179,8 +180,8 @@ export default function ProjectSidebar({
                           key={project.id}
                           onClick={() => handleProjectSelect(project.slug)}
                           className={cn(
-                            "block w-full text-left hover:bg-gray-100 px-3 py-2 rounded-md transition-colors opacity-60",
-                            selectedProjectSlug === project.slug && "bg-blue-50 border-l-4 border-blue-500"
+                            "block w-full text-left hover:shadow-sm bg-gray-50 border border-gray-200 px-4 py-3 rounded-lg transition-colors opacity-60",
+                            selectedProjectSlug === project.slug && "ring-2 ring-blue-500"
                           )}
                         >
                           <div className="flex items-center space-x-2">
@@ -208,7 +209,7 @@ export default function ProjectSidebar({
           {!collapsed && (
             <div className="pt-4 border-t">
               <Button 
-                className="w-full" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium" 
                 onClick={() => setOpen(true)}
                 disabled={loading}
               >

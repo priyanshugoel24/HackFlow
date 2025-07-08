@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import type { TaskStatus } from "@prisma/client";
+import { logActivity } from "@/lib/logActivity";
+import { getAblyServer } from "@/lib/ably";
 
 // GET all context cards for logged-in user
 export async function GET(req: NextRequest) {
@@ -140,7 +142,42 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    (global as any).socketIOServer?.emit("new-context-card", savedCard);
+    // Log activity
+    await logActivity({
+      type: "CARD_CREATED",
+      description: `created a new ${type.toLowerCase()} "${title.trim()}"`,
+      userId: token.sub,
+      projectId: project.id,
+      metadata: {
+        cardId: savedCard.id,
+        cardType: type,
+      },
+    });
+
+    // Publish real-time update to Ably
+    try {
+      const ably = getAblyServer();
+      const channel = ably.channels.get(`project:${project.id}`);
+      
+      await channel.publish("activity:created", {
+        id: `activity_${Date.now()}`,
+        type: "CARD_CREATED",
+        description: `created a new ${type.toLowerCase()} "${title.trim()}"`,
+        createdAt: new Date().toISOString(),
+        userId: token.sub,
+        projectId: project.id,
+        user: {
+          id: token.sub,
+          name: token.name,
+          image: token.picture,
+        },
+      });
+      
+      console.log("📡 Published activity:created event to Ably for project:", project.id);
+    } catch (ablyError) {
+      console.error("❌ Failed to publish activity to Ably:", ablyError);
+    }
+
     // Update project lastActivityAt
     await prisma.project.update({
       where: { id: project.id },

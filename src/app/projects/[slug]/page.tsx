@@ -116,12 +116,12 @@ export default function ProjectPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-6 py-8 md:px-10 md:py-10">
         {/* Back Button */}
         <Button
           variant="ghost"
           onClick={() => router.push("/")}
-          className="mb-6"
+          className="mb-8 text-sm text-gray-600 hover:text-gray-900 transition"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Projects
@@ -132,7 +132,7 @@ export default function ProjectPage() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-2">
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-3xl font-semibold text-gray-800 tracking-tight">
                   {project.name}
                 </h1>
                 {project.isArchived && (
@@ -147,7 +147,7 @@ export default function ProjectPage() {
               </div>
 
               {project.description && (
-                <p className="text-gray-600 mb-4">{project.description}</p>
+                <p className="mt-1 text-gray-600 mb-4">{project.description}</p>
               )}
 
               <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -205,7 +205,7 @@ export default function ProjectPage() {
           </div>
         </div>
               {/* Online Users */}
-              <div className="bg-white border rounded-lg shadow-sm p-4 mb-6">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-md p-6 mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">
                   Online Now {!isConnected && "(Reconnecting...)"}
                 </h3>
@@ -218,7 +218,7 @@ export default function ProjectPage() {
                       const displayStatus = user.id === session?.user?.id ? currentUserStatus : user.status;
                       
                       return (
-                        <div key={user.id} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md shadow-sm border border-gray-200">
+                        <div key={user.id} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md shadow-sm border border-gray-200 hover:shadow transition-all">
                           <div className="relative">
                             {user.image ? (
                               <Image
@@ -248,9 +248,9 @@ export default function ProjectPage() {
                             />
                           </div>
                           <div>
-                            <div className="text-sm text-gray-800 font-medium">{user.name}</div>
+                            <div className="font-semibold text-gray-700 text-sm">{user.name}</div>
                             {displayStatus && displayStatus !== "Available" && (
-                              <div className="text-xs text-gray-500">{displayStatus}</div>
+                              <div className="text-xs text-gray-500 italic">{displayStatus}</div>
                             )}
                           </div>
                         </div>
@@ -269,7 +269,7 @@ export default function ProjectPage() {
                   fetchProject();
                 }}
               />
-<Button onClick={() => setInviteOpen(true)}>Invite Member</Button>
+<Button onClick={() => setInviteOpen(true)} className="mt-4 rounded-full">Invite Member</Button>
         {/* Context Cards */}
         <ContextCardList projectSlug={projectSlug} />
       </div>

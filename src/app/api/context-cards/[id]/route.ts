@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { TaskStatus } from "@prisma/client";
+import { logActivity } from "@/lib/logActivity";
 
 // PATCH: Update a context card
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -136,6 +137,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       (global as any).io?.emit("card:update", updatedCard);
     }
 
+    // Log the activity
+    await logActivity({
+    type: "CARD_UPDATED",
+    description: `Updated card "${updatedCard.title}"`,
+    metadata: { cardId: updatedCard.id },
+    userId: token.sub,
+    projectId: updatedCard.projectId,
+  });
+
     console.log("📊 Update successful. Card:", updatedCard.id);
     return NextResponse.json({ success: true, card: updatedCard });
   } catch (error) {
@@ -171,6 +181,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       where: { id },
     });
     (global as any).socketIOServer?.emit("card:delete", existing);
+
+    // Log the activity
+    await logActivity({
+    type: "CARD_DELETED",
+    description: `Deleted card "${existing.title}"`,
+    metadata: { cardId: existing.id },
+    userId: token.sub,
+    projectId: existing.projectId,
+  });
 
     return NextResponse.json({ 
       success: true, 

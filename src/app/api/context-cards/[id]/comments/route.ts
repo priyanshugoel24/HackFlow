@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/logActivity";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { getAblyServer } from "@/lib/ably";
@@ -102,13 +103,47 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     });
 
+    // Get card project details
+    const cardProject = await prisma.contextCard.findUnique({
+      where: { id: cardId },
+      select: { projectId: true },
+    });
+
+    // Log comment activity
+    await logActivity({
+      type: "COMMENT_CREATED",
+      description: `Added a comment to card`,
+      metadata: { cardId, commentId: newComment.id },
+      userId: token.sub,
+      projectId: cardProject?.projectId || "", // Provide fallback empty string if undefined
+    });
+
     const ably = getAblyServer();
+    
+    // Publish to card-specific channel for real-time comments
     await ably.channels.get(`card:${cardId}:comments`).publish("comment:created", {
       id: newComment.id,
       content: newComment.content,
       createdAt: newComment.createdAt,
       author: newComment.author,
     });
+
+    // Publish to project activity feed
+    if (cardProject?.projectId) {
+      await ably.channels.get(`project:${cardProject.projectId}`).publish("activity:created", {
+        id: Date.now(), // temporary ID for real-time display
+        type: "COMMENT_CREATED",
+        description: `Added a comment to card`,
+        user: {
+          id: token.sub,
+          name: token.name,
+          image: token.picture,
+        },
+        createdAt: new Date().toISOString(),
+        projectId: cardProject.projectId,
+        metadata: { cardId, commentId: newComment.id },
+      });
+    }
 
     return NextResponse.json({ comment: newComment });
   } catch (error) {

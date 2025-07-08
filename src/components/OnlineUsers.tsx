@@ -32,21 +32,37 @@ const OnlineUsers = () => {
   };
 
   return (
-    <div className="text-sm text-gray-600">
-      👥 Online Users ({onlineUsers.length}) {!isConnected && "(Disconnected)"}:
-      <ul className="mt-1 space-y-1">
+    <div className="bg-white rounded-lg shadow p-4 text-sm text-gray-800 border border-gray-200 w-full max-w-md">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-base">👥 Online Users</h3>
+        <span className={`text-xs ${isConnected ? "text-green-600" : "text-red-500"}`}>
+          {isConnected ? "Connected" : "Disconnected"}
+        </span>
+      </div>
+      <ul className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
         {onlineUsers.map((user) => {
-          // Use current user's status from StatusProvider if it's the current user
           const displayStatus = user.id === session?.user?.id ? currentUserStatus : user.status;
-          
+          const statusColor = getStatusColor(displayStatus);
+          const initials = user.name
+            ? user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+            : "??";
+
           return (
-            <li key={user.id} className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${getStatusColor(displayStatus)}`} 
-                   title={displayStatus || "Available"} />
-              <span>{user.name}</span>
-              {displayStatus && displayStatus !== "Available" && (
-                <span className="text-xs text-gray-500">({displayStatus})</span>
-              )}
+            <li key={user.id} className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-700 font-medium flex items-center justify-center text-xs">
+                    {initials}
+                  </div>
+                  <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${statusColor}`} title={displayStatus || "Available"} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-medium">{user.name}</span>
+                  {displayStatus && displayStatus !== "Available" && (
+                    <span className="text-xs text-gray-500">{displayStatus}</span>
+                  )}
+                </div>
+              </div>
             </li>
           );
         })}

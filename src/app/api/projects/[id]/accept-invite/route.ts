@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { getAblyServer } from "@/lib/ably";
+import { logActivity } from "@/lib/logActivity";
 
 // POST /api/projects/[id]/accept-invite
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -150,6 +151,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: { lastActivityAt: new Date() },
     });
 
+    // Log activity for member joining
+    await logActivity({
+      type: "MEMBER_JOINED",
+      description: `joined the project`,
+      userId: token.sub,
+      projectId: project.id,
+      metadata: { 
+        memberId: updatedMember.id,
+        role: updatedMember.role 
+      },
+    });
+
     // Publish real-time update to Ably
     try {
       const ably = getAblyServer();
@@ -164,8 +177,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         joinedAt: updatedMember.joinedAt,
         user: updatedMember.user
       });
+
+      // Also publish to activity feed
+      await channel.publish("activity:created", {
+        id: `activity_${Date.now()}`,
+        type: "MEMBER_JOINED",
+        description: `joined the project`,
+        createdAt: new Date().toISOString(),
+        userId: token.sub,
+        projectId: project.id,
+        user: {
+          id: token.sub,
+          name: token.name,
+          image: token.picture,
+        },
+        metadata: { 
+          memberId: updatedMember.id,
+          role: updatedMember.role 
+        },
+      });
       
-      console.log("📡 Published member:accepted event to Ably for project:", project.id);
+      console.log("📡 Published member:accepted and activity:created events to Ably for project:", project.id);
     } catch (ablyError) {
       console.error("❌ Failed to publish to Ably:", ablyError);
       // Don't fail the entire request if Ably publish fails

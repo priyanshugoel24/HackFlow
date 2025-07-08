@@ -74,18 +74,18 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
         <Card
           key={project.id}
           className={cn(
-            "cursor-pointer group hover:shadow-xl hover:border-blue-500 transition border border-gray-200 h-full",
+            "cursor-pointer group hover:shadow-md hover:border-blue-500 hover:bg-gray-50 transition border border-gray-200 h-full rounded-lg bg-white p-2",
             project.isArchived && "opacity-60"
           )}
           onClick={() => handleProjectClick(project.slug)}
         >
-          <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center space-x-2 flex-1">
               <div className="flex items-center space-x-2">
                 <Folder className="h-5 w-5 text-blue-500" />
                 {project.isArchived && <Archive className="h-4 w-4 text-gray-400" />}
               </div>
-              <CardTitle className="text-base font-semibold group-hover:text-blue-600 line-clamp-1">
+              <CardTitle className="text-[15px] font-semibold group-hover:text-blue-600 truncate">
                 {project.name}
               </CardTitle>
             </div>
@@ -102,14 +102,14 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
             )}
           </CardHeader>
           
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 px-2 pb-3">
             {project.description && (
               <p className="text-sm text-muted-foreground line-clamp-2">
                 {project.description}
               </p>
             )}
             
-            <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 mt-2">
               <div className="flex items-center space-x-1">
                 <Users className="h-3 w-3" />
                 <span>{project.members?.length || 0} member{project.members?.length !== 1 ? 's' : ''}</span>
@@ -126,16 +126,16 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
               </div>
             )}
             
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-2 overflow-x-auto max-w-full scrollbar-hide">
               {project.tags && project.tags.length > 0 && (
                 <>
                   {project.tags.slice(0, 3).map((tag: string, index: number) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
+                    <Badge key={index} variant="secondary" className="text-xs rounded-md">
                       {tag}
                     </Badge>
                   ))}
                   {project.tags.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs rounded-md">
                       +{project.tags.length - 3} more
                     </Badge>
                   )}
@@ -145,7 +145,7 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
             
             <div className="flex items-center justify-between mt-3">
               <div className="flex items-center space-x-2">
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs rounded-md">
                   {project.isArchived ? "Archived" : "Active"}
                 </Badge>
                 {project.createdBy && (
