@@ -77,8 +77,9 @@ export default function CommentThread({ cardId }: { cardId: string }) {
           commentMap.set(comment.id, comment);
         });
         
-        // Add or update the new comment
-        commentMap.set(msg.data.id, msg.data);
+        // Add or update the new comment - msg.data contains the comment data
+        const commentData = msg.data || msg;
+        commentMap.set(commentData.id, commentData);
         
         // Convert back to array and sort by createdAt
         return Array.from(commentMap.values()).sort((a, b) => 
@@ -150,18 +151,6 @@ export default function CommentThread({ cardId }: { cardId: string }) {
           </Button>
         </div>
       </div>
-
-      {nextCursor && (
-  <div className="text-center mb-4">
-    <button
-      onClick={() => fetchComments(nextCursor)}
-      className="text-sm px-4 py-2 rounded bg-muted hover:bg-gray-200 transition"
-      disabled={isLoading}
-    >
-      {isLoading ? "Loading..." : "Load more comments"}
-    </button>
-  </div>
-)}
 
       {/* Comment List */}
       <div className="space-y-4">

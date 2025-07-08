@@ -260,7 +260,15 @@ export default function ProjectPage() {
                 )}
               </div>
               {/* <DebugPresence /> */}
-              <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} projectSlug={projectSlug} />
+              <InviteMemberModal 
+                open={inviteOpen} 
+                setOpen={setInviteOpen} 
+                projectSlug={projectSlug} 
+                onSuccess={() => {
+                  // Refresh project data when member is successfully invited
+                  fetchProject();
+                }}
+              />
 <Button onClick={() => setInviteOpen(true)}>Invite Member</Button>
         {/* Context Cards */}
         <ContextCardList projectSlug={projectSlug} />

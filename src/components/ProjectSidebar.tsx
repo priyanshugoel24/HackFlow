@@ -7,7 +7,13 @@ import ProjectModal from "./ProjectModal";
 import { ChevronLeft, ChevronRight, Archive, Users, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function ProjectSidebar({ onSelect }: { onSelect: (id: string) => void }) {
+export default function ProjectSidebar({ 
+  onSelect, 
+  onRefreshNeeded 
+}: { 
+  onSelect: (id: string) => void;
+  onRefreshNeeded?: (refreshFn: () => void) => void;
+}) {
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProjectSlug, setSelectedProjectSlug] = useState<string>("");
   const [open, setOpen] = useState(false);
@@ -36,7 +42,9 @@ export default function ProjectSidebar({ onSelect }: { onSelect: (id: string) =>
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+    // Expose refresh function to parent
+    onRefreshNeeded?.(fetchProjects);
+  }, [onRefreshNeeded]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

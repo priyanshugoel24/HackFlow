@@ -1,18 +1,15 @@
-
-
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 
-// DELETE /api/projects/[id]/members
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// DELETE /api/projects/[id]/members/[userId]
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string; userId: string }> }) {
   const token = await getToken({ req });
   if (!token?.sub) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { id } = await params;
-  const { userId } = await req.json();
+  const { id, userId } = await params;
 
   if (!userId) {
     return NextResponse.json({ error: "User ID is required" }, { status: 400 });
@@ -47,6 +44,25 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "You cannot remove yourself" }, { status: 400 });
     }
 
+    // Prevent removing the project creator
+    if (userId === project.createdById) {
+      return NextResponse.json({ error: "Cannot remove the project creator" }, { status: 400 });
+    }
+
+    // Check if the user is actually a member of the project
+    const memberToRemove = await prisma.projectMember.findUnique({
+      where: {
+        userId_projectId: {
+          projectId: project.id,
+          userId,
+        },
+      },
+    });
+
+    if (!memberToRemove) {
+      return NextResponse.json({ error: "User is not a member of this project" }, { status: 404 });
+    }
+
     // Delete member from project
     await prisma.projectMember.delete({
       where: {
@@ -56,6 +72,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         },
       },
     });
+
+    console.log(`✅ Successfully removed user ${userId} from project ${project.id}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

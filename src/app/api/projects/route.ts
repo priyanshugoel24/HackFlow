@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   try {
+    console.log(`🔍 Fetching projects for user: ${token.sub} (${token.email})`);
+    
     // First, ensure the user exists in the database
     const user = await prisma.user.upsert({
       where: { id: token.sub },
@@ -65,6 +67,8 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { lastActivityAt: "desc" },
     });
+
+    console.log(`📋 Found ${projects.length} projects for user ${token.sub}`);
 
     return NextResponse.json({ projects });
   } catch (error) {

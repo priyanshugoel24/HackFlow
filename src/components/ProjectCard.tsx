@@ -11,7 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ExternalLink, Folder, Users, Calendar, Archive } from "lucide-react";
 
-export default function ProjectCardGrid({ onSelect }: { onSelect: (id: string) => void }) {
+export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: { 
+  onSelect: (id: string) => void;
+  onRefreshNeeded?: (refreshFn: () => void) => void;
+}) {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -30,7 +33,9 @@ export default function ProjectCardGrid({ onSelect }: { onSelect: (id: string) =
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+    // Expose refresh function to parent
+    onRefreshNeeded?.(fetchProjects);
+  }, [onRefreshNeeded]);
 
   if (loading) {
     return (

@@ -1,0 +1,185 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { prisma } from "@/lib/prisma";
+import { getAblyServer } from "@/lib/ably";
+
+// POST /api/projects/[id]/accept-invite
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const token = await getToken({ req });
+  if (!token?.sub) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  try {
+    console.log(`🔍 User ${token.sub} (${token.email}) attempting to accept invite for project: ${id}`);
+    
+    // Check if the id is a CUID (database ID) or a slug
+    const isCUID = /^c[a-z0-9]{24}$/.test(id);
+    
+    // Find the project
+    const project = await prisma.project.findFirst({
+      where: {
+        ...(isCUID ? { id } : { slug: id }),
+        isArchived: false,
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // Check if user has a pending invitation (by user ID or email)
+    const existingMember = await prisma.projectMember.findFirst({
+      where: {
+        OR: [
+          {
+            userId: token.sub,
+            projectId: project.id,
+          },
+          {
+            user: {
+              email: token.email,
+            },
+            projectId: project.id,
+          },
+        ],
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!existingMember) {
+      console.log(`❌ No invitation found for user ${token.sub} (${token.email}) in project ${project.id}`);
+      return NextResponse.json({ error: "No invitation found for this project" }, { status: 404 });
+    }
+
+    console.log(`📨 Found invitation: ${existingMember.id}, status: ${existingMember.status}, for user: ${existingMember.userId}`);
+
+    if (existingMember.status === "ACTIVE") {
+      return NextResponse.json({ error: "You are already a member of this project" }, { status: 400 });
+    }
+
+    if (existingMember.status !== "INVITED") {
+      return NextResponse.json({ error: "Invalid invitation status" }, { status: 400 });
+    }
+
+    // Accept the invitation by updating status to ACTIVE
+    let updatedMember;
+    
+    if (existingMember.userId === token.sub) {
+      // Direct match - just update the status
+      console.log(`✅ Direct user match - updating membership status to ACTIVE`);
+      updatedMember = await prisma.projectMember.update({
+        where: {
+          userId_projectId: {
+            projectId: project.id,
+            userId: token.sub,
+          },
+        },
+        data: {
+          status: "ACTIVE",
+          joinedAt: new Date(),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
+      });
+    } else {
+      // Email match - need to transfer the invitation to the current user
+      console.log(`🔄 Email match - transferring invitation from placeholder user ${existingMember.userId} to current user ${token.sub}`);
+      // First, delete the old placeholder invitation
+      await prisma.projectMember.delete({
+        where: {
+          userId_projectId: {
+            projectId: project.id,
+            userId: existingMember.userId,
+          },
+        },
+      });
+      
+      // Create a new membership for the current authenticated user
+      updatedMember = await prisma.projectMember.create({
+        data: {
+          projectId: project.id,
+          userId: token.sub,
+          role: existingMember.role,
+          status: "ACTIVE",
+          addedById: existingMember.addedById,
+          joinedAt: new Date(),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
+      });
+    }
+
+    // Update project activity
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { lastActivityAt: new Date() },
+    });
+
+    // Publish real-time update to Ably
+    try {
+      const ably = getAblyServer();
+      const channel = ably.channels.get(`project:${project.id}`);
+      
+      await channel.publish("member:accepted", {
+        id: updatedMember.id,
+        userId: updatedMember.userId,
+        projectId: updatedMember.projectId,
+        role: updatedMember.role,
+        status: updatedMember.status,
+        joinedAt: updatedMember.joinedAt,
+        user: updatedMember.user
+      });
+      
+      console.log("📡 Published member:accepted event to Ably for project:", project.id);
+    } catch (ablyError) {
+      console.error("❌ Failed to publish to Ably:", ablyError);
+      // Don't fail the entire request if Ably publish fails
+    }
+
+    console.log(`✅ User ${token.sub} accepted invitation to project ${project.id}`);
+
+    return NextResponse.json({ 
+      success: true, 
+      message: "Invitation accepted successfully",
+      member: updatedMember 
+    });
+  } catch (error) {
+    console.error("Error accepting invitation:", error);
+    return NextResponse.json({ error: "Failed to accept invitation" }, { status: 500 });
+  }
+}

@@ -64,10 +64,30 @@ export default function ProjectSettingsPage() {
           }));
         });
 
+        channel.subscribe("member:accepted", (msg: any) => {
+          setProject((prev: any) => ({
+            ...prev,
+            members: prev.members.map((m: any) => 
+              m.user.id === msg.data.userId 
+                ? { ...m, status: "ACTIVE", joinedAt: msg.data.joinedAt }
+                : m
+            ),
+          }));
+        });
+
+        channel.subscribe("member:declined", (msg: any) => {
+          setProject((prev: any) => ({
+            ...prev,
+            members: prev.members.filter((m: any) => m.user.id !== msg.data.userId),
+          }));
+        });
+
         return () => {
           channel.unsubscribe("project:updated", handleProjectUpdate);
           channel.unsubscribe("member:removed");
           channel.unsubscribe("member:added");
+          channel.unsubscribe("member:accepted");
+          channel.unsubscribe("member:declined");
           ably.channels.release(`project:${data.project.id}`);
         };
       } catch (error) {
@@ -197,6 +217,13 @@ export default function ProjectSettingsPage() {
                     size="sm"
                     className="text-red-600 hover:bg-red-100"
                     onClick={async () => {
+                      // Confirm before removing
+                      if (!confirm("Are you sure you want to remove this member?")) return;
+                      // Prevent removing the project creator
+                      if (member.user.id === project.createdById) {
+                        toast.error("You cannot remove the project creator.");
+                        return;
+                      }
                       try {
                         const res = await fetch(`/api/projects/${projectSlug}/members/${member.user.id}`, {
                           method: "DELETE",

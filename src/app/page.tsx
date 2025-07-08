@@ -5,11 +5,20 @@ import LoginPage from "@/components/LoginPage";
 import ProjectSidebar from "@/components/ProjectSidebar";
 import ContextCardList from "@/components/ContextCardList";
 import ProjectCard from "@/components/ProjectCard"; // new component
-import { useState } from "react";
+import PendingInvitations from "@/components/PendingInvitations";
+import { useState, useRef } from "react";
 
 export default function Home() {
   const { data: session, status } = useSession();
   const [selectedProjectSlug, setSelectedProjectSlug] = useState("");
+  const refreshProjectsRef = useRef<(() => void) | null>(null);
+  const refreshSidebarRef = useRef<(() => void) | null>(null);
+
+  const handleInvitationAccepted = () => {
+    // Refresh both the project cards and sidebar when an invitation is accepted
+    refreshProjectsRef.current?.();
+    refreshSidebarRef.current?.();
+  };
 
   if (status === "loading") {
     return (
@@ -28,14 +37,27 @@ export default function Home() {
       <Navbar />
       <div className="flex h-[calc(100vh-60px)]">
         {/* Sidebar */}
-        <ProjectSidebar onSelect={setSelectedProjectSlug} />
+        <ProjectSidebar 
+          onSelect={setSelectedProjectSlug} 
+          onRefreshNeeded={(refreshFn: () => void) => {
+            refreshSidebarRef.current = refreshFn;
+          }}
+        />
 
         {/* Main area */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {selectedProjectSlug ? (
             <ContextCardList projectSlug={selectedProjectSlug} />
           ) : (
-            <ProjectCard onSelect={setSelectedProjectSlug} />
+            <div className="space-y-6">
+              <PendingInvitations onInvitationAccepted={handleInvitationAccepted} />
+              <ProjectCard 
+                onSelect={setSelectedProjectSlug} 
+                onRefreshNeeded={(refreshFn: () => void) => {
+                  refreshProjectsRef.current = refreshFn;
+                }}
+              />
+            </div>
           )}
         </div>
       </div>
