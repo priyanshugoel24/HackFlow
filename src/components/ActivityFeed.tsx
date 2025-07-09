@@ -63,11 +63,11 @@ export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
   }, [identifier, projectId, slug]);
 
   useEffect(() => {
-    if (!actualProjectId || !session?.user?.id) return;
+    if (!actualProjectId || !session?.user?.email) return;
 
     console.log("🔌 ActivityFeed connecting to Ably for project:", actualProjectId);
     
-    const ably = getAblyClient(session.user.id);
+    const ably = getAblyClient(session.user.email);
     const channel = ably.channels.get(`project:${actualProjectId}`);
 
     const handleNewActivity = (msg: Ably.Message) => {
@@ -91,16 +91,16 @@ export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
       });
       
     };
-  }, [actualProjectId, session?.user?.id]);
+  }, [actualProjectId, session?.user?.email]);
 
   if (loading) {
-    return <Skeleton className="h-24 w-full" />;
+    return <Skeleton className="h-24 w-full bg-gray-100 dark:bg-gray-800" />;
   }
 
   return (
     <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1 custom-scrollbar">
       {activities.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm">
+        <div className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
           <p>No activity yet. Start by creating context cards or adding comments!</p>
         </div>
       ) : (
@@ -112,7 +112,7 @@ export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
-              className="flex items-start gap-3 bg-white shadow-sm rounded-lg p-4 border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all"
+              className="flex items-start gap-3 bg-white dark:bg-gray-900 shadow-sm dark:shadow-none rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md dark:hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-500 transition-all"
             >
               {activity.user?.image ? (
                 <Image
@@ -123,16 +123,16 @@ export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
                   className="rounded-full object-cover"
                 />
               ) : (
-                <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold">
+                <div className="w-9 h-9 bg-gray-300 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 text-sm font-semibold">
                   👤
                 </div>
               )}
 
               <div>
-                <p className="text-sm text-gray-800 leading-tight">
-                  <span className="font-semibold text-gray-900">{activity.user?.name}</span> {activity.description}
+                <p className="text-sm text-gray-800 dark:text-gray-200 leading-tight">
+                  <span className="font-semibold text-gray-900 dark:text-white">{activity.user?.name}</span> {activity.description}
                 </p>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
                 </p>
               </div>

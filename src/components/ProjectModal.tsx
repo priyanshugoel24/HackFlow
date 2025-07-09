@@ -55,50 +55,53 @@ export default function ProjectModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-2xl bg-white shadow-2xl rounded-xl p-8">
+      <DialogContent className="sm:max-w-2xl bg-white dark:bg-gray-900 shadow-2xl rounded-xl p-8">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">Create a New Project</DialogTitle>
         </DialogHeader>
         <div className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Name *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Name *</label>
             <Input 
               placeholder="Enter project name" 
               value={name} 
               onChange={(e) => setName(e.target.value)}
               required
+              className="dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:border-gray-600"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Link</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Link</label>
             <Input 
               placeholder="https://your-project.com" 
               value={link} 
               onChange={(e) => setLink(e.target.value)}
               type="url"
+              className="dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:border-gray-600"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Description</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Description</label>
             <textarea
               placeholder="Brief description of the project"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
               rows={4}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
             <Input 
               placeholder="e.g. frontend, react, urgent" 
               value={tags} 
               onChange={(e) => setTags(e.target.value)}
+              className="dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:border-gray-600"
             />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
               Separate tags with commas
             </p>
           </div>

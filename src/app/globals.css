@@ -145,3 +145,11 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+html {
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+body {
+  @apply bg-background text-foreground;
+}

@@ -571,12 +571,12 @@ export default function ContextCardModal({
         }
       }}
     >
-      <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl p-6 space-y-4">
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto bg-background rounded-xl shadow-xl p-8 space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          className="space-y-6"
+          className="space-y-8"
         >
           <DialogHeader className="mb-2">
             <DialogTitle className="sr-only">
@@ -585,8 +585,8 @@ export default function ContextCardModal({
 
             {/* Show currently editing users */}
             {otherEditors.length > 0 && (
-              <div className="flex items-center gap-3 mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
-                <span className="text-sm font-medium text-blue-700">
+              <div className="flex items-center gap-3 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
                   Currently editing:
                 </span>
                 <div className="flex -space-x-3">
@@ -595,7 +595,7 @@ export default function ContextCardModal({
                     .map((editor) => (
                       <div
                         key={editor.id}
-                        className="relative w-8 h-8 rounded-full border-3 border-white bg-gray-100 flex items-center justify-center overflow-hidden shadow-sm"
+                        className="relative w-8 h-8 rounded-full border-3 border-white dark:border-gray-800 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden shadow-sm"
                         title={`${editor.name} is editing`}
                       >
                         {editor.image ? (
@@ -605,21 +605,21 @@ export default function ContextCardModal({
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <span className="text-sm font-semibold text-gray-700">
+                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                             {editor.name.charAt(0).toUpperCase()}
                           </span>
                         )}
                         {/* Online indicator */}
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
                       </div>
                     ))}
                   {otherEditors.length > 3 && (
-                    <div className="w-8 h-8 rounded-full border-3 border-white bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-600 shadow-sm">
+                    <div className="w-8 h-8 rounded-full border-3 border-white dark:border-gray-800 bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-sm font-semibold text-gray-600 dark:text-gray-300 shadow-sm">
                       +{otherEditors.length - 3}
                     </div>
                   )}
                 </div>
-                <span className="text-xs text-blue-600">
+                <span className="text-xs text-blue-600 dark:text-blue-400">
                   {otherEditors.length} user
                   {otherEditors.length !== 1 ? "s" : ""} editing
                 </span>
@@ -633,16 +633,16 @@ export default function ContextCardModal({
               </div>
             )} */}
           </DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-6">
             <input
-              className="text-xl font-medium w-full placeholder:text-gray-400 text-gray-800 focus:outline-none focus:ring-2 focus:ring-yellow-400 rounded cursor-pointer"
+              className="text-xl font-medium w-full placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-800 dark:text-gray-200 bg-transparent focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:focus:ring-yellow-500 rounded px-2 py-1 cursor-pointer"
               placeholder="Card title *"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={(e) => setTitle(sanitizeText(e.target.value))}
             />
             {existingCard && canArchive && (
-              <div className="flex items-center space-x-2 ml-2">
+              <div className="flex items-center space-x-3 ml-4">
                 <button
                   onClick={async () => {
                     const action = existingCard.isArchived ? "unarchive" : "archive";
@@ -730,23 +730,23 @@ export default function ContextCardModal({
             )}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               Content *
             </label>
             <RichTextEditor
               value={content}
               onChange={setContent}
               placeholder="Add your context content here... Support for **bold**, *italic*, [links](url), lists, and more!"
-              className="focus-within:ring-2 focus-within:ring-yellow-400"
+              className="focus-within:ring-2 focus-within:ring-yellow-400 dark:focus-within:ring-yellow-500"
               minHeight={120}
               initialPreview={!!existingCard}
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
-            <div className="space-y-2 w-full">
-              <label className="text-sm font-semibold text-gray-700">
+          <div className="flex flex-col lg:flex-row lg:space-x-6 space-y-6 lg:space-y-0">
+            <div className="space-y-3 flex-1">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Type
               </label>
               <div className="flex gap-2 flex-wrap">
@@ -754,10 +754,10 @@ export default function ContextCardModal({
                   <Badge
                     key={cardType}
                     onClick={() => setType(cardType as "TASK" | "INSIGHT" | "DECISION")}
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    className={`px-3 py-2 rounded-full text-xs font-semibold ${
                       type === cardType
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-600"
+                        ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
                     } cursor-pointer`}
                   >
                     {getTypeIcon(cardType)} {cardType}
@@ -766,8 +766,8 @@ export default function ContextCardModal({
               </div>
             </div>
 
-            <div className="space-y-2 w-full">
-              <label className="text-sm font-semibold text-gray-700">
+            <div className="space-y-3 flex-1">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Visibility
               </label>
               <div className="flex gap-2 flex-wrap">
@@ -775,12 +775,12 @@ export default function ContextCardModal({
                   <Badge
                     key={vis}
                     onClick={() => setVisibility(vis as "PRIVATE" | "PUBLIC")}
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    className={`px-3 py-2 rounded-full text-xs font-semibold ${
                       visibility === vis
                         ? vis === "PRIVATE"
-                          ? "bg-red-100 text-red-600"
-                          : "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-600"
+                          ? "bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400"
+                          : "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-400"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
                     } cursor-pointer`}
                   >
                     {vis === "PRIVATE" ? (
@@ -796,8 +796,8 @@ export default function ContextCardModal({
           </div>
 
           {type === "TASK" && (
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Task Status
               </label>
               <div className="flex gap-2">
@@ -805,12 +805,12 @@ export default function ContextCardModal({
                   <Badge
                     key={statusOption}
                     onClick={() => setStatus(statusOption as "ACTIVE" | "CLOSED")}
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    className={`px-3 py-2 rounded-full text-xs font-semibold ${
                       status === statusOption
                         ? statusOption === "ACTIVE"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-300 text-gray-800"
-                        : "bg-gray-100 text-gray-600"
+                          ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-400"
+                          : "bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
                     } cursor-pointer`}
                   >
                     {statusOption === "ACTIVE" ? (
@@ -830,8 +830,8 @@ export default function ContextCardModal({
             </div>
           )}
 
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               Why is this important? (optional)
             </label>
             <textarea
@@ -839,13 +839,13 @@ export default function ContextCardModal({
               onChange={(e) => setWhy(e.target.value)}
               onBlur={(e) => setWhy(sanitizeText(e.target.value))}
               placeholder="Explain why this is important..."
-              className="w-full bg-gray-50 border border-gray-300 rounded-md p-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"
+              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-3 text-base text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:focus:ring-yellow-500 resize-none"
               rows={3}
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               Any blockers/issues? (optional)
             </label>
             <textarea
@@ -853,16 +853,16 @@ export default function ContextCardModal({
               onChange={(e) => setIssues(e.target.value)}
               onBlur={(e) => setIssues(sanitizeText(e.target.value))}
               placeholder="Describe any blockers or issues..."
-              className="w-full bg-gray-50 border border-gray-300 rounded-md p-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"
+              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-3 text-base text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:focus:ring-yellow-500 resize-none"
               rows={3}
             />
           </div>
 
-          <div className="flex items-center gap-2 relative">
-            <AtSign className="h-4 w-4 text-gray-500" />
+          <div className="flex items-center gap-3 relative">
+            <AtSign className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             <div className="w-full relative">
               <input
-                className="w-full border rounded-md p-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 cursor-pointer"
+                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-3 text-base text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:focus:ring-yellow-500 cursor-pointer"
                 placeholder="Mention team member (optional)"
                 value={mention}
                 onChange={(e) => filterMembers(e.target.value)}
@@ -873,11 +873,11 @@ export default function ContextCardModal({
               />
               
               {showMemberDropdown && filteredMembers.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
                   {filteredMembers.map((member) => (
                     <div
                       key={member.userId}
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                      className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelectMember(member);
@@ -890,13 +890,13 @@ export default function ContextCardModal({
                           className="w-6 h-6 rounded-full"
                         />
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs text-gray-600">
+                        <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-600 dark:text-gray-400">
                           {member.name ? member.name[0].toUpperCase() : '@'}
                         </div>
                       )}
                       <div>
-                        <div className="font-medium">{member.name || 'User'}</div>
-                        {member.email && <div className="text-xs text-gray-500">{member.email}</div>}
+                        <div className="font-medium text-gray-800 dark:text-gray-200">{member.name || 'User'}</div>
+                        {member.email && <div className="text-xs text-gray-500 dark:text-gray-400">{member.email}</div>}
                       </div>
                     </div>
                   ))}
@@ -907,25 +907,25 @@ export default function ContextCardModal({
 
           {/* Existing attachments preview */}
           {existingAttachments.length > 0 && (
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-700">
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Existing Attachments
               </label>
-              <ul className="list-disc list-inside text-sm text-gray-700">
+              <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-1">
                 {existingAttachments.map((url, idx) => (
-                  <li key={idx} className="flex items-center justify-between">
+                  <li key={idx} className="flex items-center justify-between py-1">
                     <a
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline truncate max-w-xs"
+                      className="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs"
                     >
                       {url.split("/").pop()}
                     </a>
                     <button
                       type="button"
                       onClick={() => removeExistingAttachment(url)}
-                      className="text-red-600 hover:text-red-800 ml-2"
+                      className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 ml-2"
                       aria-label="Remove attachment"
                     >
                       ✕
@@ -936,8 +936,8 @@ export default function ContextCardModal({
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            <Paperclip className="h-4 w-4 text-gray-500" />
+          <div className="flex items-center gap-3">
+            <Paperclip className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             <input
               type="file"
               multiple
@@ -960,19 +960,19 @@ export default function ContextCardModal({
                 
                 setAttachments((prev) => [...prev, ...validFiles]);
               }}
-              className="text-sm text-gray-600"
+              className="text-sm text-gray-600 dark:text-gray-400 flex-1"
             />
           </div>
 
           {/* New attachments preview */}
           {attachments.length > 0 && (
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-700">
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 New Attachments
               </label>
-              <ul className="list-disc list-inside text-sm text-gray-700">
+              <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-1">
                 {attachments.map((file, idx) => (
-                  <li key={idx} className="flex items-center justify-between">
+                  <li key={idx} className="flex items-center justify-between py-1">
                     <span className="truncate max-w-xs text-sm">
                       {file.name}
                     </span>
@@ -981,7 +981,7 @@ export default function ContextCardModal({
                       onClick={() =>
                         setAttachments(attachments.filter((_, i) => i !== idx))
                       }
-                      className="text-red-600 hover:text-red-800 ml-2"
+                      className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 ml-2"
                       aria-label="Remove attachment"
                     >
                       ✕
@@ -993,18 +993,19 @@ export default function ContextCardModal({
           )}
 
           {!existingCard && (
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200 dark:border-gray-600">
               <Button
                 variant="outline"
                 onClick={() => setOpen(false)}
                 disabled={isLoading}
+                className="px-6 py-2"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSubmit}
                 disabled={!isFormValid() || isLoading}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                className="bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700 text-white px-6 py-2"
               >
                 {isLoading ? "Creating..." : "Create Card"}
               </Button>
@@ -1012,29 +1013,30 @@ export default function ContextCardModal({
           )}
           
           {existingCard && (
-            <div className="flex justify-between mt-6 border-t border-gray-200 pt-4">
+            <div className="flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-600">
               <div>
                 {/* Confirmation of card status */}
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
                   {existingCard.isArchived ? (
-                    <span className="flex items-center text-amber-600">
+                    <span className="flex items-center text-amber-600 dark:text-amber-400">
                       <Archive className="h-4 w-4 mr-1" /> Archived
                     </span>
                   ) : null}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setOpen(false)}
                   disabled={isLoading}
+                  className="px-6 py-2"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSubmit}
                   disabled={!isFormValid() || isLoading || !hasChanges()}
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-6 py-2"
                 >
                   {isLoading ? "Updating..." : "Update Card"}
                 </Button>
@@ -1043,7 +1045,7 @@ export default function ContextCardModal({
           )}
 
           {existingCard && (
-            <div className="pt-4 border-t border-gray-700 mt-6">
+            <div className="pt-6 border-t border-gray-200 dark:border-gray-600 mt-8">
               <CommentThread cardId={existingCard.id} />
             </div>
           )}

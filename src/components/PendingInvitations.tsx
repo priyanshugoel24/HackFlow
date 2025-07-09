@@ -121,15 +121,15 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
 
   if (invitations.length === 0) {
     return (
-      <div className="text-center text-gray-500 py-8">
-        <Mail className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+      <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+        <Mail className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
         <p className="text-lg font-medium">No pending invitations</p>
         <p className="text-sm">You&apos;re all caught up!</p>
       </div>
@@ -138,14 +138,14 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
         Pending Invitations ({invitations.length})
       </h2>
       
       {invitations.map((invitation) => (
         <Card
           key={invitation.id}
-          className="border border-orange-200 bg-orange-50 shadow-sm rounded-lg"
+          className="border border-orange-200 dark:border-orange-400 bg-orange-50 dark:bg-orange-950 shadow-sm rounded-lg"
         >
           <CardHeader className="pb-2 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-3">
@@ -163,20 +163,20 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
                 )}
               </div>
               <div>
-                <CardTitle className="text-base font-semibold text-gray-900">
+                <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">
                   {invitation.project.name}
                 </CardTitle>
                 {invitation.project.description && (
-                  <p className="text-sm text-muted-foreground">{invitation.project.description}</p>
+                  <p className="text-sm text-muted-foreground dark:text-gray-400">{invitation.project.description}</p>
                 )}
               </div>
             </div>
-            <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 self-start mt-2 sm:mt-0">
+            <Badge variant="outline" className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-500 self-start mt-2 sm:mt-0">
               Pending
             </Badge>
           </CardHeader>
 
-          <CardContent className="space-y-4 text-sm text-gray-600">
+          <CardContent className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
             <div className="gap-2 sm:flex justify-between items-center">
               <div className="flex items-center flex-wrap gap-3">
                 {invitation.addedBy && (
@@ -192,7 +192,7 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
                   <span>{formatDate(invitation.joinedAt)}</span>
                 </div>
               </div>
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs dark:text-gray-200 dark:bg-gray-700">
                 {invitation.role}
               </Badge>
             </div>
@@ -200,12 +200,12 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
             {invitation.project.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {invitation.project.tags.slice(0, 3).map((tag, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
+                  <Badge key={index} variant="outline" className="text-xs dark:text-gray-200 dark:border-gray-500">
                     {tag}
                   </Badge>
                 ))}
                 {invitation.project.tags.length > 3 && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs dark:text-gray-200 dark:border-gray-500">
                     +{invitation.project.tags.length - 3} more
                   </Badge>
                 )}

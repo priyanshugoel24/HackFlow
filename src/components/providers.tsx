@@ -7,7 +7,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <StatusProvider>
-        {children}
+        
+          {children}
       </StatusProvider>
     </SessionProvider>
   );

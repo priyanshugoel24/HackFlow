@@ -33,11 +33,11 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-100">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-100 dark:from-zinc-900 dark:to-zinc-800">
       <Navbar />
       <div className="flex h-[calc(100vh-60px)]">
         {/* Sidebar */}
-        <div className="w-64 bg-white border-r shadow-sm">
+        <div className="w-64 bg-white dark:bg-zinc-900 border-r dark:border-zinc-700 shadow-sm">
           <ProjectSidebar 
             onSelect={setSelectedProjectSlug} 
             onRefreshNeeded={(refreshFn: () => void) => {
@@ -53,10 +53,10 @@ export default function Home() {
               <ContextCardList projectSlug={selectedProjectSlug} />
             ) : (
               <>
-                <div className="bg-white shadow-md rounded-lg p-6 border border-gray-200">
+                <div className="bg-white dark:bg-zinc-900 shadow-md rounded-lg p-6 border border-gray-200 dark:border-zinc-700">
                   <PendingInvitations onInvitationAccepted={handleInvitationAccepted} />
                 </div>
-                <div className="bg-white shadow-md rounded-lg p-6 border border-gray-200">
+                <div className="bg-white dark:bg-zinc-900 shadow-md rounded-lg p-6 border border-gray-200 dark:border-zinc-700">
                   <ProjectCard 
                     onSelect={setSelectedProjectSlug} 
                     onRefreshNeeded={(refreshFn: () => void) => {

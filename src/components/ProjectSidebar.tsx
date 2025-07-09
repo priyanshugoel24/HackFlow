@@ -84,7 +84,7 @@ export default function ProjectSidebar({
       <div
         ref={sidebarRef}
         className={cn(
-          "h-full border-r bg-white flex flex-col transition-all duration-200",
+          "h-full border-r bg-white dark:bg-gray-900 dark:border-gray-700 flex flex-col transition-all duration-200",
           collapsed ? "w-[48px]" : ""
         )}
         style={!collapsed ? { width: `${width}px` } : undefined}
@@ -94,8 +94,8 @@ export default function ProjectSidebar({
           <div className="flex justify-between items-center">
             {!collapsed && (
               <div>
-                <h2 className="font-semibold text-base text-gray-800">Projects</h2>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <h2 className="font-semibold text-base text-gray-800 dark:text-gray-100">Projects</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   {activeProjects.length} active
                   {archivedProjects.length > 0 && `, ${archivedProjects.length} archived`}
                 </p>
@@ -103,7 +103,7 @@ export default function ProjectSidebar({
             )}
             <button
               onClick={() => setCollapsed((prev) => !prev)}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
               title={collapsed ? "Expand" : "Collapse"}
             >
               {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -114,7 +114,7 @@ export default function ProjectSidebar({
           {!collapsed && (
             <div className="space-y-3">
               {loading ? (
-                <div className="text-center text-gray-500 py-4">
+                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
                   <p className="text-xs mt-2">Loading...</p>
                 </div>
@@ -128,22 +128,22 @@ export default function ProjectSidebar({
                           key={project.id}
                           onClick={() => handleProjectSelect(project.slug)}
                           className={cn(
-                            "block w-full text-left bg-white hover:shadow-md border border-gray-200 px-4 py-3 rounded-lg transition-all",
+                            "block w-full text-left bg-white dark:bg-gray-900 hover:shadow-md border border-gray-200 dark:border-gray-600 px-4 py-3 rounded-lg transition-all",
                             selectedProjectSlug === project.slug && "ring-2 ring-blue-500"
                           )}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{project.name}</p>
+                              <p className="font-medium truncate text-gray-800 dark:text-gray-100">{project.name}</p>
                               <div className="flex items-center space-x-2 mt-1">
                                 {project.members && project.members.length > 0 && (
-                                  <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
                                     <Users className="h-3 w-3" />
                                     <span>{project.members.length}</span>
                                   </div>
                                 )}
                                 {project._count && (
-                                  <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
                                     <Hash className="h-3 w-3" />
                                     <span>{project._count.contextCards}</span>
                                   </div>
@@ -172,8 +172,8 @@ export default function ProjectSidebar({
 
                   {/* Archived Projects */}
                   {archivedProjects.length > 0 && (
-                    <div className="space-y-2 pt-3 border-t">
-                      <div className="flex items-center space-x-2 text-xs text-gray-500 px-3">
+                    <div className="space-y-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 px-3">
                         <Archive className="h-3 w-3" />
                         <span>Archived</span>
                       </div>
@@ -182,14 +182,14 @@ export default function ProjectSidebar({
                           key={project.id}
                           onClick={() => handleProjectSelect(project.slug)}
                           className={cn(
-                            "block w-full text-left hover:shadow-sm bg-gray-50 border border-gray-200 px-4 py-3 rounded-lg transition-colors opacity-60",
+                            "block w-full text-left hover:shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-lg transition-colors opacity-60",
                             selectedProjectSlug === project.slug && "ring-2 ring-blue-500"
                           )}
                         >
                           <div className="flex items-center space-x-2">
-                            <Archive className="h-4 w-4 text-gray-400" />
+                            <Archive className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{project.name}</p>
+                              <p className="font-medium truncate text-gray-800 dark:text-gray-100">{project.name}</p>
                             </div>
                           </div>
                         </button>
@@ -198,7 +198,7 @@ export default function ProjectSidebar({
                   )}
 
                   {projects.length === 0 && !loading && (
-                    <div className="text-center text-gray-500 py-4">
+                    <div className="text-center text-gray-500 dark:text-gray-400 py-4">
                       <p className="text-sm">No projects yet</p>
                     </div>
                   )}
@@ -209,7 +209,7 @@ export default function ProjectSidebar({
 
           {/* Add Project Button */}
           {!collapsed && (
-            <div className="pt-4 border-t">
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <Button 
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium" 
                 onClick={() => setOpen(true)}
@@ -225,7 +225,7 @@ export default function ProjectSidebar({
       {/* Resizer */}
       {!collapsed && (
         <div
-          className="w-1 bg-gray-200 cursor-col-resize hover:bg-gray-400 transition"
+          className="w-1 bg-gray-200 dark:bg-gray-700 cursor-col-resize hover:bg-gray-400 dark:hover:bg-gray-600 transition"
           onMouseDown={() => (isResizing.current = true)}
         />
       )}

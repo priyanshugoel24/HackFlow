@@ -147,7 +147,7 @@ export default function ProjectSettingsPage() {
       <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-zinc-800">
         <h1 className="text-4xl font-bold mb-10 text-zinc-800 dark:text-zinc-100 tracking-tight">Project Settings</h1>
 
-        <section className="border-b border-gray-200 pb-8 mb-10">
+        <section className="border-b border-gray-200 dark:border-zinc-700 pb-8 mb-10">
           <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6">Project Info</h2>
           <div className="space-y-6">
             <div>
@@ -179,14 +179,14 @@ export default function ProjectSettingsPage() {
           </div>
         </section>
 
-        <section className="border-b border-gray-200 pb-8 mb-10">
+        <section className="border-b border-gray-200 dark:border-zinc-700 pb-8 mb-10">
           <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6">Tags</h2>
           <div className="flex items-center gap-3 mb-5">
             <Input
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
               placeholder="Add tag"
-              className="flex-1 rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500"
+              className="flex-1 rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400 dark:placeholder:text-gray-500"
             />
             <Button 
               variant="outline" 
@@ -201,7 +201,7 @@ export default function ProjectSettingsPage() {
               <Badge
                 key={tag}
                 variant="secondary"
-                className="cursor-pointer hover:bg-gray-200 transition-colors rounded-lg px-3 py-1 select-none"
+                className="cursor-pointer hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors rounded-lg px-3 py-1 select-none"
                 onClick={() => handleRemoveTag(tag)}
               >
                 {tag}
@@ -226,14 +226,14 @@ export default function ProjectSettingsPage() {
                       className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-300 dark:ring-zinc-600"
                     />
                     <div>
-                      <p className="text-sm font-medium">{member.user.name || member.user.email}</p>
-                      <p className="text-xs text-muted-foreground">{member.role}</p>
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{member.user.name || member.user.email}</p>
+                      <p className="text-xs text-muted-foreground dark:text-gray-400">{member.role}</p>
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-red-600 hover:bg-red-100 text-xs px-2 py-1 rounded-md"
+                    className="text-red-600 hover:bg-red-100 dark:hover:bg-red-900 text-xs px-2 py-1 rounded-md"
                     onClick={async () => {
                       // Confirm before removing
                       if (!confirm("Are you sure you want to remove this member?")) return;
@@ -271,12 +271,12 @@ export default function ProjectSettingsPage() {
           </section>
         )}
 
-        <section className="pt-8 border-t border-gray-200">
+        <section className="pt-8 border-t border-gray-200 dark:border-zinc-700">
           <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6">Project Status</h2>
           <div className="mb-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-md font-medium">
+                <h3 className="text-md font-medium text-zinc-900 dark:text-zinc-100">
                   {project?.isArchived ? "Archived Project" : "Active Project"}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -286,9 +286,9 @@ export default function ProjectSettingsPage() {
                 </p>
               </div>
               {/* Only show if user is project creator or manager */}
-              {(project?.createdById === session?.user?.id || 
+              {(project?.createdById === session?.user?.email || 
                 project?.members?.some((m: any) => 
-                  m.user.id === session?.user?.id && m.role === "MANAGER" && m.status === "ACTIVE"
+                  m.user.id === session?.user?.email && m.role === "MANAGER" && m.status === "ACTIVE"
                 )) && (
                 <Button
                   variant="outline"

@@ -87,7 +87,7 @@ export default function ProjectPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Navbar />
         <div className="flex items-center justify-center h-[calc(100vh-60px)]">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -127,25 +127,25 @@ export default function ProjectPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
       <div className="max-w-7xl mx-auto px-6 py-8 md:px-10 md:py-10">
         {/* Back Button */}
         <Button
           variant="ghost"
           onClick={() => router.push("/")}
-          className="mb-8 text-sm text-gray-600 hover:text-gray-900 transition"
+          className="mb-8 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Projects
         </Button>
 
         {/* Project Header */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border p-6 mb-6">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-2">
-                <h1 className="text-3xl font-semibold text-gray-800 tracking-tight">
+                <h1 className="text-3xl font-semibold text-gray-800 dark:text-gray-100 tracking-tight">
                   {project.name}
                 </h1>
                 {project.isArchived && (
@@ -160,10 +160,10 @@ export default function ProjectPage() {
               </div>
 
               {project.description && (
-                <p className="mt-1 text-gray-600 mb-4">{project.description}</p>
+                <p className="mt-1 text-gray-600 dark:text-gray-400 mb-4">{project.description}</p>
               )}
 
-              <div className="flex items-center space-x-4 text-sm text-gray-500">
+              <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-500">
                 <div className="flex items-center space-x-1">
                   <Users className="h-4 w-4" />
                   <span>
@@ -188,7 +188,7 @@ export default function ProjectPage() {
               )}
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 flex-wrap justify-end mt-2 md:mt-0">
               {project.link && (
                 <Button
                   variant="outline"
@@ -216,16 +216,25 @@ export default function ProjectPage() {
                     Settings
                   </Link>
                 </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className="ml-2"
+                onClick={() => setInviteOpen(true)}
+              >
+                <UserRound className="h-4 w-4 mr-2" />
+                Invite Member
+              </Button>
             </div>
           </div>
         </div>
               {/* Online Users */}
-              <div className="bg-white rounded-xl border border-gray-200 shadow-md p-6 mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md p-6 mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                   Online Now {!isConnected && "(Reconnecting...)"}
                 </h3>
                 {onlineUsers.length === 0 ? (
-                  <div className="text-gray-500 text-sm">No users currently online</div>
+                  <div className="text-gray-500 dark:text-gray-500 text-sm">No users currently online</div>
                 ) : (
                   <div className="flex flex-wrap gap-3">
                     {Array.from(new Map(onlineUsers.map(user => [user.id, user])).values())
@@ -235,7 +244,7 @@ export default function ProjectPage() {
                       const displayStatus = user.id === sessionUser?.id ? currentUserStatus : user.status;
                       
                       return (
-                        <div key={`${user.id}-${index}`} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md shadow-sm border border-gray-200 hover:shadow transition-all">
+                        <div key={`${user.id}-${index}`} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-950 px-3 py-2 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow transition-all">
                           <div className="relative">
                             {user.image ? (
                               <Image
@@ -250,8 +259,8 @@ export default function ProjectPage() {
                                 }}
                               />
                             ) : (
-                              <div className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded-full border">
-                                <UserRound className="h-4 w-4 text-gray-600" />
+                              <div className="w-8 h-8 flex items-center justify-center bg-gray-200 dark:bg-gray-600 rounded-full border">
+                                <UserRound className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                               </div>
                             )}
                             <span 
@@ -265,9 +274,9 @@ export default function ProjectPage() {
                             />
                           </div>
                           <div>
-                            <div className="font-semibold text-gray-700 text-sm">{user.name}</div>
+                            <div className="font-semibold text-gray-700 dark:text-gray-300 text-sm">{user.name}</div>
                             {displayStatus && displayStatus !== "Available" && (
-                              <div className="text-xs text-gray-500 italic">{displayStatus}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-500 italic">{displayStatus}</div>
                             )}
                           </div>
                         </div>
@@ -286,7 +295,6 @@ export default function ProjectPage() {
                   fetchProject();
                 }}
               />
-<Button onClick={() => setInviteOpen(true)} className="mt-4 rounded-full">Invite Member</Button>
         {/* Context Cards */}
         <ContextCardList projectSlug={projectSlug} />
       </div>

@@ -84,8 +84,8 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
 
   if (loading) {
     return (
-      <div className="text-center text-gray-500 mt-10">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+      <div className="text-center text-gray-500 dark:text-gray-400 mt-10">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
         <p className="mt-2">Loading context cards...</p>
       </div>
     );
@@ -102,10 +102,10 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'INSIGHT': return 'bg-yellow-100 text-yellow-800';
-      case 'DECISION': return 'bg-green-100 text-green-800';
+      case 'INSIGHT': return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100';
+      case 'DECISION': return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100';
       case 'TASK': 
-      default: return 'bg-blue-100 text-blue-800';
+      default: return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100';
     }
   };
 
@@ -124,8 +124,8 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
   if (displayedCards.length === 0) {
     return (
       <>
-        <div className="text-center text-gray-500 mt-10">
-          <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+        <div className="text-center text-gray-500 dark:text-gray-400 mt-10">
+          <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
           <p className="text-lg font-medium">No context cards found</p>
           <p className="text-sm mb-4">Create your first context card for this project!</p>
           <Button onClick={() => setModalOpen(true)}>
@@ -152,7 +152,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            <h2 className="text-xl font-semibold">Context Cards</h2>
+            <h2 className="text-xl font-semibold dark:text-gray-100">Context Cards</h2>
             <Button 
               variant="outline" 
               size="sm"
@@ -163,7 +163,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
               {showArchived ? "Hide Archived" : "Show Archived"}
             </Button>
             {showArchived && allCards.some(card => card.isArchived) && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 Showing {allCards.filter(card => card.isArchived).length} archived cards
               </span>
             )}
@@ -179,9 +179,9 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
             <Card
               key={card.id}
               className={cn(
-                "cursor-pointer group hover:shadow-lg transition-shadow",
+                "cursor-pointer group hover:shadow-lg dark:hover:shadow-blue-900 transition-shadow",
                 card.isArchived && "opacity-60",
-                card.isPinned && "ring-2 ring-blue-200"
+                card.isPinned && "ring-2 ring-blue-200 dark:ring-blue-700"
               )}
               onClick={() => setSelectedCard(card)}
             >
@@ -193,61 +193,61 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
                       <span className="capitalize">{card.type.toLowerCase()}</span>
                     </div>
                     {card.isPinned && (
-                      <Pin className="h-4 w-4 text-blue-500" />
+                      <Pin className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                     )}
                     {card.isArchived && (
-                      <Archive className="h-4 w-4 text-gray-400" />
+                      <Archive className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     )}
                   </div>
                   <div className="flex items-center space-x-1">
                     {card.visibility === 'PRIVATE' ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
+                      <EyeOff className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     ) : (
-                      <Eye className="h-4 w-4 text-green-500" />
+                      <Eye className="h-4 w-4 text-green-500 dark:text-green-400" />
                     )}
                   </div>
                 </div>
                 
-                <CardTitle className="text-base font-semibold group-hover:text-blue-600 line-clamp-2">
+                <CardTitle className="text-base font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400 line-clamp-2">
                   {card.title}
                 </CardTitle>
               </CardHeader>
               
               <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground line-clamp-3">
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground-dark line-clamp-3">
                   {card.content}
                 </p>
                 
                 {card.why && (
-                  <div className="bg-yellow-50 p-2 rounded-md">
-                    <p className="text-xs font-medium text-yellow-800">Why:</p>
-                    <p className="text-xs text-yellow-700 line-clamp-2">{card.why}</p>
+                  <div className="bg-yellow-50 dark:bg-yellow-900 p-2 rounded-md">
+                    <p className="text-xs font-medium text-yellow-800 dark:text-yellow-100">Why:</p>
+                    <p className="text-xs text-yellow-700 dark:text-yellow-200 line-clamp-2">{card.why}</p>
                   </div>
                 )}
                 
                 {card.issues && (
-                  <div className="bg-red-50 p-2 rounded-md flex items-start space-x-2">
-                    <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div className="bg-red-50 dark:bg-red-900 p-2 rounded-md flex items-start space-x-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-xs font-medium text-red-800">Issues:</p>
-                      <p className="text-xs text-red-700 line-clamp-2">{card.issues}</p>
+                      <p className="text-xs font-medium text-red-800 dark:text-red-100">Issues:</p>
+                      <p className="text-xs text-red-700 dark:text-red-200 line-clamp-2">{card.issues}</p>
                     </div>
                   </div>
                 )}
                 
                 {card.linkedCard && (
-                  <div className="bg-blue-50 p-2 rounded-md flex items-center space-x-2">
-                    <Link className="h-4 w-4 text-blue-500" />
+                  <div className="bg-blue-50 dark:bg-blue-900 p-2 rounded-md flex items-center space-x-2">
+                    <Link className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                     <div>
-                      <p className="text-xs font-medium text-blue-800">Linked to:</p>
-                      <p className="text-xs text-blue-700 line-clamp-1">{card.linkedCard.title}</p>
+                      <p className="text-xs font-medium text-blue-800 dark:text-blue-100">Linked to:</p>
+                      <p className="text-xs text-blue-700 dark:text-blue-200 line-clamp-1">{card.linkedCard.title}</p>
                     </div>
                   </div>
                 )}
                 
                 {card.linkedFrom && card.linkedFrom.length > 0 && (
-                  <div className="bg-gray-50 p-2 rounded-md">
-                    <p className="text-xs font-medium text-gray-800">
+                  <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-md">
+                    <p className="text-xs font-medium text-gray-800 dark:text-gray-200">
                       {card.linkedFrom.length} card{card.linkedFrom.length !== 1 ? 's' : ''} linked to this
                     </p>
                   </div>
@@ -255,14 +255,14 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
                 
                 <div className="flex flex-wrap gap-1">
                   {card.attachments && card.attachments.length > 0 && (
-                    <div className="flex items-center space-x-1 text-xs text-gray-500">
+                    <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
                       <Paperclip className="h-3 w-3" />
                       <span>{card.attachments.length} attachment{card.attachments.length !== 1 ? 's' : ''}</span>
                     </div>
                   )}
 
                   {card.attachments && card.attachments.length > 0 && (
-    <div className="text-xs text-blue-600 space-y-1 mt-1">
+    <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1 mt-1">
       {card.attachments.map((url : string, i : number) => (
         <a 
           key={`${card.id}-attachment-${i}-${url.split("/").pop()}`}
@@ -278,14 +278,14 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
   )}
                   
                   {card.slackLinks && card.slackLinks.length > 0 && (
-                    <div className="flex items-center space-x-1 text-xs text-gray-500">
+                    <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
                       <MessageSquare className="h-3 w-3" />
                       <span>{card.slackLinks.length} slack link{card.slackLinks.length !== 1 ? 's' : ''}</span>
                     </div>
                   )}
                 </div>
                 
-                <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
                   <span>Updated {formatDate(card.updatedAt)}</span>
                   <span>Created {formatDate(card.createdAt)}</span>
                 </div>

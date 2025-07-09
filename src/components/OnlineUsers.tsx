@@ -41,23 +41,23 @@ export default function OnlineUsers() {
         <div className="flex -space-x-2">
           {otherUsers.slice(0, 3).map((user) => (
             <div key={user.id} className="group relative">
-              <Avatar className="w-6 h-6 border-2 border-background">
+              <Avatar className="w-6 h-6 border-2 border-background dark:border-border">
                 <AvatarImage src={user.image} alt={user.name} />
                 <AvatarFallback className="text-xs">
                   {user.name?.charAt(0)?.toUpperCase() || '?'}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black dark:bg-white text-white dark:text-black px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                 {user.name}
                 {user.status && (
-                  <span className="ml-1 text-gray-300">({user.status})</span>
+                  <span className="ml-1 text-gray-300 dark:text-gray-600">({user.status})</span>
                 )}
               </div>
             </div>
           ))}
           {otherUsers.length > 3 && (
-            <div className="w-6 h-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-              <span className="text-xs text-muted-foreground">+{otherUsers.length - 3}</span>
+            <div className="w-6 h-6 rounded-full bg-muted dark:bg-muted/60 border-2 border-background dark:border-border flex items-center justify-center">
+              <span className="text-xs text-muted-foreground dark:text-muted-foreground">+{otherUsers.length - 3}</span>
             </div>
           )}
         </div>

@@ -62,7 +62,7 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
 
   if (loading) {
     return (
-      <div className="text-center text-gray-500 mt-10">
+      <div className="text-center text-gray-500 dark:text-gray-400 mt-10">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
         <p className="mt-2">Loading projects...</p>
       </div>
@@ -71,10 +71,10 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
 
   if (projects.length === 0) {
     return (
-      <div className="text-center text-gray-500 mt-10">
-        <Folder className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-        <p className="text-lg font-medium">No projects found</p>
-        <p className="text-sm">Create your first project to get started!</p>
+      <div className="text-center text-gray-500 dark:text-gray-400 mt-10">
+        <Folder className="h-16 w-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+        <p className="text-lg font-medium text-gray-800 dark:text-gray-100">No projects found</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300">Create your first project to get started!</p>
       </div>
     );
   }
@@ -95,23 +95,23 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <h2 className="text-lg font-semibold">Projects</h2>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Projects</h2>
           <button
             onClick={toggleShowArchived}
-            className="flex items-center space-x-1 text-sm px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors"
+            className="flex items-center space-x-1 text-sm px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
             <Archive className="h-3.5 w-3.5 mr-1" />
             {showArchived ? "Hide Archived" : "Show Archived"}
           </button>
           {showArchived && allProjects.some(project => project.isArchived) && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               Showing {allProjects.filter(project => project.isArchived).length} archived
             </span>
           )}
         </div>
         {/* <button
           onClick={() => router.push('/projects/new')}
-          className="bg-blue-600 text-white rounded-md px-3 py-1.5 text-sm hover:bg-blue-700"
+          className="bg-blue-600 dark:bg-blue-700 text-white rounded-md px-3 py-1.5 text-sm hover:bg-blue-700 dark:hover:bg-blue-600"
         >
           New Project
         </button> */}
@@ -122,7 +122,7 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
           <Card
             key={project.id}
             className={cn(
-              "cursor-pointer group hover:shadow-md hover:border-blue-500 hover:bg-gray-50 transition border border-gray-200 h-full rounded-lg bg-white p-2",
+              "cursor-pointer group hover:shadow-md hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition border border-gray-200 dark:border-gray-700 h-full rounded-lg bg-white dark:bg-gray-900 p-2",
               project.isArchived && "opacity-60"
             )}
             onClick={() => handleProjectClick(project.slug)}
@@ -131,9 +131,9 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
               <div className="flex items-center space-x-2 flex-1">
                 <div className="flex items-center space-x-2">
                   <Folder className="h-5 w-5 text-blue-500" />
-                  {project.isArchived && <Archive className="h-4 w-4 text-gray-400" />}
+                  {project.isArchived && <Archive className="h-4 w-4 text-gray-400 dark:text-gray-500" />}
                 </div>
-                <CardTitle className="text-[15px] font-semibold group-hover:text-blue-600 truncate">
+                <CardTitle className="text-[15px] font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
                   {project.name}
                 </CardTitle>
               </div>
@@ -143,7 +143,7 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="text-blue-500 hover:text-blue-700 flex-shrink-0"
+                  className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex-shrink-0"
                 >
                   <ExternalLink className="h-4 w-4" />
                 </a>
@@ -157,7 +157,7 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
                 </p>
               )}
               
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 mt-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400 mt-2">
                 <div className="flex items-center space-x-1">
                   <Users className="h-3 w-3" />
                   <span>{project.members?.length || 0} member{project.members?.length !== 1 ? 's' : ''}</span>
@@ -169,7 +169,7 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
               </div>
               
               {project._count && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
                   {project._count.contextCards} context card{project._count.contextCards !== 1 ? 's' : ''}
                 </div>
               )}
@@ -197,7 +197,7 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
                     {project.isArchived ? "Archived" : "Active"}
                   </Badge>
                   {project.createdBy && (
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                       by {project.createdBy.name || project.createdBy.email}
                     </div>
                   )}

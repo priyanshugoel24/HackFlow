@@ -136,7 +136,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
   };
 
   return (
-    <div className="space-y-4 mt-4 border-t pt-4">
+    <div className="space-y-4 mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
       <h4 className="text-sm font-semibold text-gray-800 dark:text-white">💬 Comments</h4>
 
       {/* New Comment Input */}
@@ -151,7 +151,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
             onChange={(e) => setNewComment(e.target.value)}
             rows={2}
             placeholder="Write a comment..."
-            className="w-full text-sm"
+            className="w-full text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 border border-gray-300 dark:border-gray-700"
           />
           <Button
             size="sm"
@@ -172,7 +172,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
               <AvatarImage src={c.author.image} />
               <AvatarFallback>{c.author.name?.[0]}</AvatarFallback>
             </Avatar>
-            <div className="bg-muted rounded-lg px-4 py-2 w-full">
+            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-2 w-full">
               <div className="text-sm font-semibold text-gray-900 dark:text-white">{c.author.name}</div>
               <p className="text-sm text-gray-700 dark:text-gray-300">{c.content}</p>
               <div className="text-xs text-muted-foreground mt-1">
