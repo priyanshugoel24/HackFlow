@@ -1,22 +1,24 @@
 "use client";
 import React, { createContext, useContext } from "react";
-import { useAblyStatus, type UserStatus } from "@/lib/ably/useAblyStatus";
+import { useAblyPresence } from "@/lib/ably/useAblyPresence";
+
+export type UserStatus = "Available" | "Busy" | "Focused" | "Away";
 
 interface StatusContextType {
-  status: UserStatus;
-  updateStatus: (status: UserStatus) => Promise<void>;
+  status: string;
+  updateStatus: (status: string) => void;
   isConnected: boolean;
 }
 
 const StatusContext = createContext<StatusContextType | undefined>(undefined);
 
 export function StatusProvider({ children }: { children: React.ReactNode }) {
-  const { status, updateStatus, isConnected } = useAblyStatus();
+  const { currentStatus, updateStatus, isConnected } = useAblyPresence();
 
   return (
     <StatusContext.Provider
       value={{
-        status,
+        status: currentStatus,
         updateStatus,
         isConnected,
       }}

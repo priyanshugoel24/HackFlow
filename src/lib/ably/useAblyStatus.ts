@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { getAblyClient, CHANNELS, type AblyStatusData } from "@/lib/ably";
 import type Ably from 'ably';
@@ -10,13 +10,19 @@ export function useAblyStatus() {
   const { data: session } = useSession();
   const [status, setStatus] = useState<UserStatus>("Available");
   const [isConnected, setIsConnected] = useState(false);
-  const [channel, setChannel] = useState<Ably.RealtimeChannel | null>(null);
+  
+  const ablyRef = useRef<Ably.Realtime | null>(null);
+  const statusChannelRef = useRef<Ably.RealtimeChannel | null>(null);
 
   // Update status both locally and via API
   const updateStatus = useCallback(async (newStatus: UserStatus) => {
-    if (!session?.user?.id) return;
+    const user = session?.user as { id: string };
+    if (!user?.id) return;
 
     try {
+      // Update local state immediately
+      setStatus(newStatus);
+      
       // Update via API (which will also publish to Ably)
       const response = await fetch("/api/status", {
         method: "POST",
@@ -27,79 +33,105 @@ export function useAblyStatus() {
       });
 
       if (response.ok) {
-        setStatus(newStatus);
-        console.log("✅ Status updated:", newStatus);
+        console.log("✅ Status updated via API:", newStatus);
       } else {
         console.error("❌ Failed to update status via API");
+        // Revert local state if API call failed
+        setStatus(status);
       }
     } catch (error) {
       console.error("❌ Error updating status:", error);
+      // Revert local state if there was an error
+      setStatus(status);
     }
-  }, [session?.user?.id]);
+  }, [session?.user, status]);
 
   // Fetch initial status
   const fetchInitialStatus = useCallback(async () => {
-    if (!session?.user?.id) return;
+    const user = session?.user as { id: string };
+    if (!user?.id) return;
 
     try {
       const response = await fetch("/api/status");
       if (response.ok) {
         const data = await response.json();
-        setStatus(data.status?.state || "Available");
-        console.log("📥 Fetched initial status:", data.status?.state || "Available");
+        const initialStatus = data.status?.state || "Available";
+        setStatus(initialStatus);
+        console.log("📥 Fetched initial status:", initialStatus);
       }
     } catch (error) {
       console.error("❌ Error fetching initial status:", error);
     }
-  }, [session?.user?.id]);
+  }, [session?.user]);
 
+  // Handle connection state changes
+  const handleConnectionStateChange = useCallback((stateChange: Ably.ConnectionStateChange) => {
+    console.log('🌐 Ably status connection state changed:', stateChange.current);
+    setIsConnected(stateChange.current === 'connected');
+  }, []);
+
+  // Handle status updates from other users (and ourselves)
+  const handleStatusMessage = useCallback((message: Ably.Message) => {
+    const statusData = message.data as AblyStatusData;
+    const user = session?.user as { id?: string };
+    
+    // Only update if it's our own status update
+    if (statusData.userId === user?.id) {
+      setStatus(statusData.state as UserStatus);
+      console.log("📡 Received own status update via Ably:", statusData.state);
+    }
+  }, [session?.user]);
+
+  // Main effect - initialize connection
   useEffect(() => {
-    if (!session?.user?.id) {
+    const user = session?.user as { id: string };
+    if (!user?.id) {
       console.log("⏳ useAblyStatus waiting for session");
+      setIsConnected(false);
       return;
     }
 
     console.log("🔌 Starting Ably status connection");
     
-    const ably = getAblyClient(session.user.id);
-    const statusChannel = ably.channels.get(CHANNELS.STATUS_UPDATES);
-    setChannel(statusChannel);
-
-    // Handle connection state changes
-    const handleConnectionStateChange = (stateChange: Ably.ConnectionStateChange) => {
-      console.log('🌐 Ably status connection state changed:', stateChange.current);
-      setIsConnected(stateChange.current === 'connected');
-    };
-
-    // Handle status updates from other users (and ourselves)
-    const handleStatusMessage = (message: Ably.Message) => {
-      const statusData = message.data as AblyStatusData;
+    try {
+      const ably = getAblyClient(user.id);
+      ablyRef.current = ably;
       
-      // Only update if it's our own status update
-      if (statusData.userId === session.user.id) {
-        setStatus(statusData.state as UserStatus);
-        console.log("📡 Received status update via Ably:", statusData.state);
-      }
-    };
+      const statusChannel = ably.channels.get(CHANNELS.STATUS_UPDATES);
+      statusChannelRef.current = statusChannel;
 
-    // Subscribe to connection state changes
-    ably.connection.on(handleConnectionStateChange);
+      // Set up connection state listener
+      ably.connection.on(handleConnectionStateChange);
 
-    // Subscribe to status updates
-    statusChannel.subscribe('status-update', handleStatusMessage);
+      // Set up status message listener
+      statusChannel.subscribe('status-update', handleStatusMessage);
 
-    // Fetch initial status
-    fetchInitialStatus();
+      // Set initial connection state
+      setIsConnected(ably.connection.state === 'connected');
+
+      // Fetch initial status
+      fetchInitialStatus();
+
+    } catch (error) {
+      console.error("❌ Failed to initialize Ably status:", error);
+      setIsConnected(false);
+    }
 
     // Cleanup function
     return () => {
-      console.log("🔇 Cleaning up Ably status connection");
-      ably.connection.off(handleConnectionStateChange);
-      statusChannel.unsubscribe('status-update', handleStatusMessage);
-      setChannel(null);
+      console.log("🧹 Cleaning up Ably status connection");
+      
+      if (ablyRef.current) {
+        ablyRef.current.connection.off(handleConnectionStateChange);
+      }
+      
+      if (statusChannelRef.current) {
+        statusChannelRef.current.unsubscribe('status-update', handleStatusMessage);
+      }
+      
       setIsConnected(false);
     };
-  }, [session?.user?.id, fetchInitialStatus]);
+  }, [session?.user, handleConnectionStateChange, handleStatusMessage, fetchInitialStatus]);
 
   return {
     status,

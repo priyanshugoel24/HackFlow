@@ -43,8 +43,8 @@ export default function ProjectPage() {
   const params = useParams();
   const router = useRouter();
   const projectSlug = params?.slug as string;
-  const { onlineUsers, isConnected } = usePresence();
-  const { status: currentUserStatus } = useStatus();
+  const { onlineUsers } = usePresence();
+  const { status: currentUserStatus, isConnected } = useStatus();
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -231,7 +231,8 @@ export default function ProjectPage() {
                     {Array.from(new Map(onlineUsers.map(user => [user.id, user])).values())
                       .map((user, index) => {
                       // Use current user's status from StatusProvider if it's the current user
-                      const displayStatus = user.id === session?.user?.id ? currentUserStatus : user.status;
+                      const sessionUser = session?.user as { id: string; name?: string | null; email?: string | null; image?: string | null } | undefined;
+                      const displayStatus = user.id === sessionUser?.id ? currentUserStatus : user.status;
                       
                       return (
                         <div key={`${user.id}-${index}`} className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md shadow-sm border border-gray-200 hover:shadow transition-all">

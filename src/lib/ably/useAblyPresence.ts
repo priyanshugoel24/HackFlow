@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { getAblyClient, CHANNELS, type AblyPresenceData, type AblyStatusData } from "@/lib/ably";
+import { getAblyClient, CHANNELS, type AblyPresenceData } from "@/lib/ably";
 import type Ably from 'ably';
 
-type PresenceUser = {
+export type PresenceUser = {
   id: string;
   name: string;
   image?: string;
@@ -12,218 +12,295 @@ type PresenceUser = {
   lastSeen: string;
 };
 
-interface UseAblyPresenceOptions {
-  initialStatus?: string;
-}
-
-export function useAblyPresence(options: UseAblyPresenceOptions = {}) {
+export function useAblyPresence() {
   const { data: session } = useSession();
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [presenceChannel, setPresenceChannel] = useState<Ably.RealtimeChannel | null>(null);
-  const [statusChannel, setStatusChannel] = useState<Ably.RealtimeChannel | null>(null);
-  const [currentStatus, setCurrentStatus] = useState(options.initialStatus || "Available");
+  const [currentStatus, setCurrentStatus] = useState("Available");
+  
+  // Use refs to avoid stale closures
+  const ablyRef = useRef<Ably.Realtime | null>(null);
+  const presenceChannelRef = useRef<Ably.RealtimeChannel | null>(null);
+  const hasEnteredPresence = useRef(false);
 
-  // Convert Ably presence members to our PresenceUser format
+  // Convert Ably presence members to our format
   const convertPresenceMembers = useCallback((members: Ably.PresenceMessage[]): PresenceUser[] => {
-    console.log("🔄 Converting presence members:", members.map(m => ({ 
-      clientId: m.clientId, 
-      status: (m.data as AblyPresenceData)?.status,
-      name: (m.data as AblyPresenceData)?.name 
-    })));
-    
-    // Create a map to deduplicate users by clientId (in case same user appears multiple times)
     const userMap = new Map<string, PresenceUser>();
     
     members.forEach((member) => {
       if (!member.clientId) return;
       
       const data = member.data as AblyPresenceData;
+      if (!data) return;
+      
       const user: PresenceUser = {
         id: member.clientId,
-        name: data.name,
+        name: data.name || "Unknown User",
         image: data.image,
-        status: data.status,
-        lastSeen: data.lastSeen,
+        status: data.status || "Available",
+        lastSeen: data.lastSeen || new Date().toISOString(),
       };
       
-      // Only keep the most recent entry for each user
-      const existing = userMap.get(member.clientId);
-      if (!existing || new Date(data.lastSeen) > new Date(existing.lastSeen)) {
-        userMap.set(member.clientId, user);
-      }
+      userMap.set(member.clientId, user);
     });
     
     return Array.from(userMap.values());
   }, []);
 
-  // Update presence data for current user
-  const updatePresence = useCallback(async (presenceData: Partial<AblyPresenceData>) => {
-    if (!presenceChannel || !session?.user?.id) {
-      console.warn("⚠️ Cannot update presence: channel or session not available");
-      return;
-    }
-
+  // Update presence members from channel
+  const updatePresenceMembers = useCallback(async () => {
+    if (!presenceChannelRef.current) return;
+    
     try {
-      const currentData: AblyPresenceData = {
-        name: session.user.name || "Unknown User",
-        image: session.user.image || undefined,
-        status: currentStatus,
-        lastSeen: new Date().toISOString(),
-        ...presenceData,
-      };
-
-      await presenceChannel.presence.update(currentData);
-      console.log("🔄 Updated Ably presence:", currentData);
+      const members = await presenceChannelRef.current.presence.get();
+      const users = convertPresenceMembers(members || []);
+      setOnlineUsers(users);
+      console.log("👥 Updated presence members:", users.length);
     } catch (error) {
-      console.error("❌ Failed to update Ably presence:", error);
+      console.error("❌ Failed to get presence members:", error);
     }
-  }, [presenceChannel, session?.user?.id, session?.user?.name, session?.user?.image, currentStatus]);
+  }, [convertPresenceMembers]);
 
-  // Update status and sync with presence
-  const updateStatus = useCallback(async (newStatus: string) => {
-    setCurrentStatus(newStatus);
-    await updatePresence({ status: newStatus });
-  }, [updatePresence]);
-
-  useEffect(() => {
-    if (!session?.user?.id) {
-      console.log("⏳ useAblyPresence waiting for session");
-      return;
-    }
-
-    console.log("🔌 Starting Ably presence connection");
+  // Enter presence with current user data
+  const enterPresence = useCallback(async () => {
+    if (!presenceChannelRef.current || !session?.user) return;
     
-    const ably = getAblyClient(session.user.id);
-    
-    const presenceChannelRef = ably.channels.get(CHANNELS.PRESENCE_GLOBAL);
-    const statusChannelRef = ably.channels.get(CHANNELS.STATUS_UPDATES);
-    
-    setPresenceChannel(presenceChannelRef);
-    setStatusChannel(statusChannelRef);
+    const user = session.user as { id: string; name?: string | null; image?: string | null };
+    if (!user.id) return;
 
-    // Enter presence function (defined inside useEffect to avoid stale closure)
-    const enterPresence = async () => {
+    const maxRetries = 3;
+    let retryCount = 0;
+    
+    const attemptEnterPresence = async (): Promise<void> => {
       try {
-        console.log("🚪 Entering Ably presence...");
-        
         const presenceData: AblyPresenceData = {
-          name: session.user.name || "Unknown User",
-          image: session.user.image || undefined,
+          name: user.name || "Unknown User",
+          image: user.image || undefined,
           status: currentStatus,
           lastSeen: new Date().toISOString(),
         };
 
-        await presenceChannelRef.presence.enter(presenceData);
-        console.log("✅ Successfully entered Ably presence");
+        await presenceChannelRef.current!.presence.enter(presenceData);
+        hasEnteredPresence.current = true;
+        console.log("✅ Entered presence:", presenceData);
         
-        // Get initial presence members after entering
-        const members = await presenceChannelRef.presence.get();
-        const users = convertPresenceMembers(members || []);
-        console.log("👥 Initial presence members:", users);
-        setOnlineUsers(users);
+        // Update presence members after entering
+        await updatePresenceMembers();
       } catch (error) {
         console.error("❌ Failed to enter presence:", error);
-      }
-    };
-
-    // Handle connection state changes
-    const handleConnectionStateChange = (stateChange: Ably.ConnectionStateChange) => {
-      console.log('🌐 Ably presence connection state changed:', stateChange.current);
-      setIsConnected(stateChange.current === 'connected');
-      
-      // Try to enter presence when connected
-      if (stateChange.current === 'connected') {
-        enterPresence();
-      }
-    };
-
-    // Handle presence updates
-    const handlePresenceUpdate = async () => {
-      try {
-        const members = await presenceChannelRef.presence.get();
-        const users = convertPresenceMembers(members || []);
-        console.log("👥 Presence update, online users:", users);
-        setOnlineUsers(users);
-      } catch (err) {
-        console.error("❌ Failed to get presence members:", err);
-      }
-    };
-
-    // Handle status updates from the status channel
-    const handleStatusUpdate = async (message: Ably.Message) => {
-      const statusData = message.data as AblyStatusData;
-      console.log("📡 Received status update:", statusData);
-      
-      // If it's our own status update, sync with presence
-      if (statusData.userId === session.user.id) {
-        console.log("🔄 Syncing own status with presence:", statusData.state);
-        setCurrentStatus(statusData.state);
+        hasEnteredPresence.current = false;
         
-        // Update presence immediately with the new status
-        try {
-          const presenceData: AblyPresenceData = {
-            name: session.user.name || "Unknown User",
-            image: session.user.image || undefined,
-            status: statusData.state,
-            lastSeen: new Date().toISOString(),
-          };
-
-          await presenceChannelRef.presence.update(presenceData);
-          console.log("✅ Updated presence with new status:", statusData.state);
-        } catch (error) {
-          console.error("❌ Failed to update presence with new status:", error);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(`🔄 Retrying presence entry (${retryCount}/${maxRetries})...`);
+          setTimeout(attemptEnterPresence, 1000 * retryCount);
+        } else {
+          console.error("❌ Max retries reached for presence entry");
         }
       }
-      
-      // Refresh presence to get updated status for all users
-      handlePresenceUpdate();
     };
+    
+    await attemptEnterPresence();
+  }, [session?.user, currentStatus, updatePresenceMembers]);
 
-    // Subscribe to connection state changes
-    ably.connection.on(handleConnectionStateChange);
+  // Update presence data
+  const updatePresence = useCallback(async (data: Partial<AblyPresenceData>) => {
+    if (!presenceChannelRef.current || !session?.user) return;
 
-    // Subscribe to presence events
-    presenceChannelRef.presence.subscribe(['enter', 'update', 'leave'], (presenceMessage) => {
-      console.log("🔄 Presence event:", presenceMessage.action, presenceMessage.clientId);
-      handlePresenceUpdate();
-    });
+    const user = session.user as { id: string; name?: string | null; image?: string | null };
+    if (!user.id) return;
 
-    // Subscribe to status updates
-    statusChannelRef.subscribe('status-update', handleStatusUpdate);
+    try {
+      const presenceData: AblyPresenceData = {
+        name: user.name || "Unknown User",
+        image: user.image || undefined,
+        status: currentStatus,
+        lastSeen: new Date().toISOString(),
+        ...data,
+      };
 
-    // Set initial connection state
-    setIsConnected(ably.connection.state === 'connected');
-
-    // Enter presence when ready
-    if (ably.connection.state === 'connected') {
-      enterPresence();
-    } else {
-      console.log("⏳ Waiting for Ably connection...", ably.connection.state);
-      ably.connection.once('connected', enterPresence);
+      if (hasEnteredPresence.current) {
+        await presenceChannelRef.current.presence.update(presenceData);
+        console.log("🔄 Updated presence:", presenceData);
+      } else {
+        await presenceChannelRef.current.presence.enter(presenceData);
+        hasEnteredPresence.current = true;
+        console.log("✅ Entered presence (via update):", presenceData);
+      }
+      
+      // Update presence members after updating
+      await updatePresenceMembers();
+    } catch (error) {
+      console.error("❌ Failed to update presence:", error);
     }
+  }, [session?.user, currentStatus, updatePresenceMembers]);
+
+  // Handle connection state changes
+  const handleConnectionStateChange = useCallback((stateChange: Ably.ConnectionStateChange) => {
+    console.log('🌐 Ably connection state changed:', stateChange.current);
+    const connected = stateChange.current === 'connected';
+    setIsConnected(connected);
+    
+    if (connected) {
+      // Enter presence when connected
+      if (!hasEnteredPresence.current) {
+        enterPresence();
+      }
+    } else {
+      // Clear online users when disconnected
+      setOnlineUsers([]);
+      hasEnteredPresence.current = false;
+    }        // Handle failed states and CSP errors
+        if (stateChange.current === 'failed') {
+          console.error("❌ Ably connection failed:", stateChange.reason);
+          setIsConnected(false);
+          setOnlineUsers([]);
+          hasEnteredPresence.current = false;
+          
+          // Check if this is a CSP-related error
+          if (stateChange.reason && stateChange.reason.message && 
+              stateChange.reason.message.includes('violates the following Content Security Policy')) {
+            console.error("❌ CSP violation detected. Please check your CSP settings.");
+            // Don't retry CSP errors immediately - they need configuration changes
+            return;
+          }
+          
+          // Try to reconnect after a delay for other types of errors
+          setTimeout(() => {
+            console.log("🔄 Attempting to reconnect...");
+            if (ablyRef.current) {
+              ablyRef.current.connect();
+            }
+          }, 5000);
+        }
+  }, [enterPresence]);
+
+  // Handle presence events
+  const handlePresenceEvent = useCallback((presenceMessage: Ably.PresenceMessage) => {
+    console.log("🔄 Presence event:", presenceMessage.action, presenceMessage.clientId);
+    updatePresenceMembers();
+  }, [updatePresenceMembers]);
+
+  // Main effect - initialize connection
+  useEffect(() => {
+    if (!session?.user) {
+      console.log("⏳ Waiting for session...");
+      setIsConnected(false);
+      setOnlineUsers([]);
+      return;
+    }
+
+    const user = session.user as { id: string; name?: string | null };
+    if (!user.id) {
+      console.log("⏳ Waiting for user id...");
+      return;
+    }
+
+    console.log("🔌 Initializing Ably presence for user:", user.name);
+    
+    let mounted = true;
+    
+    const initializePresence = async () => {
+      try {
+        // Check if environment variables are set
+        if (!process.env.NEXT_PUBLIC_ABLY_CLIENT_KEY) {
+          console.error("❌ NEXT_PUBLIC_ABLY_CLIENT_KEY is not set");
+          return;
+        }
+        
+        // Initialize Ably client
+        const ably = getAblyClient(user.id);
+        if (!mounted) return;
+        
+        ablyRef.current = ably;
+        
+        // Get presence channel
+        const presenceChannel = ably.channels.get(CHANNELS.PRESENCE_GLOBAL);
+        presenceChannelRef.current = presenceChannel;
+        
+        // Set up connection state listener
+        ably.connection.on(handleConnectionStateChange);
+        
+        // Set up presence event listeners with retry logic
+        const subscribeToPresence = async (retryCount = 0) => {
+          try {
+            presenceChannel.presence.subscribe(['enter', 'update', 'leave'], handlePresenceEvent);
+            console.log("✅ Subscribed to presence events");
+          } catch (error) {
+            console.error("❌ Failed to subscribe to presence events:", error);
+            
+            // Retry subscription up to 3 times
+            if (retryCount < 3) {
+              console.log(`🔄 Retrying presence subscription (${retryCount + 1}/3)...`);
+              setTimeout(() => subscribeToPresence(retryCount + 1), 2000 * (retryCount + 1));
+            }
+          }
+        };
+        
+        await subscribeToPresence();
+        
+        // Set initial connection state
+        const initialState = ably.connection.state;
+        if (mounted) {
+          setIsConnected(initialState === 'connected');
+          console.log("🔌 Initial connection state:", initialState);
+        }
+        
+        // Enter presence if already connected
+        if (initialState === 'connected' && mounted) {
+          enterPresence();
+        }
+        
+      } catch (error) {
+        console.error("❌ Failed to initialize Ably presence:", error);
+        if (mounted) {
+          setIsConnected(false);
+          setOnlineUsers([]);
+        }
+      }
+    };
+    
+    initializePresence();
 
     // Cleanup function
     return () => {
-      console.log("🔇 Cleaning up Ably presence connection");
-      ably.connection.off(handleConnectionStateChange);
-      presenceChannelRef.presence.unsubscribe();
-      presenceChannelRef.presence.leave().catch(err => 
-        console.warn("⚠️ Error leaving presence:", err)
-      );
-      statusChannelRef.unsubscribe('status-update', handleStatusUpdate);
-      setPresenceChannel(null);
-      setStatusChannel(null);
+      mounted = false;
+      console.log("🧹 Cleaning up Ably presence");
+      
+      // Leave presence and clean up
+      if (presenceChannelRef.current && hasEnteredPresence.current) {
+        presenceChannelRef.current.presence.leave().catch(err => 
+          console.warn("⚠️ Error leaving presence:", err)
+        );
+      }
+      
+      // Remove listeners
+      if (ablyRef.current) {
+        ablyRef.current.connection.off(handleConnectionStateChange);
+      }
+      
+      if (presenceChannelRef.current) {
+        presenceChannelRef.current.presence.unsubscribe();
+      }
+      
+      // Reset state
+      hasEnteredPresence.current = false;
       setIsConnected(false);
       setOnlineUsers([]);
     };
-  }, [session?.user?.id, session?.user?.name, session?.user?.image, currentStatus, convertPresenceMembers, updatePresence]);
+  }, [session?.user, handleConnectionStateChange, handlePresenceEvent, enterPresence]);
 
-  return { 
-    onlineUsers, 
-    isConnected, 
+  // Update status
+  const updateStatus = useCallback((newStatus: string) => {
+    setCurrentStatus(newStatus);
+    updatePresence({ status: newStatus });
+  }, [updatePresence]);
+
+  return {
+    onlineUsers,
+    isConnected,
     updatePresence,
     updateStatus,
-    currentStatus
+    currentStatus,
   };
 }

@@ -2,13 +2,15 @@
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { useStatus } from "@/components/StatusProvider";
+import { usePresence } from "@/lib/socket/usePresence";
 import ActivityFeed from "@/components/ActivityFeed";
 import { Bell } from "lucide-react";
 import { useParams } from "next/navigation";
 
 export default function Navbar() {
   const { data: session } = useSession();
-  const { status: userStatus, updateStatus: updateUserStatus, isConnected } = useStatus();
+  const { status: userStatus, updateStatus: updateUserStatus } = useStatus();
+  const { isConnected } = usePresence();
   const [statusLoading, setStatusLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [error, setError] = useState<string>("");
@@ -26,7 +28,7 @@ export default function Navbar() {
     setStatusLoading(true);
     setError("");
     try {
-      await updateUserStatus(newState as any);
+      updateUserStatus(newState);
       setDropdownOpen(false);
       console.log("✅ Status updated via Ably:", newState);
     } catch (err) {

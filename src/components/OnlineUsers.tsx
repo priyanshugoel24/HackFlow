@@ -1,79 +1,67 @@
 "use client";
 import { usePresence } from "@/lib/socket/usePresence";
-import { useStatus } from "@/components/StatusProvider";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession } from "next-auth/react";
 
-const OnlineUsers = () => {
-  const { onlineUsers, isConnected } = usePresence();
-  const { status: currentUserStatus } = useStatus();
+export default function OnlineUsers() {
   const { data: session } = useSession();
+  const { onlineUsers, isConnected } = usePresence();
 
-  console.log("👥 OnlineUsers render:", { 
-    onlineUsersCount: onlineUsers.length, 
-    isConnected,
-    users: onlineUsers.map(u => ({ id: u.id, name: u.name, status: u.status }))
+  // Filter out current user
+  const currentUserId = (session?.user as { id?: string })?.id;
+  const otherUsers = onlineUsers.filter(user => user.id !== currentUserId);
+
+  console.log("🔍 OnlineUsers render:", { 
+    isConnected, 
+    totalUsers: onlineUsers.length, 
+    otherUsers: otherUsers.length,
+    currentUserId,
+    users: onlineUsers.map(u => ({ id: u.id, name: u.name }))
   });
 
-  if (onlineUsers.length === 0) {
+  if (!isConnected) {
     return (
-      <div className="text-sm text-gray-600">
-        👥 No users online {isConnected ? "(Connected)" : "(Disconnected)"}
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+        <span className="text-sm text-muted-foreground">Reconnecting...</span>
       </div>
     );
   }
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case "Available": return "bg-green-500";
-      case "Busy": return "bg-yellow-500";
-      case "Focused": return "bg-red-500";
-      default: return "bg-green-500";
-    }
-  };
-
   return (
-    <div className="bg-white rounded-lg shadow p-4 text-sm text-gray-800 border border-gray-200 w-full max-w-md">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-base">👥 Online Users</h3>
-        <span className={`text-xs ${isConnected ? "text-green-600" : "text-red-500"}`}>
-          {isConnected ? "Connected" : "Disconnected"}
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
+        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+        <span className="text-sm text-muted-foreground">
+          {otherUsers.length > 0 ? `${otherUsers.length} online` : 'Online'}
         </span>
       </div>
-      <ul className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-        {onlineUsers
-          // Deduplicate users by ID to prevent duplicate keys
-          .filter((user, index, array) => 
-            array.findIndex(u => u.id === user.id) === index
-          )
-          .map((user) => {
-          const displayStatus = user.id === session?.user?.id ? currentUserStatus : user.status;
-          const statusColor = getStatusColor(displayStatus);
-          const initials = user.name
-            ? user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
-            : "??";
-
-          return (
-            <li key={user.id} className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-700 font-medium flex items-center justify-center text-xs">
-                    {initials}
-                  </div>
-                  <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${statusColor}`} title={displayStatus || "Available"} />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-medium">{user.name}</span>
-                  {displayStatus && displayStatus !== "Available" && (
-                    <span className="text-xs text-gray-500">{displayStatus}</span>
-                  )}
-                </div>
+      
+      {otherUsers.length > 0 && (
+        <div className="flex -space-x-2">
+          {otherUsers.slice(0, 3).map((user) => (
+            <div key={user.id} className="group relative">
+              <Avatar className="w-6 h-6 border-2 border-background">
+                <AvatarImage src={user.image} alt={user.name} />
+                <AvatarFallback className="text-xs">
+                  {user.name?.charAt(0)?.toUpperCase() || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                {user.name}
+                {user.status && (
+                  <span className="ml-1 text-gray-300">({user.status})</span>
+                )}
               </div>
-            </li>
-          );
-        })}
-      </ul>
+            </div>
+          ))}
+          {otherUsers.length > 3 && (
+            <div className="w-6 h-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+              <span className="text-xs text-muted-foreground">+{otherUsers.length - 3}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
-};
-
-export default OnlineUsers;
+}

@@ -27,19 +27,36 @@ export function getAblyClient(clientId?: string): Ably.Realtime {
       key: ablyKey,
       clientId: currentClientId || undefined,
       autoConnect: true,
+      disconnectedRetryTimeout: 3000,
+      suspendedRetryTimeout: 5000,
+      httpRequestTimeout: 15000,
+      closeOnUnload: true,
+      useBinaryProtocol: false,
     });
 
     // Log connection events for debugging
     clientAbly.connection.on('connected', () => {
-      console.log("✅ Ably client connected successfully");
+      console.log("✅ Ably client connected successfully - clientId:", clientAbly?.auth.clientId);
+    });
+
+    clientAbly.connection.on('connecting', () => {
+      console.log("🔄 Ably client connecting...");
     });
 
     clientAbly.connection.on('disconnected', () => {
       console.log("❌ Ably client disconnected");
     });
 
+    clientAbly.connection.on('suspended', () => {
+      console.log("⏸️ Ably client suspended");
+    });
+
     clientAbly.connection.on('failed', (error) => {
       console.error("❌ Ably connection failed:", error);
+    });
+
+    clientAbly.connection.on('update', (stateChange) => {
+      console.log("🔄 Ably connection update:", stateChange);
     });
   }
   

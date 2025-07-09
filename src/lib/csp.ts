@@ -6,11 +6,11 @@ export const getCSPHeaders = () => {
   return {
     'Content-Security-Policy': [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Note: Consider removing unsafe-inline and unsafe-eval in production
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https:",
+      "connect-src 'self' https: wss: https://*.ably.io wss://*.ably.io https://*.ably-realtime.com wss://*.ably-realtime.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'"
