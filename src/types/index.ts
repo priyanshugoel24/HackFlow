@@ -4,6 +4,7 @@ import { User, Project, ContextCard, Comment, Activity, ProjectMember } from "@p
 export interface ContextCardWithRelations extends ContextCard {
   user: User;
   project: Project;
+  assignedTo?: User;
   linkedCard?: ContextCard;
   linkedFrom?: ContextCard[];
   comments?: Comment[];

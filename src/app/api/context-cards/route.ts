@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
-import type { TaskStatus } from "@prisma/client";
+import type { TaskStatus, Prisma } from "@prisma/client";
 import { logActivity } from "@/lib/logActivity";
 import { getAblyServer } from "@/lib/ably";
 import { 
@@ -21,6 +21,13 @@ export async function GET(req: NextRequest) {
   const token = await getToken({ req });
   if (!token?.sub) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
+  // Query params
+  const { searchParams } = new URL(req.url);
+  const assignedTo = searchParams.get("assignedTo");
+  const status = searchParams.get("status");
+  const offset = parseInt(searchParams.get("offset") || "0", 10);
+  const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50); // max 50 per page
+
   try {
     // First, ensure the user exists in the database
     await prisma.user.upsert({
@@ -34,35 +41,55 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    // Build query for assigned cards
+    let where: Prisma.ContextCardWhereInput = { isArchived: false };
+
+    // If assignedTo is provided, fetch cards where the user is assigned OR created by them
+    if (assignedTo) {
+      where = {
+        ...where,
+        OR: [
+          { assignedToId: assignedTo } as any, // Type assertion for assignedToId
+          { userId: assignedTo }
+        ],
+      };
+    } else {
+      // Default: show cards created by the user
+      where = { ...where, userId: token.sub };
+    }
+    if (status) {
+      where = { ...where, status: status as TaskStatus };
+    }
+
     const cards = await prisma.contextCard.findMany({
-      where: { 
-        userId: token.sub,
-        isArchived: false,
-      },
+      where,
       include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        linkedCard: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        linkedFrom: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
+        project: { select: { id: true, name: true, slug: true } },
+        user: { select: { id: true, name: true, image: true } }, // Fetch creator
+        linkedCard: { select: { id: true, title: true } },
+        linkedFrom: { select: { id: true, title: true } },
       },
       orderBy: { updatedAt: "desc" },
+      skip: offset,
+      take: limit,
     });
 
-    return NextResponse.json({ cards });
+    // Manually fetch assigned user information for each card
+    const cardsWithAssignedUser = await Promise.all(
+      cards.map(async (card) => {
+        const cardWithId = card as any; // Type assertion to access assignedToId
+        if (cardWithId.assignedToId) {
+          const assignedUser = await prisma.user.findUnique({
+            where: { id: cardWithId.assignedToId },
+            select: { id: true, name: true, image: true },
+          });
+          return { ...card, assignedTo: assignedUser };
+        }
+        return { ...card, assignedTo: null };
+      })
+    );
+
+    return NextResponse.json({ cards: cardsWithAssignedUser });
   } catch (error) {
     console.error("Error fetching context cards:", error);
     return NextResponse.json({ error: "Failed to fetch context cards" }, { status: 500 });
@@ -169,6 +196,9 @@ export async function POST(req: NextRequest) {
         issues: issues || undefined,
         slackLinks: mention ? [mention] : [],
         attachments: attachments.map((f) => f.name), // placeholder, file name only
+        ...(notifyUserId && {
+          assignedToId: notifyUserId
+        }),
       },
       include: {
         project: {

@@ -5,6 +5,7 @@ import LoginPage from "@/components/LoginPage";
 import ProjectSidebar from "@/components/ProjectSidebar";
 import ContextCardList from "@/components/ContextCardList";
 import ProjectCard from "@/components/ProjectCard"; // new component
+import AssignedCards from "@/components/AssignedCards";
 import PendingInvitations from "@/components/PendingInvitations";
 import { useState, useRef } from "react";
 
@@ -63,6 +64,10 @@ export default function Home() {
                       refreshProjectsRef.current = refreshFn;
                     }}
                   />
+                </div>
+                {/* Enhanced Assigned Cards below Project Cards */}
+                <div className="w-full mt-6">
+                  <AssignedCards />
                 </div>
               </>
             )}

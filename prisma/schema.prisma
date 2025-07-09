@@ -15,13 +15,14 @@ model User {
   emailVerified   DateTime?
   accounts        Account[]
   activities      Activity[]
-  contextCards    ContextCard[]
+  comments        Comment[]       @relation("UserComments")
+  assignedCards   ContextCard[]   @relation("AssignedCards")
+  contextCards    ContextCard[]   @relation("CreatedCards")
   createdProjects Project[]       @relation("CreatedProjects")
   addedMembers    ProjectMember[] @relation("UserAddedMembers")
   memberships     ProjectMember[]
   sessions        Session[]
   status          Status?
-  comments        Comment[]       @relation("UserComments")
 }
 
 model Project {
@@ -32,10 +33,10 @@ model Project {
   createdAt      DateTime        @default(now())
   createdById    String
   description    String?
-  activities     Activity[]
   isArchived     Boolean         @default(false)
   lastActivityAt DateTime        @updatedAt
   tags           String[]
+  activities     Activity[]
   contextCards   ContextCard[]
   createdBy      User            @relation("CreatedProjects", fields: [createdById], references: [id], onDelete: Cascade)
   members        ProjectMember[]
@@ -74,11 +75,15 @@ model ContextCard {
   type         CardType      @default(TASK)
   visibility   Visibility    @default(PRIVATE)
   why          String?
+  assignedToId String?
+  comments     Comment[]     @relation("CardComments")
+  assignedTo   User?         @relation("AssignedCards", fields: [assignedToId], references: [id])
   linkedCard   ContextCard?  @relation("LinkedCards", fields: [linkedCardId], references: [id])
   linkedFrom   ContextCard[] @relation("LinkedCards")
   project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comments     Comment[]     @relation("CardComments")
+  user         User          @relation("CreatedCards", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([assignedToId])
 }
 
 model Status {
@@ -90,31 +95,29 @@ model Status {
 }
 
 model Activity {
-  id         String   @id @default(cuid())
-  type       String
-  description String   
-  metadata   Json?
-  createdAt  DateTime @default(now())
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId     String?
-  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId  String
+  id          String   @id @default(cuid())
+  type        String
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  userId      String?
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id])
 }
 
 model Comment {
-  id       String      @id @default(cuid())
-  card     ContextCard @relation("CardComments", fields: [cardId], references: [id], onDelete: Cascade)
-  cardId   String
-  author   User        @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
-  authorId String
-
-  content  String
-  parent   Comment?  @relation("ThreadedComments", fields: [parentId], references: [id])
-  parentId String?
-  children Comment[] @relation("ThreadedComments")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String      @id @default(cuid())
+  cardId    String
+  authorId  String
+  content   String
+  parentId  String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  author    User        @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
+  card      ContextCard @relation("CardComments", fields: [cardId], references: [id], onDelete: Cascade)
+  parent    Comment?    @relation("ThreadedComments", fields: [parentId], references: [id])
+  children  Comment[]   @relation("ThreadedComments")
 }
 
 model Account {
