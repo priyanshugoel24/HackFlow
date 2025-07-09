@@ -63,11 +63,14 @@ export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
   }, [identifier, projectId, slug]);
 
   useEffect(() => {
-    if (!actualProjectId || !session?.user?.email) return;
+    if (!actualProjectId || !session?.user) return;
 
+    const user = session.user as { id: string };
+    if (!user.id) return;
+    
     console.log("🔌 ActivityFeed connecting to Ably for project:", actualProjectId);
     
-    const ably = getAblyClient(session.user.email);
+    const ably = getAblyClient(user.id);
     const channel = ably.channels.get(`project:${actualProjectId}`);
 
     const handleNewActivity = (msg: Ably.Message) => {
@@ -83,15 +86,10 @@ export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
     return () => {
       console.log("🔇 ActivityFeed unsubscribing from project:", actualProjectId);
       channel.unsubscribe("activity:created", handleNewActivity);
-      channel.once("attached", () => {
-        channel.detach();
-        channel.once("detached", () => {
-          ably.channels.release(`project:${actualProjectId}`);
-        });
-      });
-      
+      // Don't release channels as they might be used by other components
+      // Just unsubscribe from our specific events
     };
-  }, [actualProjectId, session?.user?.email]);
+  }, [actualProjectId, session?.user]);
 
   if (loading) {
     return <Skeleton className="h-24 w-full bg-gray-100 dark:bg-gray-800" />;
