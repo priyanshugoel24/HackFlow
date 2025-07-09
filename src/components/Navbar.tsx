@@ -7,6 +7,7 @@ import ActivityFeed from "@/components/ActivityFeed";
 import { Bell } from "lucide-react";
 import { useParams } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import SearchBar from "./SearchBar";
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -68,6 +69,8 @@ export default function Navbar() {
             Reconnecting...
           </span>
         )}
+
+        <SearchBar />
         
         <div className="flex items-center gap-4" ref={dropdownRef}>
           {/* Theme Toggle */}
