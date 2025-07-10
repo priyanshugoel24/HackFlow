@@ -75,6 +75,7 @@ model ContextCard {
   type         CardType      @default(TASK)
   visibility   Visibility    @default(PRIVATE)
   why          String?
+  summary      String?
   assignedToId String?
   comments     Comment[]     @relation("CardComments")
   assignedTo   User?         @relation("AssignedCards", fields: [assignedToId], references: [id])
