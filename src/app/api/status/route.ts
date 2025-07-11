@@ -11,8 +11,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
     const status = await prisma.status.findUnique({
-      where: { userId: token.sub },
+      where: { userId: user.id },
     });
 
     return NextResponse.json({ status: status || { state: "Available" } });
@@ -30,6 +44,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
     const { state } = await req.json();
 
     if (!state || typeof state !== "string") {
@@ -37,11 +65,11 @@ export async function POST(req: NextRequest) {
     }
 
     const updated = await prisma.status.upsert({
-      where: { userId: token.sub },
+      where: { userId: user.id },
       update: { state },
       create: {
         state,
-        userId: token.sub,
+        userId: user.id,
       },
     });
 
@@ -51,7 +79,7 @@ export async function POST(req: NextRequest) {
       const channel = ably.channels.get(CHANNELS.STATUS_UPDATES);
       
       const statusData: AblyStatusData = {
-        userId: token.sub,
+        userId: user.id,
         state,
         timestamp: new Date().toISOString(),
       };

@@ -9,15 +9,29 @@ import {
   createRateLimiter 
 } from "@/lib/security";
 
-// Rate limiter: 30 comments per minute per user
-const rateLimiter = createRateLimiter(60 * 1000, 30);
+// Rate limiter: 60 comments per minute per user (increased from 30)
+const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 export async function POST(req: NextRequest) {
   const token = await getToken({ req });
   if (!token?.sub) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // First, ensure the user exists in the database and get the actual user
+  const user = await prisma.user.upsert({
+    where: { email: token.email! },
+    update: {
+      name: token.name,
+      image: token.picture,
+    },
+    create: {
+      email: token.email!,
+      name: token.name,
+      image: token.picture,
+    },
+  });
+
   // Rate limiting
-  if (!rateLimiter(token.sub)) {
+  if (!rateLimiter(user.id)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -45,7 +59,7 @@ export async function POST(req: NextRequest) {
         content: validatedData.content,
         cardId: validatedData.cardId,
         parentId: validatedData.parentId || null,
-        authorId: token.sub,
+        authorId: user.id,
       },
       include: {
         author: {

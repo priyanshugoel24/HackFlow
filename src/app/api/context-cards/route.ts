@@ -13,8 +13,8 @@ import {
   validateFileUpload 
 } from "@/lib/security";
 
-// Rate limiter: 20 requests per minute per user
-const rateLimiter = createRateLimiter(60 * 1000, 20);
+// Rate limiter: 60 requests per minute per user (increased from 20)
+const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 // GET all context cards for logged-in user
 export async function GET(req: NextRequest) {
@@ -30,12 +30,14 @@ export async function GET(req: NextRequest) {
 
   try {
     // First, ensure the user exists in the database
-    await prisma.user.upsert({
-      where: { id: token.sub },
-      update: {},
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
       create: {
-        id: token.sub,
-        email: token.email,
+        email: token.email!,
         name: token.name,
         image: token.picture,
       },
@@ -46,16 +48,41 @@ export async function GET(req: NextRequest) {
 
     // If assignedTo is provided, fetch cards where the user is assigned OR created by them
     if (assignedTo) {
-      where = {
-        ...where,
-        OR: [
-          { assignedToId: assignedTo } as any, // Type assertion for assignedToId
-          { userId: assignedTo }
-        ],
-      };
+      // Check if assignedTo is an email or user ID
+      const isEmail = assignedTo.includes('@');
+      
+      if (isEmail) {
+        // Find user by email first
+        const assignedUser = await prisma.user.findUnique({
+          where: { email: assignedTo },
+          select: { id: true }
+        });
+        
+        if (assignedUser) {
+          where = {
+            ...where,
+            OR: [
+              { assignedToId: assignedUser.id } as any,
+              { userId: assignedUser.id }
+            ],
+          };
+        } else {
+          // No user found with this email, return empty results
+          where = { ...where, id: 'non-existent-id' };
+        }
+      } else {
+        // Treat as user ID (backwards compatibility)
+        where = {
+          ...where,
+          OR: [
+            { assignedToId: assignedTo } as any,
+            { userId: assignedTo }
+          ],
+        };
+      }
     } else {
       // Default: show cards created by the user
-      where = { ...where, userId: token.sub };
+      where = { ...where, userId: user.id };
     }
     if (status) {
       where = { ...where, status: status as TaskStatus };
@@ -103,8 +130,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // First, ensure the user exists in the database and get the actual user
+  const user = await prisma.user.upsert({
+    where: { email: token.email! },
+    update: {
+      name: token.name,
+      image: token.picture,
+    },
+    create: {
+      email: token.email!,
+      name: token.name,
+      image: token.picture,
+    },
+  });
+
   // Rate limiting
-  if (!rateLimiter(token.sub)) {
+  if (!rateLimiter(user.id)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -123,6 +164,20 @@ export async function POST(req: NextRequest) {
     const notifyUserId = formData.get("notifyUserId") as string | null;
 
     const attachments = formData.getAll("attachments") as File[];
+
+    // First, ensure the user exists in the database
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
 
     // Validate input using security schema
     const validationResult = validateInput(contextCardSchema, {
@@ -162,11 +217,11 @@ export async function POST(req: NextRequest) {
       where: {
         ...(isUUID ? { id: projectIdentifier } : { slug: projectIdentifier }),
         OR: [
-          { createdById: token.sub },
+          { createdById: user.id },
           {
             members: {
               some: {
-                userId: token.sub,
+                userId: user.id,
                 status: "ACTIVE",
               },
             },
@@ -185,7 +240,7 @@ export async function POST(req: NextRequest) {
       data: {
         title: title.trim(),
         content: content.trim(),
-        userId: token.sub,
+        userId: user.id,
         projectId: project.id, // Use the actual project ID from the database
         type: type as "TASK" | "INSIGHT" | "DECISION",
         ...(type === "TASK" && {
@@ -211,7 +266,7 @@ export async function POST(req: NextRequest) {
     await logActivity({
       type: "CARD_CREATED",
       description: `created a new ${type.toLowerCase()} "${title.trim()}"`,
-      userId: token.sub,
+      userId: user.id,
       projectId: project.id,
       metadata: {
         cardId: savedCard.id,
@@ -229,12 +284,12 @@ export async function POST(req: NextRequest) {
         type: "CARD_CREATED",
         description: `created a new ${type.toLowerCase()} "${title.trim()}"`,
         createdAt: new Date().toISOString(),
-        userId: token.sub,
+        userId: user.id,
         projectId: project.id,
         user: {
-          id: token.sub,
-          name: token.name,
-          image: token.picture,
+          id: user.id,
+          name: user.name,
+          image: user.image,
         },
       });
       
@@ -259,7 +314,7 @@ export async function POST(req: NextRequest) {
                 mentionedUserId: mentionedUser.id,
                 mentionedUserName: mentionedUser.name
               },
-              userId: token.sub,
+              userId: user.id,
               projectId: project.id,
             });
 
@@ -273,7 +328,7 @@ export async function POST(req: NextRequest) {
               metadata: {
                 cardId: savedCard.id,
                 projectId: project.id,
-                mentionedBy: token.sub
+                mentionedBy: user.id
               }
             });
           }

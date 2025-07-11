@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getToken } from "next-auth/jwt";
 import { randomUUID } from "crypto";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,6 +10,20 @@ export async function POST(req: NextRequest) {
     if (!token?.sub) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
+
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -33,7 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     const fileExt = file.name.split('.').pop();
-    const filePath = `user-${token.sub}/${randomUUID()}.${fileExt}`;
+    const filePath = `user-${user.id}/${randomUUID()}.${fileExt}`;
 
     const { error } = await supabase.storage
       .from(bucket)

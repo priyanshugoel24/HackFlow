@@ -10,10 +10,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // First, ensure the user exists in the database and get the actual user
+  const user = await prisma.user.upsert({
+    where: { email: token.email! },
+    update: {
+      name: token.name,
+      image: token.picture,
+    },
+    create: {
+      email: token.email!,
+      name: token.name,
+      image: token.picture,
+    },
+  });
+
   const { id } = await params;
 
   try {
-    console.log(`🔍 User ${token.sub} (${token.email}) attempting to decline invite for project: ${id}`);
+    console.log(`🔍 User ${user.id} (${token.email}) attempting to decline invite for project: ${id}`);
     
     // Check if the id is a CUID (database ID) or a slug
     const isCUID = /^c[a-z0-9]{24}$/.test(id);
@@ -35,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: {
         OR: [
           {
-            userId: token.sub,
+            userId: user.id,
             projectId: project.id,
           },
           {
@@ -52,7 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     if (!existingMember) {
-      console.log(`❌ No invitation found for user ${token.sub} (${token.email}) in project ${project.id}`);
+      console.log(`❌ No invitation found for user ${user.id} (${token.email}) in project ${project.id}`);
       return NextResponse.json({ error: "No invitation found for this project" }, { status: 404 });
     }
 
@@ -85,7 +99,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const channel = ably.channels.get(`project:${project.id}`);
       
       await channel.publish("member:declined", {
-        userId: token.sub,
+        userId: user.id,
         projectId: project.id,
       });
       
@@ -95,7 +109,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // Don't fail the entire request if Ably publish fails
     }
 
-    console.log(`✅ User ${token.sub} declined invitation to project ${project.id}`);
+    console.log(`✅ User ${user.id} declined invitation to project ${project.id}`);
 
     return NextResponse.json({ 
       success: true, 

@@ -10,8 +10,8 @@ import type { Session } from "next-auth";
 export default function AssignedCards() {
 
   const { data: sessionData } = useSession();
-  // Support custom user id on session
-  const userId = (sessionData?.user as { id?: string } | undefined)?.id;
+  // Use email instead of userId for consistent identification across browsers
+  const userEmail = sessionData?.user?.email;
   const [cards, setCards] = useState<ContextCardWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -25,12 +25,12 @@ export default function AssignedCards() {
   // Fetch cards with pagination
   const fetchCards = useCallback(async (pageNum: number) => {
     if (isFetching.current) return;
-    if (!userId) return;
+    if (!userEmail) return;
     isFetching.current = true;
     setLoading(true);
     try {
-      // Only fetch active cards assigned to the current user
-      const res = await fetch(`/api/context-cards?assignedTo=${userId}&status=ACTIVE&offset=${pageNum * pageSize}&limit=${pageSize}`);
+      // Fetch cards using email-based authentication (consistent across browsers)
+      const res = await fetch(`/api/context-cards?assignedTo=${encodeURIComponent(userEmail)}&status=ACTIVE&offset=${pageNum * pageSize}&limit=${pageSize}`);
       const data = await res.json();
       if (Array.isArray(data.cards)) {
         setCards((prev) => {
@@ -44,19 +44,20 @@ export default function AssignedCards() {
         setHasMore(false);
       }
     } catch (error) {
+      console.error("Error fetching assigned cards:", error);
       setHasMore(false);
     } finally {
       setLoading(false);
       isFetching.current = false;
     }
-  }, [userId]);
+  }, [userEmail]);
 
   useEffect(() => {
-    if (userId) {
+    if (userEmail) {
       fetchCards(page);
     }
     // eslint-disable-next-line
-  }, [page, userId]);
+  }, [page, userEmail]);
 
   // Infinite scroll handler
   const handleScroll = useCallback(() => {
@@ -147,6 +148,7 @@ export default function AssignedCards() {
             slackLinks: selectedCard.slackLinks ?? undefined,
             attachments: selectedCard.attachments ?? undefined,
             status: selectedCard.status ?? "ACTIVE",
+            summary: selectedCard.summary ?? undefined,
           }}
         />
       )}

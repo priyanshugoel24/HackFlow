@@ -10,6 +10,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // First, ensure the user exists in the database and get the actual user
+  const user = await prisma.user.upsert({
+    where: { email: token.email! },
+    update: {
+      name: token.name,
+      image: token.picture,
+    },
+    create: {
+      email: token.email!,
+      name: token.name,
+      image: token.picture,
+    },
+  });
+
   const { id } = await params;
   const { email } = await req.json();
 
@@ -26,11 +40,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: {
         ...(isCUID ? { id } : { slug: id }),
         OR: [
-          { createdById: token.sub }, 
+          { createdById: user.id }, 
           {
             members: {
               some: {
-                userId: token.sub,
+                userId: user.id,
                 role: "MANAGER",
                 status: "ACTIVE"
               }
@@ -83,7 +97,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Prevent inviting yourself
-    if (userToInvite.id === token.sub) {
+    if (userToInvite.id === user.id) {
       return NextResponse.json({ error: "You cannot invite yourself" }, { status: 400 });
     }
 
@@ -97,7 +111,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
       update: {
         status: "INVITED",
-        addedById: token.sub,
+        addedById: user.id,
         joinedAt: new Date(),
       },
       create: {
@@ -105,7 +119,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         userId: userToInvite.id,
         role: "MEMBER",
         status: "INVITED",
-        addedById: token.sub,
+        addedById: user.id,
       },
       include: {
         user: {

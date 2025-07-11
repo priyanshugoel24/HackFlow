@@ -16,6 +16,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const includeArchived = req.nextUrl.searchParams.get("includeArchived") === "true";
 
   try {
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
     // Check if the id is a CUID (database ID) or a slug
     const isCUID = /^c[a-z0-9]{24}$/.test(id);
     
@@ -23,11 +37,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       where: {
         ...(isCUID ? { id } : { slug: id }),
         OR: [
-          { createdById: token.sub },
+          { createdById: user.id },
           { 
             members: {
               some: {
-                userId: token.sub,
+                userId: user.id,
                 status: "ACTIVE"
               }
             }
@@ -98,6 +112,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { name, link, description, tags, isArchived } = await req.json();
 
   try {
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
     // Check if the id is a CUID (database ID) or a slug
     const isCUID = /^c[a-z0-9]{24}$/.test(id);
     
@@ -106,11 +134,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       where: {
         ...(isCUID ? { id } : { slug: id }),
         OR: [
-          { createdById: token.sub },
+          { createdById: user.id },
           { 
             members: {
               some: {
-                userId: token.sub,
+                userId: user.id,
                 role: "MANAGER",
                 status: "ACTIVE"
               }

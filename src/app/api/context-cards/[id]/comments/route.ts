@@ -20,6 +20,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const cursor = searchParams.get("cursor");
 
   try {
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
     // Ensure the context card exists and user has access to the project
     const card = await prisma.contextCard.findUnique({
       where: { id: cardId },
@@ -28,7 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           include: {
             members: {
               where: {
-                userId: token.sub,
+                userId: user.id,
                 status: "ACTIVE"
               }
             }
@@ -42,7 +56,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     // Check if user has access to the project (either as creator or member)
-    const hasAccess = card.project.createdById === token.sub || card.project.members.length > 0;
+    const hasAccess = card.project.createdById === user.id || card.project.members.length > 0;
     
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied. You must be a member of this project to view comments." }, { status: 403 });
@@ -96,6 +110,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   try {
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
     // Ensure card exists and user has access to the project
     const card = await prisma.contextCard.findUnique({
       where: { id: cardId },
@@ -104,7 +132,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           include: {
             members: {
               where: {
-                userId: token.sub,
+                userId: user.id,
                 status: "ACTIVE"
               }
             }
@@ -118,7 +146,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Check if user has access to the project (either as creator or member)
-    const hasAccess = card.project.createdById === token.sub || card.project.members.length > 0;
+    const hasAccess = card.project.createdById === user.id || card.project.members.length > 0;
     
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied. You must be a member of this project to comment." }, { status: 403 });
@@ -129,7 +157,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: {
         content: content.trim(),
         cardId,
-        authorId: token.sub,
+        authorId: user.id,
       },
       include: {
         author: {
@@ -147,7 +175,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       type: "COMMENT_CREATED",
       description: `Added a comment to card`,
       metadata: { cardId, commentId: newComment.id },
-      userId: token.sub,
+      userId: user.id,
       projectId: card.project.id, // Use the project ID from the card we already fetched
     });
 
@@ -167,7 +195,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       type: "COMMENT_CREATED",
       description: `Added a comment to card`,
       user: {
-        id: token.sub,
+        id: user.id,
         name: token.name,
         image: token.picture,
       },

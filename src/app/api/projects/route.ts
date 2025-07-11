@@ -8,8 +8,8 @@ import {
   createRateLimiter 
 } from "@/lib/security";
 
-// Rate limiter: 10 requests per minute per user for project operations
-const rateLimiter = createRateLimiter(60 * 1000, 10);
+// Rate limiter: 60 requests per minute per user for project operations (increased from 10)
+const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 // GET all projects for the user (including where they're a member)
 export async function GET(req: NextRequest) {
@@ -17,37 +17,39 @@ export async function GET(req: NextRequest) {
   if (!token?.sub)
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
+  // First, ensure the user exists in the database and get the actual user
+  const user = await prisma.user.upsert({
+    where: { email: token.email! },
+    update: {
+      name: token.name,
+      image: token.picture,
+    },
+    create: {
+      email: token.email!,
+      name: token.name,
+      image: token.picture,
+    },
+  });
+
   // Rate limiting
-  if (!rateLimiter(token.sub)) {
+  if (!rateLimiter(user.id)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   try {
-    console.log(`🔍 Fetching projects for user: ${token.sub} (${token.email})`);
+    console.log(`🔍 Fetching projects for user: ${user.id} (${token.email})`);
     
     // Check if we should include archived projects
     const includeArchived = req.nextUrl.searchParams.get("includeArchived") === "true";
-    
-    // First, ensure the user exists in the database
-    await prisma.user.upsert({
-      where: { id: token.sub },
-      update: {},
-      create: {
-        id: token.sub,
-        email: token.email,
-        name: token.name,
-        image: token.picture,
-      },
-    });
 
     const projects = await prisma.project.findMany({
       where: {
         OR: [
-          { createdById: token.sub },
+          { createdById: user.id },
           { 
             members: {
               some: {
-                userId: token.sub,
+                userId: user.id,
                 status: "ACTIVE"
               }
             }
@@ -85,7 +87,7 @@ export async function GET(req: NextRequest) {
       orderBy: { lastActivityAt: "desc" },
     });
 
-    console.log(`📋 Found ${projects.length} projects for user ${token.sub}`);
+    console.log(`📋 Found ${projects.length} projects for user ${user.id}`);
 
     return NextResponse.json({ projects });
   } catch (error) {
@@ -106,13 +108,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Project name is required" }, { status: 400 });
 
   try {
-    // First, ensure the user exists in the database
-    await prisma.user.upsert({
-      where: { id: token.sub },
-      update: {},
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
       create: {
-        id: token.sub,
-        email: token.email,
+        email: token.email!,
         name: token.name,
         image: token.picture,
       },
@@ -133,10 +137,10 @@ export async function POST(req: NextRequest) {
         link: link?.startsWith("http") ? link : `https://${link}`,
         description,
         tags: tags || [],
-        createdById: token.sub,
+        createdById: user.id,
         members: {
           create: {
-            userId: token.sub,
+            userId: user.id,
             role: "MANAGER",
             status: "ACTIVE"
           }
@@ -170,7 +174,7 @@ export async function POST(req: NextRequest) {
     await logActivity({
       type: "PROJECT_CREATED",
       description: `created project "${name}"`,
-      userId: token.sub,
+      userId: user.id,
       projectId: project.id,
       metadata: { projectName: name, projectSlug: uniqueSlug },
     });
@@ -184,9 +188,9 @@ export async function POST(req: NextRequest) {
         type: "PROJECT_CREATED",
         description: `created project "${name}"`,
         user: {
-          id: token.sub,
-          name: token.name,
-          image: token.picture,
+          id: user.id,
+          name: user.name,
+          image: user.image,
         },
         createdAt: new Date().toISOString(),
         projectId: project.id,

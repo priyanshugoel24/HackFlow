@@ -11,6 +11,20 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // First, ensure the user exists in the database and get the actual user
+  const user = await prisma.user.upsert({
+    where: { email: token.email! },
+    update: {
+      name: token.name,
+      image: token.picture,
+    },
+    create: {
+      email: token.email!,
+      name: token.name,
+      image: token.picture,
+    },
+  });
+
   const { id } = await params;
   const { userId } = await req.json();
 
@@ -26,10 +40,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const project = await prisma.project.findFirst({
       where: {
         ...(isCUID ? { id } : { slug: id }),
-        OR: [{ createdById: token.sub }, {
+        OR: [{ createdById: user.id }, {
           members: {
             some: {
-              userId: token.sub,
+              userId: user.id,
               role: "MANAGER",
               status: "ACTIVE"
             }
@@ -43,7 +57,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     // Prevent user from removing themselves
-    if (userId === token.sub) {
+    if (userId === user.id) {
       return NextResponse.json({ error: "You cannot remove yourself" }, { status: 400 });
     }
 

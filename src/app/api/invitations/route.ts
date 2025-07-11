@@ -10,15 +10,17 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    console.log(`🔍 Fetching invitations for user: ${token.sub}`);
+    console.log(`🔍 Fetching invitations for user: ${token.email}`);
     
     // First, ensure the user exists in the database
-    await prisma.user.upsert({
-      where: { id: token.sub },
-      update: {},
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
       create: {
-        id: token.sub,
-        email: token.email,
+        email: token.email!,
         name: token.name,
         image: token.picture,
       },
@@ -28,7 +30,7 @@ export async function GET(req: NextRequest) {
       where: {
         OR: [
           {
-            userId: token.sub,
+            userId: user.id,
             status: "INVITED",
           },
           {
@@ -67,7 +69,7 @@ export async function GET(req: NextRequest) {
       orderBy: { joinedAt: "desc" },
     });
 
-    console.log(`📨 Found ${pendingInvitations.length} pending invitations for user ${token.sub}`);
+    console.log(`📨 Found ${pendingInvitations.length} pending invitations for user ${user.id}`);
 
     return NextResponse.json({ invitations: pendingInvitations });
   } catch (error) {

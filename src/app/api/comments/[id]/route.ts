@@ -29,6 +29,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const token = await getToken({ req });
   if (!token?.sub) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // First, ensure the user exists in the database and get the actual user
+  const user = await prisma.user.upsert({
+    where: { email: token.email! },
+    update: {
+      name: token.name,
+      image: token.picture,
+    },
+    create: {
+      email: token.email!,
+      name: token.name,
+      image: token.picture,
+    },
+  });
+
   const { content } = await req.json();
   const { id } = await params;
 
@@ -37,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       where: { id },
     });
 
-    if (!existing || existing.authorId !== token.sub)
+    if (!existing || existing.authorId !== user.id)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const updated = await prisma.comment.update({
@@ -55,10 +69,24 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const token = await getToken({ req });
   if (!token?.sub) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // First, ensure the user exists in the database and get the actual user
+  const user = await prisma.user.upsert({
+    where: { email: token.email! },
+    update: {
+      name: token.name,
+      image: token.picture,
+    },
+    create: {
+      email: token.email!,
+      name: token.name,
+      image: token.picture,
+    },
+  });
+
   try {
     const { id } = await params;
     const existing = await prisma.comment.findUnique({ where: { id } });
-    if (!existing || existing.authorId !== token.sub)
+    if (!existing || existing.authorId !== user.id)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     await prisma.comment.delete({ where: { id } });

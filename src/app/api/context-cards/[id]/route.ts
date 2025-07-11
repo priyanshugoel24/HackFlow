@@ -12,8 +12,8 @@ import {
   createRateLimiter 
 } from "@/lib/security";
 
-// Rate limiter: 30 requests per minute per user for updates
-const rateLimiter = createRateLimiter(60 * 1000, 30);
+// Rate limiter: 60 requests per minute per user for updates (increased from 30)
+const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 // PATCH: Update a context card
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -22,8 +22,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // First, ensure the user exists in the database and get the actual user
+  const user = await prisma.user.upsert({
+    where: { email: token.email! },
+    update: {
+      name: token.name,
+      image: token.picture,
+    },
+    create: {
+      email: token.email!,
+      name: token.name,
+      image: token.picture,
+    },
+  });
+
   // Rate limiting
-  if (!rateLimiter(token.sub)) {
+  if (!rateLimiter(user.id)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -86,7 +100,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           include: {
             members: {
               where: {
-                userId: token.sub,
+                userId: user.id,
                 status: "ACTIVE"
               }
             }
@@ -101,7 +115,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Check if user has access to the project (either as creator or member)
-    const hasProjectAccess = existing.project.createdById === token.sub || existing.project.members.length > 0;
+    const hasProjectAccess = existing.project.createdById === user.id || existing.project.members.length > 0;
     
     if (!hasProjectAccess) {
       return NextResponse.json({ error: "Access denied. You must be a member of this project." }, { status: 403 });
@@ -114,8 +128,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                          why !== undefined || linkedCardId !== undefined || isArchived !== undefined;
     
     // Only card creator can edit content/structure, but any project member can update status
-    if (isContentEdit && existing.userId !== token.sub) {
-      console.log("❌ Only card creator can edit content. Card creator:", existing.userId, "Current user:", token.sub);
+    if (isContentEdit && existing.userId !== user.id) {
+      console.log("❌ Only card creator can edit content. Card creator:", existing.userId, "Current user:", user.id);
       return NextResponse.json({ error: "Only the card creator can edit card content" }, { status: 403 });
     }
 
@@ -127,11 +141,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         where: {
           id: projectId,
           OR: [
-            { createdById: token.sub },
+            { createdById: user.id },
             { 
               members: {
                 some: {
-                  userId: token.sub,
+                  userId: user.id,
                   status: "ACTIVE"
                 }
               }
@@ -152,7 +166,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const linkedCard = await prisma.contextCard.findFirst({
           where: {
             id: linkedCardId,
-            userId: token.sub,
+            userId: user.id,
           },
         });
 
@@ -264,7 +278,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       type: "CARD_UPDATED",
       description: `Updated card "${updatedCard.title}"`,
       metadata: { cardId: updatedCard.id },
-      userId: token.sub,
+      userId: user.id,
       projectId: updatedCard.projectId,
     });
 
@@ -287,7 +301,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               mentionedUserId: mentionedUser.id,
               mentionedUserName: mentionedUser.name
             },
-            userId: token.sub,
+            userId: user.id,
             projectId: updatedCard.projectId,
           });
 
@@ -302,7 +316,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                 type: "USER_MENTIONED",
                 description: `mentioned ${mentionedUser.name || 'a team member'} in "${updatedCard.title}"`,
                 createdAt: new Date().toISOString(),
-                userId: token.sub,
+                userId: user.id,
                 projectId: updatedCard.projectId,
                 metadata: { 
                   cardId: updatedCard.id,
@@ -320,7 +334,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                 metadata: {
                   cardId: updatedCard.id,
                   projectId: updatedCard.projectId,
-                  mentionedBy: token.sub
+                  mentionedBy: user.id
                 }
               });
             }
@@ -350,11 +364,25 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params;
 
   try {
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
     // First check if the card exists and belongs to the user
     const existing = await prisma.contextCard.findFirst({
       where: {
         id,
-        userId: token.sub,
+        userId: user.id,
       },
     });
 
@@ -373,7 +401,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     type: "CARD_DELETED",
     description: `Deleted card "${existing.title}"`,
     metadata: { cardId: existing.id },
-    userId: token.sub,
+    userId: user.id,
     projectId: existing.projectId,
   });
 

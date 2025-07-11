@@ -14,6 +14,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { isArchived } = await req.json();
 
   try {
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
     // First check if the card exists and get project info
     const card = await prisma.contextCard.findFirst({
       where: { id },
@@ -22,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           include: {
             members: {
               where: {
-                userId: token.sub,
+                userId: user.id,
                 status: "ACTIVE"
               }
             }
@@ -36,10 +50,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Check if user has permission to archive this card
-    const isCardCreator = card.userId === token.sub;
-    const isProjectCreator = card.project.createdById === token.sub;
+    const isCardCreator = card.userId === user.id;
+    const isProjectCreator = card.project.createdById === user.id;
     const isManager = card.project.members.some(member => 
-      member.userId === token.sub && member.role === "MANAGER"
+      member.userId === user.id && member.role === "MANAGER"
     );
 
     if (!isCardCreator && !isProjectCreator && !isManager) {
@@ -88,7 +102,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       type: isArchived ? "CARD_ARCHIVED" : "CARD_UNARCHIVED",
       description: `${isArchived ? 'Archived' : 'Unarchived'} card "${card.title}"`,
       metadata: { cardId: card.id },
-      userId: token.sub,
+      userId: user.id,
       projectId: card.projectId,
     });
 

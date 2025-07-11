@@ -14,7 +14,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   try {
-    console.log(`🔍 User ${token.sub} (${token.email}) attempting to accept invite for project: ${id}`);
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
+    console.log(`🔍 User ${user.id} (${token.email}) attempting to accept invite for project: ${id}`);
     
     // Check if the id is a CUID (database ID) or a slug
     const isCUID = /^c[a-z0-9]{24}$/.test(id);
@@ -36,7 +50,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: {
         OR: [
           {
-            userId: token.sub,
+            userId: user.id,
             projectId: project.id,
           },
           {
@@ -53,7 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     if (!existingMember) {
-      console.log(`❌ No invitation found for user ${token.sub} (${token.email}) in project ${project.id}`);
+      console.log(`❌ No invitation found for user ${user.id} (${token.email}) in project ${project.id}`);
       return NextResponse.json({ error: "No invitation found for this project" }, { status: 404 });
     }
 
@@ -70,14 +84,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Accept the invitation by updating status to ACTIVE
     let updatedMember;
     
-    if (existingMember.userId === token.sub) {
+    if (existingMember.userId === user.id) {
       // Direct match - just update the status
       console.log(`✅ Direct user match - updating membership status to ACTIVE`);
       updatedMember = await prisma.projectMember.update({
         where: {
           userId_projectId: {
             projectId: project.id,
-            userId: token.sub,
+            userId: user.id,
           },
         },
         data: {
@@ -104,7 +118,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       });
     } else {
       // Email match - need to transfer the invitation to the current user
-      console.log(`🔄 Email match - transferring invitation from placeholder user ${existingMember.userId} to current user ${token.sub}`);
+      console.log(`🔄 Email match - transferring invitation from placeholder user ${existingMember.userId} to current user ${user.id}`);
       // First, delete the old placeholder invitation
       await prisma.projectMember.delete({
         where: {
@@ -119,7 +133,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       updatedMember = await prisma.projectMember.create({
         data: {
           projectId: project.id,
-          userId: token.sub,
+          userId: user.id,
           role: existingMember.role,
           status: "ACTIVE",
           addedById: existingMember.addedById,
@@ -155,7 +169,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await logActivity({
       type: "MEMBER_JOINED",
       description: `joined the project`,
-      userId: token.sub,
+      userId: user.id,
       projectId: project.id,
       metadata: { 
         memberId: updatedMember.id,
@@ -184,10 +198,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         type: "MEMBER_JOINED",
         description: `joined the project`,
         createdAt: new Date().toISOString(),
-        userId: token.sub,
+        userId: user.id,
         projectId: project.id,
         user: {
-          id: token.sub,
+          id: user.id,
           name: token.name,
           image: token.picture,
         },
@@ -203,7 +217,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // Don't fail the entire request if Ably publish fails
     }
 
-    console.log(`✅ User ${token.sub} accepted invitation to project ${project.id}`);
+    console.log(`✅ User ${user.id} accepted invitation to project ${project.id}`);
 
     return NextResponse.json({ 
       success: true, 
