@@ -18,6 +18,7 @@ import {
   Plus
 } from "lucide-react";
 import ContextCardModal from "./ContextCardModal";
+import SmartComposeModal from "./SmartComposeModal";
 import { ContextCardWithRelations, ProjectWithRelations } from "@/types";
 
 export default function ContextCardList({ projectSlug }: { projectSlug: string }) {
@@ -28,6 +29,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
   const [project, setProject] = useState<ProjectWithRelations | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [allCards, setAllCards] = useState<ContextCardWithRelations[]>([]);
+  const [smartComposeOpen, setSmartComposeOpen] = useState(false);
 
   const fetchCards = async () => {
     if (!projectSlug) return;
@@ -128,12 +130,17 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
           <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
           <p className="text-lg font-medium">No context cards found</p>
           <p className="text-sm mb-4">Create your first context card for this project!</p>
-          <Button onClick={() => setModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Context Card
-          </Button>
+          <div className="flex items-center justify-center space-x-2">
+            <Button variant="secondary" onClick={() => setSmartComposeOpen(true)}>
+              ✨ Smart Compose
+            </Button>
+            <Button onClick={() => setModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Context Card
+            </Button>
+          </div>
         </div>
-        {/* Always render modal if modalOpen is true and no card is selected */}
+        {/* Always render modals if open */}
         {modalOpen && !selectedCard && (
           <ContextCardModal 
             open={modalOpen} 
@@ -143,6 +150,14 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
             onSuccess={handleCardCreated}
           />
         )}
+        <SmartComposeModal
+          open={smartComposeOpen}
+          setOpen={setSmartComposeOpen}
+          projectSlug={projectSlug}
+          onSuccess={() => {
+            fetchCards(); // Refresh cards after creating via Smart Compose
+          }}
+        />
       </>
     );
   }
@@ -168,10 +183,18 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
               </span>
             )}
           </div>
-          <Button className="cursor-pointer" onClick={() => setModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Card
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="secondary" 
+              onClick={() => setSmartComposeOpen(true)}
+            >
+              ✨ Smart Compose
+            </Button>
+            <Button className="cursor-pointer" onClick={() => setModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Card
+            </Button>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -304,6 +327,15 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
           onSuccess={handleCardCreated}
         />
       )}
+      {/* Smart Compose Modal */}
+      <SmartComposeModal
+        open={smartComposeOpen}
+        setOpen={setSmartComposeOpen}
+        projectSlug={projectSlug}
+        onSuccess={() => {
+          fetchCards(); // Refresh cards after creating via Smart Compose
+        }}
+      />
       {/* Render modal for editing/viewing a card */}
       {selectedCard && (
         <ContextCardModal 

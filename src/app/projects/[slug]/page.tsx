@@ -295,7 +295,6 @@ export default function ProjectPage() {
                   fetchProject();
                 }}
               />
-        {/* Context Cards */}
         <ContextCardList projectSlug={projectSlug} />
       </div>
     </div>
