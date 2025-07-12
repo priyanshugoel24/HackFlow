@@ -15,7 +15,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, TrendingUp, Users, BarChart3, PieChart as PieChartIcon, Activity, Target, Eye, Archive } from "lucide-react";
 import LoginPage from "@/components/LoginPage";
 import Navbar from "@/components/Navbar";
+import StandupDigest from "@/components/StandupDigest";
 
 interface AnalyticsData {
   cardTypeDistribution: {
@@ -207,6 +207,8 @@ export default function ProjectAnalyticsPage() {
             </div>
           </div>
         </div>
+
+        <StandupDigest projectId={analytics.project.id} />
 
         {/* Overview Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">

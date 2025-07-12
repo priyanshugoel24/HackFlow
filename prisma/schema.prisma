@@ -13,6 +13,7 @@ model User {
   email           String?         @unique
   image           String?
   emailVerified   DateTime?
+  lastSeenat     DateTime?      
   accounts        Account[]
   activities      Activity[]
   comments        Comment[]       @relation("UserComments")
