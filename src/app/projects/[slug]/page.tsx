@@ -2,6 +2,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import LoginPage from "@/components/LoginPage";
 import ContextCardList from "@/components/ContextCardList";
@@ -15,12 +16,13 @@ import {
   Archive,
   Settings,
   UserRound,
+  BarChart3,
 } from "lucide-react";
 import Image from "next/image";
 import InviteMemberModal from "@/components/InviteMemberModal";
+import OnlineUsers from "@/components/OnlineUsers";
 import { usePresence } from "@/lib/socket/usePresence";
 import { useStatus } from "@/components/StatusProvider";
-import Link from "next/link";
 
 interface Project {
   id: string;
@@ -189,33 +191,24 @@ export default function ProjectPage() {
             </div>
 
             <div className="flex items-center space-x-2 flex-wrap justify-end mt-2 md:mt-0">
-              {project.link && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (project.link) {
-                      const url = project.link.startsWith("http")
-                        ? project.link
-                        : `https://${project.link}`;
-                      window.open(url, "_blank");
-                    }
-                  }}
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Visit
-                </Button>
-              )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  asChild
-                >
-                  <Link href={`/projects/${projectSlug}/settings`}>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </Link>
-                </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/projects/${projectSlug}/analytics`)}
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Analytics
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                asChild
+              >
+                <Link href={`/projects/${projectSlug}/settings`}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Link>
+              </Button>
               <Button
                 variant="default"
                 size="sm"
@@ -229,7 +222,7 @@ export default function ProjectPage() {
           </div>
         </div>
               {/* Online Users */}
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md p-6 mb-8">
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 mt-10 dark:border-gray-700 shadow-md p-6 mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                   Online Now {!isConnected && "(Reconnecting...)"}
                 </h3>
@@ -295,7 +288,7 @@ export default function ProjectPage() {
                   fetchProject();
                 }}
               />
-        <ContextCardList projectSlug={projectSlug} />
+        <div className="mt-16"></div><ContextCardList projectSlug={projectSlug} />
       </div>
     </div>
   );

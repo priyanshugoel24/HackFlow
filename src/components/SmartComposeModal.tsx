@@ -86,7 +86,7 @@ export default function SmartComposeModal({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !loading && setOpen(val)}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="min-w-xl max-w-2xl">
         <DialogHeader>
           <DialogTitle>Smart Compose</DialogTitle>
         </DialogHeader>

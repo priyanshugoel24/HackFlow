@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ProjectModal from "./ProjectModal";
-import { ChevronLeft, ChevronRight, Archive, Users, Hash } from "lucide-react";
+import { ChevronLeft, ChevronRight, Archive, UserCircle, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function ProjectSidebar({ 
@@ -89,7 +89,7 @@ export default function ProjectSidebar({
         )}
         style={!collapsed ? { width: `${width}px` } : undefined}
       >
-        <div className="p-3 space-y-4 flex-1 overflow-y-auto">
+        <div className="p-4 space-y-6 flex-1 overflow-y-auto">
           {/* Header */}
           <div className="flex justify-between items-center">
             {!collapsed && (
@@ -128,29 +128,29 @@ export default function ProjectSidebar({
                           key={project.id}
                           onClick={() => handleProjectSelect(project.slug)}
                           className={cn(
-                            "block w-full text-left bg-white dark:bg-gray-900 hover:shadow-md border border-gray-200 dark:border-gray-600 px-4 py-3 rounded-lg transition-all",
+                            "block w-full text-left bg-white dark:bg-gray-900 hover:shadow-md border border-gray-200 dark:border-gray-600 px-4 py-3 rounded-xl transition-all",
                             selectedProjectSlug === project.slug && "ring-2 ring-blue-500"
                           )}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
                               <p className="font-medium truncate text-gray-800 dark:text-gray-100">{project.name}</p>
-                              <div className="flex items-center space-x-2 mt-1">
+                              <div className="flex items-center gap-3 mt-2 flex-wrap text-sm text-gray-500 dark:text-gray-400">
                                 {project.members && project.members.length > 0 && (
-                                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                                    <Users className="h-3 w-3" />
+                                  <div className="flex items-center space-x-1">
+                                    <UserCircle className="h-4 w-4" />
                                     <span>{project.members.length}</span>
                                   </div>
                                 )}
                                 {project._count && (
-                                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                                    <Hash className="h-3 w-3" />
+                                  <div className="flex items-center space-x-1">
+                                    <FileText className="h-4 w-4" />
                                     <span>{project._count.contextCards}</span>
                                   </div>
                                 )}
                               </div>
                               {project.tags && project.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
+                                <div className="flex flex-wrap gap-2 mt-2">
                                   {project.tags.slice(0, 2).map((tag: string, index: number) => (
                                     <Badge key={index} variant="secondary" className="text-xs px-1 py-0">
                                       {tag}
@@ -182,7 +182,7 @@ export default function ProjectSidebar({
                           key={project.id}
                           onClick={() => handleProjectSelect(project.slug)}
                           className={cn(
-                            "block w-full text-left hover:shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-lg transition-colors opacity-60",
+                            "block w-full text-left hover:shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl transition-colors opacity-60",
                             selectedProjectSlug === project.slug && "ring-2 ring-blue-500"
                           )}
                         >
@@ -211,7 +211,7 @@ export default function ProjectSidebar({
           {!collapsed && (
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm rounded-lg" 
                 onClick={() => setOpen(true)}
                 disabled={loading}
               >

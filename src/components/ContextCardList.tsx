@@ -165,9 +165,9 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6 mt-4 gap-6">
+          <h2 className="text-2xl font-extrabold dark:text-gray-100">Context Cards</h2>
           <div className="flex items-center space-x-4">
-            <h2 className="text-xl font-semibold dark:text-gray-100">Context Cards</h2>
             <Button 
               variant="outline" 
               size="sm"
@@ -182,8 +182,6 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
                 Showing {allCards.filter(card => card.isArchived).length} archived cards
               </span>
             )}
-          </div>
-          <div className="flex items-center space-x-2">
             <Button 
               variant="secondary" 
               onClick={() => setSmartComposeOpen(true)}
@@ -197,21 +195,21 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {displayedCards.map((card) => (
             <Card
               key={card.id}
               className={cn(
-                "cursor-pointer group hover:shadow-lg dark:hover:shadow-blue-900 transition-shadow",
+                "cursor-pointer group hover:shadow-lg dark:hover:shadow-blue-900 transition-shadow rounded-xl border p-4 hover:border-blue-500 hover:scale-[1.01] transform",
                 card.isArchived && "opacity-60",
                 card.isPinned && "ring-2 ring-blue-200 dark:ring-blue-700"
               )}
               onClick={() => setSelectedCard(card)}
             >
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 mb-2">
                 <div className="flex items-start justify-between space-y-0">
-                  <div className="flex items-center space-x-2 flex-1">
-                    <div className={cn("flex items-center space-x-1 px-2 py-1 rounded-full text-xs", getTypeColor(card.type))}>
+                  <div className="flex items-center space-x-3 flex-1">
+                    <div className={cn("flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs", getTypeColor(card.type))}>
                       {getTypeIcon(card.type)}
                       <span className="capitalize">{card.type.toLowerCase()}</span>
                     </div>
@@ -222,9 +220,9 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
                       <Archive className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     )}
                   </div>
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center space-x-2 text-gray-400 dark:text-gray-500">
                     {card.visibility === 'PRIVATE' ? (
-                      <EyeOff className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4 text-green-500 dark:text-green-400" />
                     )}
@@ -236,8 +234,8 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
                 </CardTitle>
               </CardHeader>
               
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground dark:text-muted-foreground-dark line-clamp-3">
+              <CardContent className="space-y-3 text-sm leading-relaxed">
+                <p className="text-muted-foreground dark:text-muted-foreground-dark line-clamp-3">
                   {card.content}
                 </p>
                 
@@ -308,7 +306,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
                   )}
                 </div>
                 
-                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 pt-2 border-t border-gray-200 dark:border-gray-700">
                   <span>Updated {formatDate(card.updatedAt)}</span>
                   <span>Created {formatDate(card.createdAt)}</span>
                 </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,7 @@ import { useSession } from "next-auth/react";
 export default function ProjectSettingsPage() {
   const { data: session } = useSession();
   const { slug: projectSlug } = useParams();
+  const router = useRouter();
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -143,9 +144,20 @@ export default function ProjectSettingsPage() {
   }
 
   return (
-    <div className="bg-background min-h-screen py-16 px-6 sm:px-8 md:px-12">
-      <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-zinc-800">
-        <h1 className="text-4xl font-bold mb-10 text-zinc-800 dark:text-zinc-100 tracking-tight">Project Settings</h1>
+    <div>
+      <div className="bg-background min-h-screen py-16 px-6 sm:px-8 md:px-12">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-zinc-800">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mb-6 flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white transition"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Project
+          </Button>
+          <h1 className="text-4xl font-bold mb-10 text-zinc-800 dark:text-zinc-100 tracking-tight">Project Settings</h1>
 
         <section className="border-b border-gray-200 dark:border-zinc-700 pb-8 mb-10">
           <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6">Project Info</h2>
@@ -349,6 +361,7 @@ export default function ProjectSettingsPage() {
             {!saving && <Save className="h-4 w-4 mr-2" />}
             Save Changes
           </Button>
+        </div>
         </div>
       </div>
     </div>

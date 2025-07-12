@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { FileText, Folder, User, Tag, Search, Loader2, X, Sparkles } from "lucide-react";
@@ -240,10 +239,10 @@ export default function SearchBar() {
             }
           }}
           className={cn(
-            "block w-full pl-10 pr-20 py-3 text-sm rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors",
+            "block w-full pl-10 pr-20 py-3 text-sm rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors",
             isAIEnabled
               ? "border-yellow-500 dark:border-yellow-500"
-              : "border-gray-300 dark:border-gray-600"
+              : ""
           )}
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 space-x-1">
