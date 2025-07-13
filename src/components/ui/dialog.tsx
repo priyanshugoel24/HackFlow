@@ -50,10 +50,30 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  fullscreen = false,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  fullscreen?: boolean
 }) {
+  if (fullscreen) {
+    return (
+      <DialogPortal data-slot="dialog-portal">
+        <DialogOverlay />
+        <DialogPrimitive.Content
+          data-slot="dialog-content"
+          className={cn(
+            "bg-background fixed inset-0 z-50 border-0",
+            className
+          )}
+          {...props}
+        >
+          {children}
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    )
+  }
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />

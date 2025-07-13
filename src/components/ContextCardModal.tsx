@@ -34,6 +34,7 @@ import {
 import { sanitizeHtml } from "@/lib/security-client";
 import ExistingCard from "@/interfaces/ExistingCard";
 import Project from "@/interfaces/Project";
+import { GitHubCardAutoFill } from "./GithubCardAutofill";
 
 export default function ContextCardModal({
   open,
@@ -127,19 +128,18 @@ export default function ContextCardModal({
   );
 
   // Filter out current user and only show when modal is open
-  const otherEditors = open && session?.user
-    ? editors.filter((editor) => {
-        const user = session.user as {
-          id: string;
-          name?: string | null;
+  const otherEditors =
+    open && session?.user
+      ? editors.filter((editor) => {
+          const user = session.user as {
+            id: string;
+            name?: string | null;
             email?: string | null;
             image?: string | null;
           };
           return editor.id !== user.id;
         })
       : [];
-
-
 
   useEffect(() => {
     if (existingCard) {
@@ -389,11 +389,19 @@ export default function ContextCardModal({
         setSummaryText(data.summary);
         toast.success("Summary generated!");
       } else {
-        console.error("Failed to generate summary for card:", existingCard.id, data);
+        console.error(
+          "Failed to generate summary for card:",
+          existingCard.id,
+          data
+        );
         toast.error("Failed to generate summary", { description: data.error });
       }
     } catch (error) {
-      console.error("Error generating summary for card:", existingCard.id, error);
+      console.error(
+        "Error generating summary for card:",
+        existingCard.id,
+        error
+      );
       toast.error("Something went wrong");
     } finally {
       setIsSummarizing(false);
@@ -813,6 +821,17 @@ export default function ContextCardModal({
             />
           </div>
 
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              GitHub Auto-fill (optional)
+            </label>
+            <GitHubCardAutoFill
+              onAutoFill={(title, content) => {
+                setTitle(title);
+                setContent(content);
+              }}
+            />
+          </div>
           <div className="flex flex-col lg:flex-row lg:space-x-6 space-y-6 lg:space-y-0">
             <div className="space-y-3 flex-1">
               <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">

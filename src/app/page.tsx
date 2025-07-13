@@ -8,12 +8,17 @@ import ProjectCard from "@/components/ProjectCard"; // new component
 import AssignedCards from "@/components/AssignedCards";
 import PendingInvitations from "@/components/PendingInvitations";
 import { useState, useRef } from "react";
+import FocusMode from "@/components/FocusMode";
+import { ContextCardWithRelations } from "@/types";
 
 export default function Home() {
   const { data: session, status } = useSession();
   const [selectedProjectSlug, setSelectedProjectSlug] = useState("");
   const refreshProjectsRef = useRef<(() => void) | null>(null);
   const refreshSidebarRef = useRef<(() => void) | null>(null);
+
+  const [focusCards, setFocusCards] = useState<ContextCardWithRelations[]>([]);
+  const [focusOpen, setFocusOpen] = useState(false);
 
   const handleInvitationAccepted = () => {
     // Refresh both the project cards and sidebar when an invitation is accepted
@@ -67,11 +72,34 @@ export default function Home() {
                 </div>
                 {/* Enhanced Assigned Cards below Project Cards */}
                 <div className="w-full mt-6">
-                  <AssignedCards />
+                  <AssignedCards
+                    selectedCardIds={focusCards.map((c) => c.id)}
+                    onToggleFocusCard={(card) => {
+                      setFocusCards((prev) =>
+                        prev.find((c) => c.id === card.id)
+                          ? prev.filter((c) => c.id !== card.id)
+                          : [...prev, card]
+                      );
+                    }}
+                  />
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={() => setFocusOpen(true)}
+                      disabled={focusCards.length === 0}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-md disabled:opacity-40"
+                    >
+                      🎯 Enter Focus Mode
+                    </button>
+                  </div>
                 </div>
               </>
             )}
           </div>
+          <FocusMode
+            open={focusOpen}
+            onClose={() => setFocusOpen(false)}
+            cards={focusCards}
+          />
         </div>
       </div>
     </div>

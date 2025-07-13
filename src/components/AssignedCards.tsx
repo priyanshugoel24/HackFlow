@@ -4,7 +4,13 @@ import ContextCardModal from "./ContextCardModal";
 import { ContextCardWithRelations } from "../types";
 import { useSession } from "next-auth/react";
 
-export default function AssignedCards() {
+export default function AssignedCards({
+  onToggleFocusCard,
+  selectedCardIds = [],
+}: {
+  onToggleFocusCard?: (card: ContextCardWithRelations) => void;
+  selectedCardIds?: string[];
+}) {
 
   const { data: sessionData } = useSession();
   // Use email instead of userId for consistent identification across browsers
@@ -109,19 +115,33 @@ export default function AssignedCards() {
             </div>
             <div className="text-xs text-gray-500 mb-2 uppercase tracking-wide">{card.type}</div>
             <div className="line-clamp-3 text-sm text-gray-700 dark:text-gray-200 mb-2">{card.content}</div>
-            <div className="flex items-center gap-2 mt-4">
-              {card.project && (
-                <span className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-zinc-800 px-2 py-0.5 rounded">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
-                  {card.project.name}
-                </span>
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center gap-2">
+                {card.project && (
+                  <span className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-zinc-800 px-2 py-0.5 rounded">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+                    {card.project.name}
+                  </span>
+                )}
+                {card.why && (
+                  <span className="text-xs text-gray-400 italic truncate max-w-[120px]">{card.why}</span>
+                )}
+              </div>
+              {onToggleFocusCard && (
+                <button
+                  className={`text-xs px-2 py-1 rounded-md border shadow-sm ${
+                    selectedCardIds.includes(card.id)
+                      ? "bg-green-100 text-green-700 border-green-300"
+                      : "bg-white text-gray-600 border-gray-300"
+                  } hover:bg-gray-100 dark:bg-zinc-800 dark:text-gray-300 dark:border-zinc-600`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFocusCard(card);
+                  }}
+                >
+                  {selectedCardIds.includes(card.id) ? "✔ Added" : "🎯 Add to Focus"}
+                </button>
               )}
-              {card.why && (
-                <span className="text-xs text-gray-400 italic ml-2 truncate max-w-[120px]">{card.why}</span>
-              )}
-            </div>
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 12H9m12 0A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z"/></svg>
             </div>
           </div>
         ))}
