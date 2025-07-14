@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const assignedTo = searchParams.get("assignedTo");
   const status = searchParams.get("status");
+  const teamId = searchParams.get("teamId");
+  const projectId = searchParams.get("projectId"); // Add projectId parameter
   const offset = parseInt(searchParams.get("offset") || "0", 10);
   const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50); // max 50 per page
 
@@ -62,7 +64,7 @@ export async function GET(req: NextRequest) {
           where = {
             ...where,
             OR: [
-              { assignedToId: assignedUser.id } as any,
+              { assignedToId: assignedUser.id },
               { userId: assignedUser.id }
             ],
           };
@@ -75,14 +77,111 @@ export async function GET(req: NextRequest) {
         where = {
           ...where,
           OR: [
-            { assignedToId: assignedTo } as any,
+            { assignedToId: assignedTo },
             { userId: assignedTo }
           ],
         };
       }
+    } else if (teamId) {
+      // Fetch all assigned cards for team members
+      const teamMembers = await prisma.teamMember.findMany({
+        where: { 
+          teamId: teamId,
+          status: 'ACTIVE'
+        },
+        select: { userId: true }
+      });
+      
+      const memberUserIds = teamMembers.map(member => member.userId);
+      
+      if (memberUserIds.length > 0) {
+        where = {
+          ...where,
+          assignedToId: { in: memberUserIds },
+          project: {
+            teamId: teamId // Ensure cards are from projects in this team
+          }
+        };
+      } else {
+        // No team members found, return empty results
+        where = { ...where, id: 'non-existent-id' };
+      }
+    } else if (projectId) {
+      // Filter by specific project - check if user has access to this project
+      const isCUID = /^c[a-z0-9]{24}$/i.test(projectId);
+      
+      console.log(`🔍 Checking access for project: ${projectId} (isCUID: ${isCUID}), user: ${user.id}`);
+      
+      const accessibleProject = await prisma.project.findFirst({
+        where: {
+          ...(isCUID ? { id: projectId } : { slug: projectId }),
+          OR: [
+            { createdById: user.id },
+            {
+              members: {
+                some: {
+                  userId: user.id,
+                  status: "ACTIVE"
+                }
+              }
+            },
+            // Team-based access: if user is an active team member and project belongs to that team
+            {
+              team: {
+                members: {
+                  some: {
+                    userId: user.id,
+                    status: "ACTIVE"
+                  }
+                }
+              }
+            }
+          ],
+          isArchived: false,
+        },
+        select: { id: true, name: true, slug: true }
+      });
+
+      if (accessibleProject) {
+        console.log(`✅ User has access to project: ${accessibleProject.name} (${accessibleProject.id})`);
+        where = {
+          ...where,
+          projectId: accessibleProject.id
+        };
+      } else {
+        console.log(`❌ User does not have access to project: ${projectId}`);
+        // No access to this project, return empty results
+        where = { ...where, id: 'non-existent-id' };
+      }
     } else {
-      // Default: show cards created by the user
-      where = { ...where, userId: user.id };
+      // Default: show all cards from projects where user is a member or creator
+      where = {
+        ...where,
+        project: {
+          OR: [
+            { createdById: user.id },
+            {
+              members: {
+                some: {
+                  userId: user.id,
+                  status: "ACTIVE"
+                }
+              }
+            },
+            // Team-based access: if user is an active team member and project belongs to that team
+            {
+              team: {
+                members: {
+                  some: {
+                    userId: user.id,
+                    status: "ACTIVE"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      };
     }
     if (status) {
       where = { ...where, status: status as TaskStatus };
@@ -104,7 +203,7 @@ export async function GET(req: NextRequest) {
     // Manually fetch assigned user information for each card
     const cardsWithAssignedUser = await Promise.all(
       cards.map(async (card) => {
-        const cardWithId = card as any; // Type assertion to access assignedToId
+        const cardWithId = card as { assignedToId?: string } & typeof card;
         if (cardWithId.assignedToId) {
           const assignedUser = await prisma.user.findUnique({
             where: { id: cardWithId.assignedToId },
@@ -165,20 +264,6 @@ export async function POST(req: NextRequest) {
 
     const attachments = formData.getAll("attachments") as File[];
 
-    // First, ensure the user exists in the database
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
-
     // Validate input using security schema
     const validationResult = validateInput(contextCardSchema, {
       title: sanitizeText(title),
@@ -209,13 +294,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Check if the identifier is a UUID (legacy ID) or a slug
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectIdentifier);
+    // Check if the identifier is a CUID (database ID) or a slug
+    // CUID format: starts with 'c' followed by 24 alphanumeric characters
+    const isCUID = /^c[a-z0-9]{24}$/i.test(projectIdentifier);
 
-    // Verify project access
+    // Verify project access - ALL ACTIVE MEMBERS should be able to create cards
     const project = await prisma.project.findFirst({
       where: {
-        ...(isUUID ? { id: projectIdentifier } : { slug: projectIdentifier }),
+        ...(isCUID ? { id: projectIdentifier } : { slug: projectIdentifier }),
         OR: [
           { createdById: user.id },
           {
@@ -226,14 +312,72 @@ export async function POST(req: NextRequest) {
               },
             },
           },
+          // Team-based access: if user is an active team member and project belongs to that team
+          {
+            team: {
+              members: {
+                some: {
+                  userId: user.id,
+                  status: "ACTIVE"
+                }
+              }
+            }
+          }
         ],
         isArchived: false,
       },
+      include: {
+        members: {
+          where: { status: "ACTIVE" },
+          include: {
+            user: {
+              select: { id: true, name: true, email: true }
+            }
+          }
+        }
+      }
     });
 
     if (!project) {
+      console.error(`❌ Project not found or access denied`);
+      console.error(`   - Project identifier: ${projectIdentifier} (isCUID: ${isCUID})`);
+      console.error(`   - User ID: ${user.id}`);
+      console.error(`   - User email: ${user.email}`);
+      
+      // Let's also try to find the project without access restrictions to debug
+      const debugProject = await prisma.project.findFirst({
+        where: {
+          ...(isCUID ? { id: projectIdentifier } : { slug: projectIdentifier }),
+          isArchived: false,
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { id: true, email: true, name: true }
+              }
+            }
+          }
+        }
+      });
+      
+      if (debugProject) {
+        console.error(`   - Project exists: ${debugProject.name} (${debugProject.id})`);
+        console.error(`   - Project creator: ${debugProject.createdById}`);
+        console.error(`   - Project members:`, debugProject.members.map(m => ({
+          userId: m.userId,
+          email: m.user.email,
+          status: m.status,
+          role: m.role
+        })));
+      } else {
+        console.error(`   - Project does not exist with identifier: ${projectIdentifier}`);
+      }
+      
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
+
+    console.log(`✅ Project found: ${project.name} (${project.id}), user has access`);
 
     // Store metadata (actual upload to Supabase/S3 will be added later)
     const savedCard = await prisma.contextCard.create({
@@ -279,6 +423,22 @@ export async function POST(req: NextRequest) {
       const ably = getAblyServer();
       const channel = ably.channels.get(`project:${project.id}`);
       
+      await channel.publish("card:created", {
+        id: savedCard.id,
+        title: savedCard.title,
+        content: savedCard.content,
+        type: savedCard.type,
+        status: savedCard.status,
+        createdAt: savedCard.createdAt,
+        userId: user.id,
+        projectId: project.id,
+        user: {
+          id: user.id,
+          name: user.name,
+          image: user.image,
+        },
+      });
+      
       await channel.publish("activity:created", {
         id: `activity_${Date.now()}`,
         type: "CARD_CREATED",
@@ -293,7 +453,7 @@ export async function POST(req: NextRequest) {
         },
       });
       
-      console.log("📡 Published activity:created event to Ably for project:", project.id);
+      console.log("📡 Published card:created and activity:created events to Ably for project:", project.id);
       
       // Handle notification for mentioned user
       if (notifyUserId) {

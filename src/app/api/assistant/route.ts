@@ -145,6 +145,17 @@ export async function POST(req: NextRequest) {
                 status: "ACTIVE"
               } 
             } 
+          },
+          // Team-based access: if user is an active team member and project belongs to that team
+          {
+            team: {
+              members: {
+                some: {
+                  userId: user.id,
+                  status: "ACTIVE"
+                }
+              }
+            }
           }
         ],
         isArchived: false,
@@ -219,7 +230,7 @@ export async function POST(req: NextRequest) {
       },
       include: {
         user: {
-          select: { id: true, name: true }
+          select: { id: true, name: true, email: true }
         },
         project: {
           select: { id: true, name: true }
@@ -292,7 +303,7 @@ PROJECT: ${project.name} (${project.slug})
 
     // Build activity context
     const activityContext = recentActivities.map(activity => {
-      const userName = activity.user?.name || 'Unknown User';
+      const userName = activity.user?.name || activity.user?.email?.split('@')[0] || 'User';
       return `[${activity.project.name}] ${userName}: ${activity.type} - ${activity.description}`;
     }).join('\n');
 

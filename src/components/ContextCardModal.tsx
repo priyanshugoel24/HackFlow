@@ -43,6 +43,7 @@ export default function ContextCardModal({
   project,
   existingCard,
   onSuccess,
+  teamSlug,
 }: {
   open: boolean;
   setOpen: (val: boolean) => void;
@@ -50,6 +51,7 @@ export default function ContextCardModal({
   project?: Project;
   existingCard?: ExistingCard & { createdById?: string };
   onSuccess?: () => void;
+  teamSlug?: string;
 }) {
   const { data: session } = useSession();
   const [title, setTitle] = useState("");
@@ -65,6 +67,9 @@ export default function ContextCardModal({
   const [status, setStatus] = useState<"ACTIVE" | "CLOSED">("ACTIVE");
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [filteredMembers, setFilteredMembers] = useState<
+    Array<{ userId: string; name?: string; email?: string; image?: string }>
+  >([]);
+  const [teamMembers, setTeamMembers] = useState<
     Array<{ userId: string; name?: string; email?: string; image?: string }>
   >([]);
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -94,7 +99,7 @@ export default function ContextCardModal({
     };
     return {
       id: user.id,
-      name: user.name || "Unknown User",
+      name: user.name || user.email?.split('@')[0] || "User",
       image: user.image || undefined,
     };
   }, [session?.user]);
@@ -183,12 +188,12 @@ export default function ContextCardModal({
     }
   }, [existingCard, open]);
 
-  // Get project members for mention dropdown
+  // Get project members and team members for mention dropdown
   useEffect(() => {
+    // Load project members
     if (project && project.members) {
-      // Transform the project members into a format suitable for the dropdown
       const members = project.members
-        .filter((m) => m.status === "ACTIVE") // Only include active members
+        .filter((m) => m.status === "ACTIVE")
         .map((member) => {
           const user =
             (
@@ -205,12 +210,40 @@ export default function ContextCardModal({
         });
       setFilteredMembers(members);
     }
-  }, [project]);
 
-  // Filter members based on search input
+    // Load team members if teamSlug is provided
+    if (teamSlug) {
+      const fetchTeamMembers = async () => {
+        try {
+          const response = await fetch(`/api/teams/${teamSlug}/members`);
+          if (response.ok) {
+            const members = await response.json();
+            const teamMembersList = members
+              .filter((m: any) => m.status === "ACTIVE")
+              .map((member: any) => ({
+                userId: member.user.id,
+                name: member.user.name,
+                email: member.user.email,
+                image: member.user.image,
+              }));
+            setTeamMembers(teamMembersList);
+            
+            // If no project members, use team members as filtered members
+            if (!project || !project.members) {
+              setFilteredMembers(teamMembersList);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching team members:', error);
+        }
+      };
+      
+      fetchTeamMembers();
+    }
+  }, [project, teamSlug]);
+
+  // Filter members based on search input (from both project and team)
   const filterMembers = (input: string) => {
-    if (!project || !project.members) return;
-
     setMention(input);
 
     if (!input.trim()) {
@@ -219,30 +252,46 @@ export default function ContextCardModal({
     }
 
     const searchTerm = input.toLowerCase().trim();
-    const members = project.members
-      .filter((m) => m.status === "ACTIVE")
-      .map((member) => {
-        const user =
-          (
-            member as {
-              user?: { name?: string; email?: string; image?: string };
-            }
-          ).user || {};
-        return {
-          userId: member.userId,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        };
-      })
-      .filter(
-        (member) =>
-          (member.name && member.name.toLowerCase().includes(searchTerm)) ||
-          (member.email && member.email.toLowerCase().includes(searchTerm))
-      );
+    let allMembers: Array<{ userId: string; name?: string; email?: string; image?: string }> = [];
 
-    setFilteredMembers(members);
-    setShowMemberDropdown(members.length > 0);
+    // Get project members if available
+    if (project && project.members) {
+      const projectMembers = project.members
+        .filter((m) => m.status === "ACTIVE")
+        .map((member) => {
+          const user =
+            (
+              member as {
+                user?: { name?: string; email?: string; image?: string };
+              }
+            ).user || {};
+          return {
+            userId: member.userId,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          };
+        });
+      allMembers = [...allMembers, ...projectMembers];
+    }
+
+    // Add team members if available and not already included
+    if (teamMembers.length > 0) {
+      const uniqueTeamMembers = teamMembers.filter(
+        (teamMember) => !allMembers.some((member) => member.userId === teamMember.userId)
+      );
+      allMembers = [...allMembers, ...uniqueTeamMembers];
+    }
+
+    // Filter members based on search term
+    const filteredMembers = allMembers.filter(
+      (member) =>
+        (member.name && member.name.toLowerCase().includes(searchTerm)) ||
+        (member.email && member.email.toLowerCase().includes(searchTerm))
+    );
+
+    setFilteredMembers(filteredMembers);
+    setShowMemberDropdown(filteredMembers.length > 0);
   };
 
   // Handle selecting a member from the dropdown
@@ -449,14 +498,29 @@ export default function ContextCardModal({
     let notifyUserId = null;
 
     // Check if we need to notify someone (when a user is mentioned)
-    if (mention && mention.trim() && project?.members) {
-      // Try to find the mentioned user in project members
-      const mentionedMember = project.members.find((m) => {
-        const user =
-          (m as { user?: { name?: string; email?: string; image?: string } })
-            .user || {};
-        return user.name === mention.trim() || user.email === mention.trim();
-      });
+    if (mention && mention.trim()) {
+      let mentionedMember = null;
+      
+      // First try to find in project members if available
+      if (project?.members) {
+        mentionedMember = project.members.find((m) => {
+          const user =
+            (m as { user?: { name?: string; email?: string; image?: string } })
+              .user || {};
+          return user.name === mention.trim() || user.email === mention.trim();
+        });
+      }
+      
+      // If not found in project members, try team members
+      if (!mentionedMember && teamMembers.length > 0) {
+        const teamMember = teamMembers.find((m) => 
+          m.name === mention.trim() || m.email === mention.trim()
+        );
+        if (teamMember) {
+          mentionedMember = { userId: teamMember.userId };
+        }
+      }
+      
       if (mentionedMember) {
         notifyUserId = mentionedMember.userId;
       }

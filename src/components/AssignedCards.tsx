@@ -7,9 +7,13 @@ import { useSession } from "next-auth/react";
 export default function AssignedCards({
   onToggleFocusCard,
   selectedCardIds = [],
+  teamId,
+  currentUserOnly = true,
 }: {
   onToggleFocusCard?: (card: ContextCardWithRelations) => void;
   selectedCardIds?: string[];
+  teamId?: string;
+  currentUserOnly?: boolean;
 }) {
 
   const { data: sessionData } = useSession();
@@ -32,8 +36,21 @@ export default function AssignedCards({
     isFetching.current = true;
     setLoading(true);
     try {
-      // Fetch cards using email-based authentication (consistent across browsers)
-      const res = await fetch(`/api/context-cards?assignedTo=${encodeURIComponent(userEmail)}&status=ACTIVE&offset=${pageNum * pageSize}&limit=${pageSize}`);
+      // Build query parameters
+      let queryParams = `status=ACTIVE&offset=${pageNum * pageSize}&limit=${pageSize}`;
+      
+      if (currentUserOnly) {
+        // Fetch only cards assigned to current user
+        queryParams += `&assignedTo=${encodeURIComponent(userEmail)}`;
+      } else if (teamId) {
+        // Fetch all assigned cards for team members
+        queryParams += `&teamId=${teamId}`;
+      } else {
+        // Fallback to current user
+        queryParams += `&assignedTo=${encodeURIComponent(userEmail)}`;
+      }
+
+      const res = await fetch(`/api/context-cards?${queryParams}`);
       const data = await res.json();
       if (Array.isArray(data.cards)) {
         setCards((prev) => {
@@ -53,14 +70,15 @@ export default function AssignedCards({
       setLoading(false);
       isFetching.current = false;
     }
-  }, [userEmail]);
+  }, [userEmail, teamId, currentUserOnly]);
 
   useEffect(() => {
     if (userEmail) {
-      fetchCards(page);
+      setCards([]); // Reset cards when dependencies change
+      setPage(0);
+      fetchCards(0);
     }
-    // eslint-disable-next-line
-  }, [page, userEmail]);
+  }, [userEmail, teamId, currentUserOnly, fetchCards]);
 
   // Infinite scroll handler
   const handleScroll = useCallback(() => {

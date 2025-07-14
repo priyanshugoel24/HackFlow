@@ -17,36 +17,47 @@ export async function GET(req: NextRequest) {
   if (!token?.sub)
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  // First, ensure the user exists in the database and get the actual user
-  const user = await prisma.user.upsert({
-    where: { email: token.email! },
-    update: {
-      name: token.name,
-      image: token.picture,
-    },
-    create: {
-      email: token.email!,
-      name: token.name,
-      image: token.picture,
-    },
-  });
-
-  // Rate limiting
-  if (!rateLimiter(user.id)) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
-
   try {
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
+    // Rate limiting
+    if (!rateLimiter(user.id)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    try {
     console.log(`🔍 Fetching projects for user: ${user.id} (${token.email})`);
     
-    // Check if we should include archived projects
+    // Check if we should include archived projects and filter by team
     const includeArchived = req.nextUrl.searchParams.get("includeArchived") === "true";
+    const teamId = req.nextUrl.searchParams.get("teamId");
 
-    const projects = await prisma.project.findMany({
-      where: {
-        OR: [
-          { createdById: user.id },
-          { 
+    let whereClause: Record<string, unknown> = {
+      OR: [
+        { createdById: user.id },
+        { 
+          members: {
+            some: {
+              userId: user.id,
+              status: "ACTIVE"
+            }
+          }
+        },
+        // Team-based access: if user is an active team member and project belongs to that team
+        {
+          team: {
             members: {
               some: {
                 userId: user.id,
@@ -54,9 +65,21 @@ export async function GET(req: NextRequest) {
               }
             }
           }
-        ],
-        ...(includeArchived ? {} : { isArchived: false }),
-      },
+        }
+      ],
+      ...(includeArchived ? {} : { isArchived: false }),
+    };
+
+    // If teamId is provided, filter projects by team
+    if (teamId) {
+      whereClause = {
+        ...whereClause,
+        teamId: teamId,
+      };
+    }
+
+    const projects = await prisma.project.findMany({
+      where: whereClause,
       include: {
         members: {
           include: {
@@ -78,6 +101,13 @@ export async function GET(req: NextRequest) {
             image: true
           }
         },
+        team: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
+        },
         _count: {
           select: {
             contextCards: true
@@ -94,6 +124,10 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching projects:", error);
     return NextResponse.json({ error: "Failed to fetch projects" }, { status: 500 });
   }
+  } catch (error) {
+    console.error("Error in GET function:", error);
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
+  }
 }
 
 // CREATE new project
@@ -102,7 +136,7 @@ export async function POST(req: NextRequest) {
   if (!token?.sub)
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  const { name, link, description, tags } = await req.json();
+  const { name, link, description, tags, teamId } = await req.json();
 
   if (!name)
     return NextResponse.json({ error: "Project name is required" }, { status: 400 });
@@ -122,6 +156,27 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // If teamId is provided, verify user has permission to create projects in this team
+    if (teamId) {
+      const teamMembership = await prisma.teamMember.findUnique({
+        where: {
+          userId_teamId: {
+            userId: user.id,
+            teamId: teamId,
+          },
+        },
+      });
+
+      if (!teamMembership || teamMembership.status !== 'ACTIVE') {
+        return NextResponse.json({ error: "Access denied to this team" }, { status: 403 });
+      }
+
+      // Only allow certain roles to create projects
+      if (!['OWNER', 'ADMIN', 'MEMBER'].includes(teamMembership.role)) {
+        return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+      }
+    }
+
     // Generate a unique slug for the project
     const baseSlug = generateSlug(name);
     const existingProjects = await prisma.project.findMany({
@@ -138,6 +193,7 @@ export async function POST(req: NextRequest) {
         description,
         tags: tags || [],
         createdById: user.id,
+        teamId: teamId || null, // Assign to team if provided
         members: {
           create: {
             userId: user.id,
@@ -166,9 +222,50 @@ export async function POST(req: NextRequest) {
             email: true,
             image: true
           }
+        },
+        team: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
         }
       }
     });
+
+    // If project is created within a team, automatically add all active team members
+    if (teamId) {
+      console.log(`🔄 Adding all team members to new project: ${project.name}`);
+      
+      const teamMembers = await prisma.teamMember.findMany({
+        where: {
+          teamId: teamId,
+          status: "ACTIVE",
+          userId: { not: user.id } // Exclude creator as they're already added as MANAGER
+        },
+        select: { userId: true }
+      });
+
+      // Add each team member to the project
+      for (const member of teamMembers) {
+        try {
+          await prisma.projectMember.create({
+            data: {
+              userId: member.userId,
+              projectId: project.id,
+              role: "MEMBER",
+              status: "ACTIVE",
+              addedById: user.id, // Project creator is adding them
+            }
+          });
+        } catch (error) {
+          console.error(`❌ Failed to add team member ${member.userId} to project:`, error);
+          // Continue with other members even if one fails
+        }
+      }
+      
+      console.log(`✅ Added ${teamMembers.length} team members to project`);
+    }
 
     // Log activity
     await logActivity({

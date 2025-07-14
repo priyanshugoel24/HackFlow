@@ -27,11 +27,14 @@ export function getAblyClient(clientId?: string): Ably.Realtime {
       key: ablyKey,
       clientId: currentClientId || undefined,
       autoConnect: true,
-      disconnectedRetryTimeout: 3000,
-      suspendedRetryTimeout: 5000,
-      httpRequestTimeout: 15000,
+      disconnectedRetryTimeout: 1000, // Faster reconnection
+      suspendedRetryTimeout: 2000, // Faster recovery
+      httpRequestTimeout: 5000, // Faster timeout
       closeOnUnload: true,
       useBinaryProtocol: false,
+      // Optimize for real-time performance
+      echoMessages: false, // Don't echo our own messages
+      queueMessages: true, // Queue messages when disconnected
     });
 
     // Log connection events for debugging
@@ -91,6 +94,7 @@ export const CHANNELS = {
 // Types for Ably presence data
 export interface AblyPresenceData {
   name: string;
+  email?: string;
   image?: string;
   status?: string;
   lastSeen: string;

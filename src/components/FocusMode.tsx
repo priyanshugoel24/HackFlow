@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Target, X, CheckCircle2, Play, Pause, Square, Timer, RotateCcw } from "lucide-react";
+import { Target, CheckCircle2, Play, Pause, Timer, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { ContextCardWithRelations } from "@/types";
 

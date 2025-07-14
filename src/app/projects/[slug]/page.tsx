@@ -6,11 +6,11 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import LoginPage from "@/components/LoginPage";
 import ContextCardList from "@/components/ContextCardList";
+import OnlineUsers from "@/components/OnlineUsers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
-  ExternalLink,
   Users,
   Calendar,
   Archive,
@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import InviteMemberModal from "@/components/InviteMemberModal";
-import OnlineUsers from "@/components/OnlineUsers";
 import { usePresence } from "@/lib/socket/usePresence";
 import { useStatus } from "@/components/StatusProvider";
 
@@ -224,59 +223,9 @@ export default function ProjectPage() {
               {/* Online Users */}
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 mt-10 dark:border-gray-700 shadow-md p-6 mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                  Online Now {!isConnected && "(Reconnecting...)"}
+                  Online Now
                 </h3>
-                {onlineUsers.length === 0 ? (
-                  <div className="text-gray-500 dark:text-gray-500 text-sm">No users currently online</div>
-                ) : (
-                  <div className="flex flex-wrap gap-3">
-                    {Array.from(new Map(onlineUsers.map(user => [user.id, user])).values())
-                      .map((user, index) => {
-                      // Use current user's status from StatusProvider if it's the current user
-                      const sessionUser = session?.user as { id: string; name?: string | null; email?: string | null; image?: string | null } | undefined;
-                      const displayStatus = user.id === sessionUser?.id ? currentUserStatus : user.status;
-                      
-                      return (
-                        <div key={`${user.id}-${index}`} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-950 px-3 py-2 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow transition-all">
-                          <div className="relative">
-                            {user.image ? (
-                              <Image
-                                src={user.image}
-                                alt={user.name}
-                                width={32}
-                                height={32}
-                                className="rounded-full object-cover border w-8 h-8"
-                                onError={(e) => {
-                                  e.currentTarget.onerror = null;
-                                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                                }}
-                              />
-                            ) : (
-                              <div className="w-8 h-8 flex items-center justify-center bg-gray-200 dark:bg-gray-600 rounded-full border">
-                                <UserRound className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                              </div>
-                            )}
-                            <span 
-                              className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-2 border-white rounded-full ${
-                                displayStatus === "Available" ? "bg-green-500" :
-                                displayStatus === "Busy" ? "bg-yellow-500" :
-                                displayStatus === "Focused" ? "bg-red-500" :
-                                "bg-gray-400"
-                              }`}
-                              title={displayStatus || "Available"}
-                            />
-                          </div>
-                          <div>
-                            <div className="font-semibold text-gray-700 dark:text-gray-300 text-sm">{user.name}</div>
-                            {displayStatus && displayStatus !== "Available" && (
-                              <div className="text-xs text-gray-500 dark:text-gray-500 italic">{displayStatus}</div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <OnlineUsers />
               </div>
               {/* <DebugPresence /> */}
               <InviteMemberModal 

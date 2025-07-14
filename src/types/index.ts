@@ -1,4 +1,4 @@
-import { User, Project, ContextCard, Comment, Activity, ProjectMember } from "@prisma/client";
+import { User, Project, ContextCard, Comment, Activity, ProjectMember, Team, TeamMember } from "@prisma/client";
 
 // Extended types for components
 export interface ContextCardWithRelations extends ContextCard {
@@ -14,6 +14,25 @@ export interface ProjectWithRelations extends Project {
   createdBy: User;
   members: ProjectMember[];
   contextCards?: ContextCard[];
+  team?: Team;
+}
+
+export interface TeamWithRelations extends Team {
+  createdBy: User;
+  members: TeamMemberWithRelations[];
+  projects: ProjectWithRelations[];
+  _count?: {
+    members: number;
+    projects: number;
+  };
+  role?: string; // User's role in this team
+  joinedAt?: Date;
+}
+
+export interface TeamMemberWithRelations extends TeamMember {
+  user: User;
+  team: Team;
+  addedBy?: User;
 }
 
 export interface CommentWithRelations extends Comment {
@@ -70,6 +89,12 @@ export interface CreateCommentData {
   content: string;
   cardId: string;
   parentId?: string;
+}
+
+export interface CreateTeamData {
+  name: string;
+  slug: string;
+  description?: string;
 }
 
 // API Response types

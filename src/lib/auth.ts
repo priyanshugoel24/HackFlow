@@ -1,10 +1,10 @@
-import { type NextAuthOptions } from "next-auth";
+import NextAuth from "next-auth";
 import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 
-export const authOptions: NextAuthOptions = {
+export const authOptions: any = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     GitHubProvider({
@@ -23,7 +23,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: 60 * 60 * 24 * 7, // Optional: JWT valid for 7 days
   },
   callbacks: {
-    async jwt({ token, user, profile }) {
+    async jwt({ token, user, profile }: any) {
       // Add user profile info to token when user signs in
       if (user) {
         token.email = user.email;
@@ -32,7 +32,7 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       // ✅ Add user ID from token to session
       if (session.user && token.sub) {
         session.user.id = token.sub;
@@ -40,7 +40,7 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile }: any) {
       if (account?.provider && user.email) {
         try {
           // Check if user already exists with this email
@@ -91,10 +91,10 @@ export const authOptions: NextAuthOptions = {
     },
   },
   events: {
-    async linkAccount({ user, account }) {
+    async linkAccount({ user, account }: any) {
       console.log(`Account ${account.provider} linked to user ${user.id}`);
     },
-    async signIn({ user, account, isNewUser }) {
+    async signIn({ user, account, isNewUser }: any) {
       if (account) {
         console.log(`User ${user.email} signed in with ${account.provider}${isNewUser ? ' (new user)' : ''}`);
       }

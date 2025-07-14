@@ -103,6 +103,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                 userId: user.id,
                 status: "ACTIVE"
               }
+            },
+            team: {
+              select: {
+                members: {
+                  where: {
+                    userId: user.id,
+                    status: "ACTIVE"
+                  }
+                }
+              }
             }
           }
         }
@@ -114,8 +124,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Card not found" }, { status: 404 });
     }
 
-    // Check if user has access to the project (either as creator or member)
-    const hasProjectAccess = existing.project.createdById === user.id || existing.project.members.length > 0;
+    // Check if user has access to the project (creator, direct member, or team member)
+    const isProjectCreator = existing.project.createdById === user.id;
+    const isDirectMember = existing.project.members.length > 0;
+    const isTeamMember = (existing.project.team?.members?.length || 0) > 0;
+    const hasProjectAccess = isProjectCreator || isDirectMember || isTeamMember;
     
     if (!hasProjectAccess) {
       return NextResponse.json({ error: "Access denied. You must be a member of this project." }, { status: 403 });
@@ -131,6 +144,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (isContentEdit && existing.userId !== user.id) {
       console.log("❌ Only card creator can edit content. Card creator:", existing.userId, "Current user:", user.id);
       return NextResponse.json({ error: "Only the card creator can edit card content" }, { status: 403 });
+    }
+
+    // For status updates, any project member should be allowed
+    if (status !== undefined && !isContentEdit) {
+      console.log("✅ Status update allowed for project member");
     }
 
     console.log("✅ Found existing card:", existing.id, existing.title);
@@ -270,7 +288,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         where: { id: updatedCard.projectId },
         data: { lastActivityAt: new Date() },
       });
-      (global as { io?: { emit: (event: string, data: unknown) => void } }).io?.emit("card:update", updatedCard);
+    }
+
+    // Publish real-time update
+    (global as { io?: { emit: (event: string, data: unknown) => void } }).io?.emit("card:update", updatedCard);
+
+    // Publish to Ably for real-time sync
+    try {
+      const ably = getAblyServer();
+      const channel = ably.channels.get(`project:${updatedCard.projectId}`);
+      
+      await channel.publish("card:updated", {
+        id: updatedCard.id,
+        title: updatedCard.title,
+        content: updatedCard.content,
+        type: updatedCard.type,
+        status: updatedCard.status,
+        updatedAt: updatedCard.updatedAt,
+        userId: user.id,
+        projectId: updatedCard.projectId,
+        user: {
+          id: user.id,
+          name: user.name,
+          image: user.image,
+        },
+      });
+      
+      console.log("📡 Published card:updated event to Ably for project:", updatedCard.projectId);
+    } catch (ablyError) {
+      console.error("❌ Failed to publish update to Ably:", ablyError);
     }
 
     // Log the activity
@@ -378,16 +424,57 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       },
     });
 
-    // First check if the card exists and belongs to the user
+    // First check if the card exists and user has access to delete it
     const existing = await prisma.contextCard.findFirst({
-      where: {
-        id,
-        userId: user.id,
-      },
+      where: { id },
+      include: {
+        project: {
+          include: {
+            members: {
+              where: {
+                userId: user.id,
+                status: "ACTIVE"
+              }
+            },
+            team: {
+              select: {
+                members: {
+                  where: {
+                    userId: user.id,
+                    status: "ACTIVE"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!existing) {
-      return NextResponse.json({ error: "Card not found or not yours" }, { status: 404 });
+      return NextResponse.json({ error: "Card not found" }, { status: 404 });
+    }
+
+    // Check if user has access to the project first
+    const isProjectCreator = existing.project.createdById === user.id;
+    const isDirectMember = existing.project.members.length > 0;
+    const isTeamMember = (existing.project.team?.members?.length || 0) > 0;
+    const hasProjectAccess = isProjectCreator || isDirectMember || isTeamMember;
+    
+    if (!hasProjectAccess) {
+      return NextResponse.json({ error: "Access denied. You must be a member of this project." }, { status: 403 });
+    }
+
+    // Check if user has permission to delete this card (only card creators can delete)
+    const isCardCreator = existing.userId === user.id;
+    const isManager = existing.project.members.some(member => 
+      member.userId === user.id && member.role === "MANAGER"
+    );
+
+    if (!isCardCreator && !isProjectCreator && !isManager) {
+      return NextResponse.json({ 
+        error: "Access denied. Only card creators, project creators, and managers can delete cards." 
+      }, { status: 403 });
     }
 
     // Delete the card

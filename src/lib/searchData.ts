@@ -70,7 +70,7 @@ export async function getGlobalSearchData() {
       type: "member" as const,
       id: `member-${member.userId}-${member.projectId}`,
       originalId: member.userId,
-      name: member.user.name || "Unknown User",
+      name: member.user.name || member.user.email?.split('@')[0] || "User",
       email: member.user.email || "",
       projectId: member.projectId,
       projectSlug: member.project.slug,

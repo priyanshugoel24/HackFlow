@@ -20,10 +20,44 @@ model User {
   assignedCards   ContextCard[]   @relation("AssignedCards")
   contextCards    ContextCard[]   @relation("CreatedCards")
   createdProjects Project[]       @relation("CreatedProjects")
+  createdTeams    Team[]          @relation("CreatedTeams")
   addedMembers    ProjectMember[] @relation("UserAddedMembers")
+  addedTeamMembers TeamMember[]   @relation("UserAddedTeamMembers")
   memberships     ProjectMember[]
+  teamMemberships TeamMember[]
   sessions        Session[]
   status          Status?
+}
+
+model Team {
+  id             String          @id @default(cuid())
+  name           String
+  slug           String          @unique
+  description    String?
+  createdAt      DateTime        @default(now())
+  createdById    String
+  lastActivityAt DateTime        @updatedAt
+  isArchived     Boolean         @default(false)
+  
+  createdBy      User            @relation("CreatedTeams", fields: [createdById], references: [id], onDelete: Cascade)
+  members        TeamMember[]
+  projects       Project[]
+}
+
+model TeamMember {
+  id        String     @id @default(cuid())
+  userId    String
+  teamId    String
+  role      TeamRole
+  status    MemberStatus @default(ACTIVE)
+  joinedAt  DateTime     @default(now())
+  addedById String?
+  
+  addedBy   User?        @relation("UserAddedTeamMembers", fields: [addedById], references: [id])
+  team      Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
 }
 
 model Project {
@@ -33,14 +67,19 @@ model Project {
   slug           String          @unique
   createdAt      DateTime        @default(now())
   createdById    String
+  teamId         String?
   description    String?
   isArchived     Boolean         @default(false)
   lastActivityAt DateTime        @updatedAt
   tags           String[]
+  hackathonDeadline     DateTime?
+  hackathonModeEnabled  Boolean   @default(false)
   activities     Activity[]
   contextCards   ContextCard[]
   createdBy      User            @relation("CreatedProjects", fields: [createdById], references: [id], onDelete: Cascade)
+  team           Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
   members        ProjectMember[]
+  @@index([teamId])
 }
 
 model ProjectMember {
@@ -86,6 +125,7 @@ model ContextCard {
   user         User          @relation("CreatedCards", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([assignedToId])
+  @@index([projectId])
 }
 
 model Status {
@@ -154,6 +194,12 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
 }
 
 enum ProjectRole {

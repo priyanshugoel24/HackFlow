@@ -7,11 +7,13 @@ import { useState } from "react";
 export default function ProjectModal({ 
   open, 
   setOpen, 
-  onSuccess 
+  onSuccess,
+  teamId
 }: { 
   open: boolean;
   setOpen: (val: boolean) => void;
   onSuccess?: () => void;
+  teamId?: string;
 }) {
   const [name, setName] = useState("");
   const [link, setLink] = useState("");
@@ -31,7 +33,8 @@ export default function ProjectModal({
           name: name.trim(), 
           link: link.trim() || undefined,
           description: description.trim() || undefined,
-          tags: tags.trim() ? tags.split(",").map(tag => tag.trim()).filter(Boolean) : []
+          tags: tags.trim() ? tags.split(",").map(tag => tag.trim()).filter(Boolean) : [],
+          teamId: teamId || undefined
         }),
       });
       

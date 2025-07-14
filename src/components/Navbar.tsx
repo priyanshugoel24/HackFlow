@@ -31,7 +31,7 @@ export default function Navbar() {
     setStatusLoading(true);
     setError("");
     try {
-      updateUserStatus(newState);
+      await updateUserStatus(newState);
       setDropdownOpen(false);
       console.log("✅ Status updated via Ably:", newState);
     } catch (err) {

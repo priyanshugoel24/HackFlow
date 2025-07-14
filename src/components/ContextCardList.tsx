@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import ContextCardModal from "./ContextCardModal";
 import SmartComposeModal from "./SmartComposeModal";
+import { useProjectRealtime } from "@/lib/ably/useProjectRealtime";
 import { ContextCardWithRelations, ProjectWithRelations } from "@/types";
 
 export default function ContextCardList({ projectSlug }: { projectSlug: string }) {
@@ -51,6 +52,28 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
     }
   };
 
+  // Real-time updates using Ably
+  const { isConnected } = useProjectRealtime(
+    project?.id || null,
+    (newCard) => {
+      console.log("📨 Real-time card created:", newCard);
+      fetchCards(); // Refresh to get the latest data with proper typing
+    },
+    (updatedCard) => {
+      console.log("📝 Real-time card updated:", updatedCard);
+      fetchCards(); // Refresh to get the latest data with proper typing
+    },
+    (deletedCardId) => {
+      console.log("🗑️ Real-time card deleted:", deletedCardId);
+      // Remove the card from the list
+      setAllCards(prevCards => prevCards.filter(card => card.id !== deletedCardId));
+    },
+    (activity) => {
+      console.log("📢 Real-time activity:", activity);
+      // You can handle activity updates here if needed
+    }
+  );
+
   useEffect(() => {
     fetchCards();
   }, [projectSlug]);
@@ -65,24 +88,9 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
     }
   }, [showArchived, allCards]);
 
-  useEffect(() => {
-    // Real-time updates are now handled via Ably websockets
-    console.log("📝 ContextCardList initialized with Ably real-time support");
-  }, [projectSlug]);
-
   const handleCardCreated = () => {
     fetchCards(); // Refresh the cards after creating a new one
   };
-
-  useEffect(() => {
-    // Filter cards based on showArchived state whenever it changes
-    if (allCards.length > 0) {
-      const filteredCards = allCards.filter((card) => 
-        showArchived ? true : !card.isArchived
-      );
-      setCards(filteredCards);
-    }
-  }, [showArchived, allCards]);
 
   if (loading) {
     return (

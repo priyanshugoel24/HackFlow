@@ -120,6 +120,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         project: {
           select: {
             id: true,
+            createdById: true,
             members: {
               where: {
                 userId: session.user.id,
@@ -138,8 +139,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Card not found" }, { status: 404 });
     }
 
-    // Check if user has access to the project
-    if (card.project.members.length === 0) {
+    // Check if user has access to the project (either as creator or member)
+    const hasProjectAccess = card.project.createdById === session.user.id || card.project.members.length > 0;
+    
+    if (!hasProjectAccess) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
@@ -188,7 +191,7 @@ ${truncatedContent}
       const result = await model.generateContent(prompt);
       const response = await result.response;
       summary = response.text().trim();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Gemini API error:", error);
       return NextResponse.json({ error: "AI service temporarily unavailable" }, { status: 503 });
     }
@@ -226,16 +229,17 @@ ${truncatedContent}
       model: CONFIG.GEMINI_MODEL,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Unexpected error in summarization:", error);
     
     // Handle specific error types
-    if (error.name === 'PrismaClientKnownRequestError') {
-      return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
-    } else if (error.name === 'PrismaClientUnknownRequestError') {
-      return NextResponse.json({ error: "Database connection error" }, { status: 503 });
-    } else {
-      return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
+    if (error && typeof error === 'object' && 'name' in error) {
+      if (error.name === 'PrismaClientKnownRequestError') {
+        return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
+      } else if (error.name === 'PrismaClientUnknownRequestError') {
+        return NextResponse.json({ error: "Database connection error" }, { status: 503 });
+      }
     }
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
   }
 }
