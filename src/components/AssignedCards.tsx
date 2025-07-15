@@ -42,6 +42,10 @@ export default function AssignedCards({
       if (currentUserOnly) {
         // Fetch only cards assigned to current user
         queryParams += `&assignedTo=${encodeURIComponent(userEmail)}`;
+        // If teamId is provided, also filter by team to get user's cards from this team only
+        if (teamId) {
+          queryParams += `&teamId=${teamId}`;
+        }
       } else if (teamId) {
         // Fetch all assigned cards for team members
         queryParams += `&teamId=${teamId}`;

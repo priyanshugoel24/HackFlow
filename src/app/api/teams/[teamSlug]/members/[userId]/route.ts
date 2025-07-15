@@ -40,7 +40,7 @@ export async function DELETE(
         members: {
           where: {
             userId: requestingUser.id,
-            role: { in: ['OWNER', 'ADMIN'] },
+            role: { in: ['OWNER'] },
             status: 'ACTIVE'
           },
         },
@@ -116,13 +116,9 @@ export async function DELETE(
     // Check if the requesting user has permission to remove this member
     const requestingMember = team.members[0]; // We already filtered for the requesting user
     
-    // Only OWNER can remove ADMIN/MEMBER, and ADMIN can remove MEMBER
+    // Only OWNER can remove members (ADMIN role removed)
     if (requestingMember.role === 'MEMBER') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
-    
-    if (requestingMember.role === 'ADMIN' && memberToRemove.role !== 'MEMBER') {
-      return NextResponse.json({ error: 'Admins can only remove members' }, { status: 403 });
     }
 
     // Remove the member

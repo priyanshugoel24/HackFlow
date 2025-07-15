@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Only allow certain roles to create projects
-      if (!['OWNER', 'ADMIN', 'MEMBER'].includes(teamMembership.role)) {
+      if (!['OWNER', 'MEMBER'].includes(teamMembership.role)) {
         return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
       }
     }

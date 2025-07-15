@@ -21,7 +21,7 @@ export async function PATCH(
         team: { slug: teamSlug },
         user: { email: token.email },
         status: 'ACTIVE',
-        role: { in: ['OWNER', 'ADMIN'] },
+        role: { in: ['OWNER'] },
       },
       include: {
         team: true,

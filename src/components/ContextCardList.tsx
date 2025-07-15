@@ -15,12 +15,19 @@ import {
   CheckCircle,
   Paperclip,
   AlertTriangle,
-  Plus
+  Plus,
+  Filter
 } from "lucide-react";
 import ContextCardModal from "./ContextCardModal";
 import SmartComposeModal from "./SmartComposeModal";
 import { useProjectRealtime } from "@/lib/ably/useProjectRealtime";
 import { ContextCardWithRelations, ProjectWithRelations } from "@/types";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function ContextCardList({ projectSlug }: { projectSlug: string }) {
   const [cards, setCards] = useState<ContextCardWithRelations[]>([]);
@@ -31,6 +38,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
   const [showArchived, setShowArchived] = useState(false);
   const [allCards, setAllCards] = useState<ContextCardWithRelations[]>([]);
   const [smartComposeOpen, setSmartComposeOpen] = useState(false);
+  const [cardTypeFilter, setCardTypeFilter] = useState<'ALL' | 'TASK' | 'INSIGHT' | 'DECISION'>('ALL');
 
   const fetchCards = async () => {
     if (!projectSlug) return;
@@ -129,7 +137,30 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
     });
   };
 
-  const displayedCards = showArchived ? allCards : cards;
+  // Sort cards: DECISION → INSIGHT → TASK
+  const sortCards = (cards: ContextCardWithRelations[]) => {
+    const typeOrder = { 'DECISION': 0, 'INSIGHT': 1, 'TASK': 2 };
+    return [...cards].sort((a, b) => {
+      const aOrder = typeOrder[a.type as keyof typeof typeOrder] ?? 3;
+      const bOrder = typeOrder[b.type as keyof typeof typeOrder] ?? 3;
+      return aOrder - bOrder;
+    });
+  };
+
+  // Filter and sort cards
+  const getDisplayedCards = () => {
+    let filtered = showArchived ? allCards : allCards.filter(card => !card.isArchived);
+    
+    // Apply type filter
+    if (cardTypeFilter !== 'ALL') {
+      filtered = filtered.filter(card => card.type === cardTypeFilter);
+    }
+    
+    // Sort the cards
+    return sortCards(filtered);
+  };
+
+  const displayedCards = getDisplayedCards();
 
   if (displayedCards.length === 0) {
     return (
@@ -176,6 +207,33 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
         <div className="flex items-center justify-between mb-6 mt-4 gap-6">
           <h2 className="text-2xl font-extrabold dark:text-gray-100">Context Cards</h2>
           <div className="flex items-center space-x-4">
+            {/* Card Type Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Filter className="h-3.5 w-3.5 mr-1" />
+                  {cardTypeFilter === 'ALL' ? 'All Types' : cardTypeFilter}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setCardTypeFilter('ALL')}>
+                  All Types
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCardTypeFilter('DECISION')}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Decisions
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCardTypeFilter('INSIGHT')}>
+                  <Lightbulb className="h-4 w-4 mr-2" />
+                  Insights
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCardTypeFilter('TASK')}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Tasks
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
             <Button 
               variant="outline" 
               size="sm"

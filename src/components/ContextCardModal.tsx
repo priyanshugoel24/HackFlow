@@ -106,7 +106,14 @@ export default function ContextCardModal({
 
   // Check if the current user has permission to archive/unarchive this card
   const canArchive = useMemo(() => {
-    if (!existingCard || !session?.user || !project) return false;
+    if (!existingCard || !session?.user || !project) {
+      console.log('❌ canArchive: Missing data', { 
+        hasExistingCard: !!existingCard, 
+        hasUser: !!session?.user, 
+        hasProject: !!project 
+      });
+      return false;
+    }
 
     const user = session.user as {
       id: string;
@@ -114,6 +121,7 @@ export default function ContextCardModal({
       email?: string | null;
       image?: string | null;
     };
+    
     const isCardCreator = existingCard.userId === user.id;
     const isProjectCreator = project.createdById === user.id;
     const isManager = project.members.some(
@@ -122,6 +130,16 @@ export default function ContextCardModal({
         member.role === "MANAGER" &&
         member.status === "ACTIVE"
     );
+
+    console.log('🔍 canArchive check:', {
+      userId: user.id,
+      cardUserId: existingCard.userId,
+      projectCreatedById: project.createdById,
+      isCardCreator,
+      isProjectCreator,
+      isManager,
+      canArchive: isCardCreator || isProjectCreator || isManager
+    });
 
     return isCardCreator || isProjectCreator || isManager;
   }, [existingCard, session?.user, project]);
@@ -300,7 +318,9 @@ export default function ContextCardModal({
     name?: string;
     email?: string;
   }) => {
-    setMention(member.name || member.email || member.userId);
+    // Always prefer the name, but fallback to email if no name
+    const displayName = member.name || member.email || `User ${member.userId.slice(-4)}`;
+    setMention(displayName);
     setShowMemberDropdown(false);
   };
 
@@ -500,6 +520,7 @@ export default function ContextCardModal({
     // Check if we need to notify someone (when a user is mentioned)
     if (mention && mention.trim()) {
       let mentionedMember = null;
+      const trimmedMention = mention.trim();
       
       // First try to find in project members if available
       if (project?.members) {
@@ -507,15 +528,22 @@ export default function ContextCardModal({
           const user =
             (m as { user?: { name?: string; email?: string; image?: string } })
               .user || {};
-          return user.name === mention.trim() || user.email === mention.trim();
+          // Check if mention matches name or email (case-insensitive)
+          const userName = user.name?.toLowerCase() || '';
+          const userEmail = user.email?.toLowerCase() || '';
+          const mentionLower = trimmedMention.toLowerCase();
+          return userName === mentionLower || userEmail === mentionLower;
         });
       }
       
       // If not found in project members, try team members
       if (!mentionedMember && teamMembers.length > 0) {
-        const teamMember = teamMembers.find((m) => 
-          m.name === mention.trim() || m.email === mention.trim()
-        );
+        const teamMember = teamMembers.find((m) => {
+          const memberName = m.name?.toLowerCase() || '';
+          const memberEmail = m.email?.toLowerCase() || '';
+          const mentionLower = trimmedMention.toLowerCase();
+          return memberName === mentionLower || memberEmail === mentionLower;
+        });
         if (teamMember) {
           mentionedMember = { userId: teamMember.userId };
         }
@@ -773,8 +801,10 @@ export default function ContextCardModal({
               onBlur={(e) => setTitle(sanitizeText(e.target.value))}
             />
             {existingCard && canArchive && (
-              <div className="flex items-center space-x-3 ml-4">
-                <button
+              <div className="flex items-center space-x-2 ml-4">
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={async () => {
                     const action = existingCard.isArchived
                       ? "unarchive"
@@ -819,19 +849,18 @@ export default function ContextCardModal({
                       console.error(`Error ${action}ing card:`, err);
                     }
                   }}
-                  title={
-                    existingCard.isArchived ? "Unarchive Card" : "Archive Card"
-                  }
+                  className={`${
+                    existingCard.isArchived
+                      ? "text-green-600 hover:text-green-800 border-green-300 hover:bg-green-50"
+                      : "text-orange-600 hover:text-orange-800 border-orange-300 hover:bg-orange-50"
+                  }`}
                 >
-                  <Archive
-                    className={`h-5 w-5 cursor-pointer ${
-                      existingCard.isArchived
-                        ? "text-green-600 hover:text-green-800"
-                        : "text-orange-600 hover:text-orange-800"
-                    }`}
-                  />
-                </button>
-                <button
+                  <Archive className="h-4 w-4 mr-1" />
+                  {existingCard.isArchived ? "Unarchive" : "Archive"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={async () => {
                     if (!confirm("Are you sure you want to delete this card?"))
                       return;
@@ -863,10 +892,11 @@ export default function ContextCardModal({
                       console.error("Error deleting card:", err);
                     }
                   }}
-                  title="Delete Card"
+                  className="text-red-600 hover:text-red-800 border-red-300 hover:bg-red-50"
                 >
-                  <Trash2 className="h-5 w-5 text-red-600 hover:text-red-800 cursor-pointer" />
-                </button>
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
               </div>
             )}
           </div>
@@ -1047,14 +1077,15 @@ export default function ContextCardModal({
                         />
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-600 dark:text-gray-400">
-                          {member.name ? member.name[0].toUpperCase() : "@"}
+                          {member.name ? member.name[0].toUpperCase() : 
+                           member.email ? member.email[0].toUpperCase() : "@"}
                         </div>
                       )}
                       <div>
                         <div className="font-medium text-gray-800 dark:text-gray-200">
-                          {member.name || "User"}
+                          {member.name || member.email || `User ${member.userId.slice(-4)}`}
                         </div>
-                        {member.email && (
+                        {member.email && member.name && (
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {member.email}
                           </div>

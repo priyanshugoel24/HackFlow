@@ -7,6 +7,8 @@ import Navbar from "@/components/Navbar";
 import LoginPage from "@/components/LoginPage";
 import ContextCardList from "@/components/ContextCardList";
 import OnlineUsers from "@/components/OnlineUsers";
+import ActivityFeed from "@/components/ActivityFeed";
+import BackButton from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -161,14 +163,10 @@ export default function TeamProjectPage() {
         </div>
 
         {/* Back Button */}
-        <Button
-          variant="ghost"
-          onClick={() => router.push(`/team/${teamSlug}`)}
-          className="mb-8 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Team
-        </Button>
+        <BackButton 
+          label="Back to Team" 
+          className="mb-8"
+        />
 
         {/* Project Header */}
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border p-6 mb-6">
@@ -259,6 +257,15 @@ export default function TeamProjectPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Recent Activity */}
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border p-4">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Recent Activity
+              </h3>
+              <ActivityFeed projectId={project.id} />
+            </div>
+
             {/* Online Team Members */}
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border p-4">
               <h3 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center">

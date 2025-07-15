@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, BarChart3, Users, Target, Activity } from 'lucide-react';
 import { toast } from 'sonner';
+import BackButton from '@/components/ui/BackButton';
 import {
   ResponsiveContainer,
   BarChart,
@@ -96,14 +97,7 @@ export default function TeamProjectAnalyticsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => router.back()}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Project
-            </Button>
+            <BackButton label="Back to Project" />
             <div>
               <h1 className="text-3xl font-bold">Project Analytics</h1>
               <p className="text-muted-foreground">{analytics.project.name}</p>

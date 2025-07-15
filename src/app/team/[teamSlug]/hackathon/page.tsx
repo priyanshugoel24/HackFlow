@@ -277,7 +277,7 @@ export default function TeamHackathonRoom() {
                   </h1>
                 </div>
               </div>
-              {(team.userRole === 'OWNER' || team.userRole === 'ADMIN') && (
+              {(team.userRole === 'OWNER') && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -300,7 +300,7 @@ export default function TeamHackathonRoom() {
               <p className="text-muted-foreground mb-6">
                 There's currently no active hackathon for this team. Team owners and admins can start a hackathon from the team settings.
               </p>
-              {(team.userRole === 'OWNER' || team.userRole === 'ADMIN') ? (
+              {(team.userRole === 'OWNER') ? (
                 <Button onClick={() => router.push(`/team/${teamSlug}/settings`)}>
                   <Settings className="h-4 w-4 mr-2" />
                   Start Hackathon
@@ -350,7 +350,7 @@ export default function TeamHackathonRoom() {
                 </p>
               </div>
             </div>
-            {(team.userRole === 'OWNER' || team.userRole === 'ADMIN') && !hackathonEnded && (
+            {(team.userRole === 'OWNER') && !hackathonEnded && (
               <Button
                 variant="destructive"
                 size="sm"

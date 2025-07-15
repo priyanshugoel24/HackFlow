@@ -197,7 +197,6 @@ model VerificationToken {
 
 enum TeamRole {
   OWNER
-  ADMIN
   MEMBER
 }
 

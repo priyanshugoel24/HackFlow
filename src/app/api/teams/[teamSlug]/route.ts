@@ -169,7 +169,7 @@ export async function PUT(
         members: {
           where: { 
             userId: user.id,
-            role: { in: ['OWNER', 'ADMIN'] }
+            role: { in: ['OWNER'] }
           },
         },
       },

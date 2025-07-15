@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import BackButton from '@/components/ui/BackButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +27,7 @@ interface Team {
 
 interface TeamMember {
   id: string;
-  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  role: 'OWNER' | 'MEMBER';
   status: string;
   joinedAt: string;
   user: {
@@ -48,7 +49,7 @@ export default function TeamSettingsPage() {
   const [teamName, setTeamName] = useState('');
   const [teamDescription, setTeamDescription] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'ADMIN' | 'MEMBER'>('MEMBER');
+  const [inviteRole, setInviteRole] = useState<'MEMBER'>('MEMBER');
 
   useEffect(() => {
     fetchTeam();
@@ -163,7 +164,7 @@ export default function TeamSettingsPage() {
   };
 
   const canManageTeam = () => {
-    return team?.userRole === 'OWNER' || team?.userRole === 'ADMIN';
+    return team?.userRole === 'OWNER';
   };
 
   const getRoleIcon = (role: string) => {
@@ -233,7 +234,8 @@ export default function TeamSettingsPage() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2">
+          <BackButton label="Back to Team" />
+          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2 mt-4">
             <Settings className="h-8 w-8" />
             Team Settings
           </h1>
@@ -321,13 +323,12 @@ export default function TeamSettingsPage() {
                       
                       <div className="space-y-2">
                         <Label htmlFor="invite-role">Role</Label>
-                        <Select value={inviteRole} onValueChange={(value: 'ADMIN' | 'MEMBER') => setInviteRole(value)}>
+                        <Select value={inviteRole} onValueChange={(value: 'MEMBER') => setInviteRole(value)}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="MEMBER">Member</SelectItem>
-                            <SelectItem value="ADMIN">Admin</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

@@ -11,6 +11,7 @@ import type * as Ably from 'ably';
 interface ActivityFeedProps {
   projectId?: string;
   slug?: string;
+  teamSlug?: string;
 }
 
 interface Activity {
@@ -23,9 +24,14 @@ interface Activity {
     name: string;
     image?: string;
   };
+  project?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
 }
 
-export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
+export default function ActivityFeed({ projectId, slug, teamSlug }: ActivityFeedProps) {
   const { data: session } = useSession();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,16 +40,24 @@ export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
   const identifier = projectId || slug;
 
   useEffect(() => {
-    if (!identifier) return;
+    if (!identifier && !teamSlug) return;
 
     const fetchActivities = async () => {
       try {
-        const res = await fetch(`/api/projects/${identifier}/activities`);
+        let res;
+        if (teamSlug) {
+          // Fetch team activities
+          res = await fetch(`/api/teams/${teamSlug}/activities`);
+        } else {
+          // Fetch project activities
+          res = await fetch(`/api/projects/${identifier}/activities`);
+        }
+        
         const data = await res.json();
         setActivities(data.activities || []);
         
         // If we used slug, we need to get the actual projectId for Ably channel
-        if (slug && !projectId) {
+        if (slug && !projectId && !teamSlug) {
           const projectRes = await fetch(`/api/projects/${identifier}`);
           const projectData = await projectRes.json();
           if (projectData.project?.id) {
@@ -60,7 +74,7 @@ export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
     };
 
     fetchActivities();
-  }, [identifier, projectId, slug]);
+  }, [identifier, projectId, slug, teamSlug]);
 
   useEffect(() => {
     if (!actualProjectId || !session?.user) return;
@@ -129,6 +143,11 @@ export default function ActivityFeed({ projectId, slug }: ActivityFeedProps) {
               <div>
                 <p className="text-sm text-gray-800 dark:text-gray-200 leading-tight">
                   <span className="font-semibold text-gray-900 dark:text-white">{activity.user?.name}</span> {activity.description}
+                  {activity.project && teamSlug && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                      in {activity.project.name}
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}

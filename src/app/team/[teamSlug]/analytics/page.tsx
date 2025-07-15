@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
+import BackButton from '@/components/ui/BackButton';
 import { 
   BarChart, 
   Bar, 
@@ -132,17 +133,7 @@ export default function TeamAnalyticsPage() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push(`/team/${teamSlug}`)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Team
-            </Button>
-          </div>
+          <BackButton label="Back to Team" className="mb-4" />
           <h1 className="text-3xl font-bold text-foreground mb-2">
             Team Analytics
           </h1>

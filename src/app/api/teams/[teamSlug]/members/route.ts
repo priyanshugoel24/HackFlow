@@ -104,7 +104,7 @@ export async function POST(
         members: {
           where: { 
             userId: requestingUser.id,
-            role: { in: ['OWNER', 'ADMIN'] }
+            role: { in: ['OWNER'] }
           },
         },
       },

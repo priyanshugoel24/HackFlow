@@ -6,17 +6,20 @@ import Navbar from '@/components/Navbar';
 import OnlineUsers from '@/components/OnlineUsers';
 import ProjectModal from '@/components/ProjectModal';
 import TeamStandupDigest from '@/components/TeamStandupDigest';
-import InviteTeamMemberModal from '@/components/InviteTeamMemberModal';
+import InviteMemberModal from '@/components/InviteMemberModal';
 import AssignedCards from '@/components/AssignedCards';
 import FocusMode from '@/components/FocusMode';
+import ActivityFeed from '@/components/ActivityFeed';
+import BackButton from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, ExternalLink, Calendar, Settings, UserPlus, BarChart3, Target } from 'lucide-react';
+import { Plus, ExternalLink, Calendar, Settings, UserPlus, BarChart3, Target, MoreVertical, Archive, ArchiveRestore } from 'lucide-react';
 import { ContextCardWithRelations } from '@/types';
 
 interface Team {
@@ -44,8 +47,14 @@ interface Project {
   createdAt: string;
   lastActivityAt: string;
   tags: string[];
+  isArchived: boolean;
   _count: {
     contextCards: number;
+  };
+  stats?: {
+    totalTasks: number;
+    completedTasks: number;
+    progress: number;
   };
 }
 
@@ -73,6 +82,7 @@ export default function TeamPage() {
   // Focus Mode state
   const [selectedCards, setSelectedCards] = useState<ContextCardWithRelations[]>([]);
   const [showFocusMode, setShowFocusMode] = useState(false);
+  const [showArchivedProjects, setShowArchivedProjects] = useState(false);
 
   // Hackathon state
   const [hackathonDeadline, setHackathonDeadline] = useState('');
@@ -102,26 +112,9 @@ export default function TeamPage() {
   };
 
   const fetchProjectStats = async () => {
-    if (!team?.projects) return;
-    
-    const stats: Record<string, { completed: number; total: number }> = {};
-    
-    for (const project of team.projects) {
-      try {
-        const response = await fetch(`/api/context-cards?projectId=${project.id}&type=TASK`);
-        if (response.ok) {
-          const data = await response.json();
-          const tasks = data.cards || [];
-          const completed = tasks.filter((task: any) => task.status === 'CLOSED').length;
-          stats[project.id] = { completed, total: tasks.length };
-        }
-      } catch (error) {
-        console.error(`Error fetching stats for project ${project.id}:`, error);
-        stats[project.id] = { completed: 0, total: 0 };
-      }
-    }
-    
-    setProjectStats(stats);
+    // Stats are now calculated server-side in the team API
+    // No need for separate client-side calculation
+    return;
   };
 
   const handleProjectClick = (project: Project) => {
@@ -185,6 +178,31 @@ export default function TeamPage() {
     }
   };
 
+  const handleToggleArchiveProject = async (projectId: string, isArchived: boolean) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/archive`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isArchived: !isArchived,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh team data to update the project list
+        fetchTeam();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to update project');
+      }
+    } catch (error) {
+      console.error('Error archiving/unarchiving project:', error);
+      alert('Failed to update project');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -214,6 +232,8 @@ export default function TeamPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
+        <BackButton label="Back to Dashboard" className="mb-6" />
+        
         {/* Team Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -236,7 +256,7 @@ export default function TeamPage() {
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Analytics
                 </Button>
-                {(team.userRole === 'OWNER' || team.userRole === 'ADMIN') && (
+                {(team.userRole === 'OWNER') && (
                   <>
                     {!team.hackathonModeEnabled && (
                       <Button
@@ -345,7 +365,16 @@ export default function TeamPage() {
             {/* Projects Section */}
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-foreground">Projects</h2>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-semibold text-foreground">Projects</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowArchivedProjects(!showArchivedProjects)}
+                  >
+                    {showArchivedProjects ? 'Hide Archived' : 'Show Archived'}
+                  </Button>
+                </div>
                 <Button onClick={() => setShowProjectModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   New Project
@@ -361,24 +390,67 @@ export default function TeamPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {team.projects.map((project) => {
-                    const stats = projectStats[project.id] || { completed: 0, total: 0 };
-                    const progressPercentage = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
+                  {team.projects
+                    .filter(project => showArchivedProjects || !project.isArchived)
+                    .map((project) => {
+                    // Use server-side calculated stats instead of client-side calculation
+                    const stats = project.stats || { totalTasks: 0, completedTasks: 0, progress: 0 };
+                    const progressPercentage = stats.progress || 0;
                     
                     return (
                       <Card 
                         key={project.id} 
-                        className="cursor-pointer hover:shadow-lg transition-shadow"
-                        onClick={() => handleProjectClick(project)}
+                        className={`cursor-pointer hover:shadow-lg transition-shadow ${
+                          project.isArchived ? 'opacity-60 bg-muted/50' : ''
+                        }`}
                       >
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
-                            <CardTitle className="text-lg font-semibold truncate">
-                              {project.name}
+                            <CardTitle 
+                              className="text-lg font-semibold truncate cursor-pointer"
+                              onClick={() => handleProjectClick(project)}
+                            >
+                              <div className="flex items-center gap-2">
+                                {project.name}
+                                {project.isArchived && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Archived
+                                  </Badge>
+                                )}
+                              </div>
                             </CardTitle>
-                            {project.link && (
-                              <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
-                            )}
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                              {project.link && (
+                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleArchiveProject(project.id, project.isArchived || false);
+                                    }}
+                                  >
+                                    {project.isArchived ? (
+                                      <>
+                                        <ArchiveRestore className="h-4 w-4 mr-2" />
+                                        Unarchive Project
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Archive className="h-4 w-4 mr-2" />
+                                        Archive Project
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                           {project.description && (
                             <p className="text-sm text-muted-foreground line-clamp-2">
@@ -392,7 +464,7 @@ export default function TeamPage() {
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Tasks</span>
                               <span className="text-muted-foreground">
-                                {stats.completed}/{stats.total}
+                                {stats.completedTasks}/{stats.totalTasks}
                               </span>
                             </div>
                             <Progress value={progressPercentage} className="h-2" />
@@ -413,6 +485,22 @@ export default function TeamPage() {
                               )}
                             </div>
                           )}
+
+                          {/* Archive / Unarchive Button - New Feature */}
+                          <div className="flex justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleArchiveProject(project.id, project.isArchived);
+                              }}
+                              className={project.isArchived ? 'text-green-600 border-green-600' : 'text-red-600 border-red-600'}
+                            >
+                              {project.isArchived ? <ArchiveRestore className="h-4 w-4 mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+                              {project.isArchived ? 'Unarchive' : 'Archive'}
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     );
@@ -424,6 +512,12 @@ export default function TeamPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Recent Activity */}
+            <div className="bg-card border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
+              <ActivityFeed teamSlug={teamSlug as string} />
+            </div>
+
             {/* Team Standup Digest */}
             <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4">Daily Standup</h3>
@@ -473,11 +567,12 @@ export default function TeamPage() {
         teamId={team.id}
       />
 
-      <InviteTeamMemberModal
+      <InviteMemberModal
         open={showInviteModal}
         setOpen={setShowInviteModal}
         teamSlug={teamSlug as string}
         onSuccess={fetchTeam}
+        mode="team"
       />
 
       {/* Start Hackathon Modal */}

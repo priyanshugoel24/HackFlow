@@ -68,6 +68,16 @@ export async function GET(req: NextRequest) {
               { userId: assignedUser.id }
             ],
           };
+          
+          // If teamId is also provided, add team filter to assignedTo results
+          if (teamId) {
+            where = {
+              ...where,
+              project: {
+                teamId: teamId
+              }
+            };
+          }
         } else {
           // No user found with this email, return empty results
           where = { ...where, id: 'non-existent-id' };
@@ -81,6 +91,16 @@ export async function GET(req: NextRequest) {
             { userId: assignedTo }
           ],
         };
+        
+        // If teamId is also provided, add team filter to assignedTo results
+        if (teamId) {
+          where = {
+            ...where,
+            project: {
+              teamId: teamId
+            }
+          };
+        }
       }
     } else if (teamId) {
       // Fetch all assigned cards for team members

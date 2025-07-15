@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AssignedCards from '@/components/AssignedCards';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import BackButton from '@/components/ui/BackButton';
 
 interface Team {
   id: string;
@@ -69,6 +70,7 @@ export default function TeamAssignedCardsPage() {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
+        <BackButton label="Back to Team" className="mb-4" />
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
           Assigned Cards - {team.name}
         </h1>

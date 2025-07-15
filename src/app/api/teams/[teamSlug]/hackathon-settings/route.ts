@@ -23,7 +23,7 @@ export async function PUT(
         team: { slug: teamSlug },
         user: { email: token.email },
         status: 'ACTIVE',
-        role: { in: ['OWNER', 'ADMIN'] },
+        role: { in: ['OWNER'] },
       },
       include: {
         team: true,
