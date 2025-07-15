@@ -8,17 +8,24 @@ import ProjectModal from '@/components/ProjectModal';
 import TeamStandupDigest from '@/components/TeamStandupDigest';
 import InviteTeamMemberModal from '@/components/InviteTeamMemberModal';
 import AssignedCards from '@/components/AssignedCards';
+import FocusMode from '@/components/FocusMode';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, ExternalLink, Calendar, Settings, UserPlus, BarChart3 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Plus, ExternalLink, Calendar, Settings, UserPlus, BarChart3, Target } from 'lucide-react';
+import { ContextCardWithRelations } from '@/types';
 
 interface Team {
   id: string;
   name: string;
   slug: string;
   description?: string;
+  hackathonDeadline?: string;
+  hackathonModeEnabled: boolean;
   projects: Project[];
   members: TeamMember[];
   userRole?: string;
@@ -37,8 +44,6 @@ interface Project {
   createdAt: string;
   lastActivityAt: string;
   tags: string[];
-  hackathonDeadline?: string;
-  hackathonModeEnabled: boolean;
   _count: {
     contextCards: number;
   };
@@ -62,7 +67,15 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showHackathonModal, setShowHackathonModal] = useState(false);
   const [projectStats, setProjectStats] = useState<Record<string, { completed: number; total: number }>>({});
+  
+  // Focus Mode state
+  const [selectedCards, setSelectedCards] = useState<ContextCardWithRelations[]>([]);
+  const [showFocusMode, setShowFocusMode] = useState(false);
+
+  // Hackathon state
+  const [hackathonDeadline, setHackathonDeadline] = useState('');
 
   useEffect(() => {
     fetchTeam();
@@ -113,6 +126,63 @@ export default function TeamPage() {
 
   const handleProjectClick = (project: Project) => {
     router.push(`/team/${teamSlug}/project/${project.slug}`);
+  };
+
+  const handleToggleFocusCard = (card: ContextCardWithRelations) => {
+    setSelectedCards(prev => {
+      const isSelected = prev.some(c => c.id === card.id);
+      if (isSelected) {
+        return prev.filter(c => c.id !== card.id);
+      } else {
+        return [...prev, card];
+      }
+    });
+  };
+
+  const handleEnterFocusMode = () => {
+    if (selectedCards.length > 0) {
+      setShowFocusMode(true);
+    }
+  };
+
+  const handleFocusModeClose = () => {
+    setShowFocusMode(false);
+    // Optionally clear selected cards after focus session
+    setSelectedCards([]);
+  };
+
+  const handleStartHackathon = async () => {
+    if (!hackathonDeadline) {
+      alert('Please select a deadline for the hackathon');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/teams/${teamSlug}/hackathon`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hackathonModeEnabled: true,
+          hackathonDeadline: hackathonDeadline,
+        }),
+      });
+
+      if (response.ok) {
+        setShowHackathonModal(false);
+        setHackathonDeadline('');
+        fetchTeam(); // Refresh team data
+        // Navigate to hackathon room
+        router.push(`/team/${teamSlug}/hackathon`);
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to start hackathon');
+      }
+    } catch (error) {
+      console.error('Error starting hackathon:', error);
+      alert('Failed to start hackathon');
+    }
   };
 
   if (loading) {
@@ -168,6 +238,17 @@ export default function TeamPage() {
                 </Button>
                 {(team.userRole === 'OWNER' || team.userRole === 'ADMIN') && (
                   <>
+                    {!team.hackathonModeEnabled && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowHackathonModal(true)}
+                        className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-950"
+                      >
+                        <Target className="h-4 w-4 mr-2" />
+                        Start Hackathon
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -191,20 +272,70 @@ export default function TeamPage() {
           </div>
         </div>
 
+        {/* Team Hackathon Section */}
+        {team.hackathonModeEnabled && (
+          <div className="mb-8">
+            <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-950 dark:to-yellow-950 dark:border-orange-800">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-6 w-6 text-orange-600" />
+                      <div>
+                        <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-100">
+                          Hackathon Mode Active
+                        </h3>
+                        <p className="text-sm text-orange-700 dark:text-orange-300">
+                          {team.hackathonDeadline && (
+                            <>Deadline: {new Date(team.hackathonDeadline).toLocaleDateString()}</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => router.push(`/team/${teamSlug}/hackathon`)}
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    <Target className="h-4 w-4 mr-2" />
+                    Join Hackathon Room
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Assigned Cards Section - Moved to Top */}
         <div className="mb-8">
           <div className="bg-card border rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold text-foreground">My Assigned Cards</h2>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => router.push(`/team/${teamSlug}/assigned-cards`)}
-              >
-                View All
-              </Button>
+              <div className="flex items-center gap-3">
+                {selectedCards.length > 0 && (
+                  <Button 
+                    onClick={handleEnterFocusMode}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                  >
+                    <Target className="h-4 w-4 mr-2" />
+                    Enter Focus Mode ({selectedCards.length})
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => router.push(`/team/${teamSlug}/assigned-cards`)}
+                >
+                  View All
+                </Button>
+              </div>
             </div>
-            <AssignedCards teamId={team.id} currentUserOnly={true} />
+            <AssignedCards 
+              teamId={team.id} 
+              currentUserOnly={true}
+              onToggleFocusCard={handleToggleFocusCard}
+              selectedCardIds={selectedCards.map(c => c.id)}
+            />
           </div>
         </div>
 
@@ -282,14 +413,6 @@ export default function TeamPage() {
                               )}
                             </div>
                           )}
-
-                          {/* Hackathon Mode */}
-                          {project.hackathonModeEnabled && (
-                            <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
-                              <Calendar className="h-3 w-3" />
-                              <span className="text-xs font-medium">Hackathon Mode</span>
-                            </div>
-                          )}
                         </CardContent>
                       </Card>
                     );
@@ -355,6 +478,63 @@ export default function TeamPage() {
         setOpen={setShowInviteModal}
         teamSlug={teamSlug as string}
         onSuccess={fetchTeam}
+      />
+
+      {/* Start Hackathon Modal */}
+      <Dialog open={showHackathonModal} onOpenChange={setShowHackathonModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-orange-600" />
+              Start Team Hackathon
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Start a hackathon for your team. All team members will be able to join and track progress across all team projects.
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="hackathon-deadline">Hackathon Deadline</Label>
+              <Input
+                id="hackathon-deadline"
+                type="datetime-local"
+                value={hackathonDeadline}
+                onChange={(e) => setHackathonDeadline(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Set when the hackathon should end
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowHackathonModal(false);
+                  setHackathonDeadline('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleStartHackathon}
+                disabled={!hackathonDeadline}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                <Target className="h-4 w-4 mr-2" />
+                Start Hackathon
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <FocusMode
+        cards={selectedCards}
+        open={showFocusMode}
+        onClose={handleFocusModeClose}
       />
     </div>
   );
