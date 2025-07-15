@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     const data = await getGlobalSearchData();
 
     const fuse = new Fuse(data, {
-      keys: ["title", "name", "email", "tag"],
+      keys: ["title", "name", "email", "tag", "description", "teamName"],
       threshold: 0.3, // Fuzzy level
       includeScore: true,
       includeMatches: true,

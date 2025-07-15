@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 type SearchResult = {
-  type: "card" | "project" | "member" | "tag";
+  type: "card" | "project" | "member" | "tag" | "team";
   id: string;
   originalId?: string;
   title?: string;
@@ -17,6 +17,10 @@ type SearchResult = {
   projectSlug?: string;
   slug?: string;
   projectName?: string;
+  teamName?: string;
+  teamSlug?: string;
+  description?: string;
+  projectCount?: number;
 };
 
 export default function SearchBar() {
@@ -41,6 +45,8 @@ export default function SearchBar() {
     
     if (item.type === "project") {
       router.push(`/projects/${item.slug}`);
+    } else if (item.type === "team") {
+      router.push(`/team/${item.slug}`);
     } else if (item.type === "card" && item.projectSlug) {
       router.push(`/projects/${item.projectSlug}?card=${item.originalId || item.id}`);
     } else if (item.type === "member" && item.projectSlug) {
@@ -208,6 +214,7 @@ export default function SearchBar() {
   };
 
   const grouped = {
+    team: results.filter((r) => r.type === "team"),
     project: results.filter((r) => r.type === "project"),
     card: results.filter((r) => r.type === "card"),
     member: results.filter((r) => r.type === "member"),
@@ -315,6 +322,40 @@ export default function SearchBar() {
             </div>
           ) : (
             <div className="py-2">
+              {grouped.team.length > 0 && (
+                <div className="px-2 py-1">
+                  <h3 className="px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Teams
+                  </h3>
+                  <div className="mt-1">
+                    {grouped.team.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleSelect(item)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-2 py-2 text-left rounded-md transition-colors",
+                          selectedIndex === results.indexOf(item)
+                            ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
+                            : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        )}
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex-shrink-0">
+                          <User className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">
+                            {item.title || item.name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Team • {item.projectCount || 0} projects
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {grouped.project.length > 0 && (
                 <div className="px-2 py-1">
                   <h3 className="px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -463,7 +504,7 @@ export default function SearchBar() {
                   </span>
                   {aiMetadata && (
                     <span className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-800/50 px-2 py-1 rounded-full">
-                      {aiMetadata.scope} • {aiMetadata.projectsAnalyzed} projects • {aiMetadata.cardsAnalyzed} cards
+                      {aiMetadata.scope} • {aiMetadata.teamsAnalyzed || 0} teams • {aiMetadata.projectsAnalyzed} projects • {aiMetadata.cardsAnalyzed} cards
                     </span>
                   )}
                 </div>
@@ -483,6 +524,24 @@ export default function SearchBar() {
                           title={`${project.reason} (Score: ${project.score?.toFixed(2)})`}
                         >
                           {project.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {aiMetadata?.relevantTeams && aiMetadata.relevantTeams.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-yellow-200 dark:border-yellow-800">
+                    <div className="text-xs text-yellow-700 dark:text-yellow-300 mb-1">
+                      Relevant teams identified:
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {aiMetadata.relevantTeams.map((team: any, index: number) => (
+                        <span
+                          key={index}
+                          className="text-xs bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-md"
+                          title={`${team.reason} (Score: ${team.score?.toFixed(2)})`}
+                        >
+                          {team.name}
                         </span>
                       ))}
                     </div>

@@ -11,46 +11,82 @@ const bodySchema = z.object({
   prompt: z.string().min(1).max(2000),
 });
 
-// Enhanced fuzzy matching for project identification
-function findRelevantProjects(prompt: string, projects: Array<{id: string, name: string, slug: string}>) {
+// Enhanced fuzzy matching for project and team identification
+function findRelevantProjectsAndTeams(prompt: string, projects: Array<{id: string, name: string, slug: string, teamName?: string}>, teams: Array<{id: string, name: string, slug: string}>) {
   const queryLower = prompt.toLowerCase();
   const relevantProjects: Array<{project: typeof projects[0], score: number, reason: string}> = [];
+  const relevantTeams: Array<{team: typeof teams[0], score: number, reason: string}> = [];
 
-  // Create Fuse instance for fuzzy search
-  const fuse = new Fuse(projects, {
-    keys: ['name', 'slug'],
+  // Create Fuse instances for fuzzy search
+  const projectFuse = new Fuse(projects, {
+    keys: ['name', 'slug', 'teamName'],
     threshold: 0.4, // Allow for typos and partial matches
     includeScore: true,
   });
 
-  // 1. Direct fuzzy search matches
-  const fuseResults = fuse.search(queryLower);
-  fuseResults.forEach(result => {
+  const teamFuse = new Fuse(teams, {
+    keys: ['name', 'slug'],
+    threshold: 0.4,
+    includeScore: true,
+  });
+
+  // 1. Direct fuzzy search matches for projects
+  const projectFuseResults = projectFuse.search(queryLower);
+  projectFuseResults.forEach((result: any) => {
     if (result.score! < 0.4) { // Good fuzzy match
       relevantProjects.push({
         project: result.item,
         score: 1 - result.score!, // Convert to relevance score
-        reason: `Fuzzy match for "${result.item.name}"`
+        reason: `Fuzzy match for project "${result.item.name}"`
       });
     }
   });
 
-  // 2. Exact substring matches (highest priority)
+  // 1. Direct fuzzy search matches for teams
+  const teamFuseResults = teamFuse.search(queryLower);
+  teamFuseResults.forEach((result: any) => {
+    if (result.score! < 0.4) { // Good fuzzy match
+      relevantTeams.push({
+        team: result.item,
+        score: 1 - result.score!, // Convert to relevance score
+        reason: `Fuzzy match for team "${result.item.name}"`
+      });
+    }
+  });
+
+  // 2. Exact substring matches for projects (highest priority)
   projects.forEach(project => {
     const projectName = project.name.toLowerCase();
     const projectSlug = project.slug.toLowerCase();
+    const teamName = project.teamName?.toLowerCase() || '';
     
     if (projectName.includes(queryLower) || queryLower.includes(projectName) || 
-        projectSlug.includes(queryLower) || queryLower.includes(projectSlug)) {
+        projectSlug.includes(queryLower) || queryLower.includes(projectSlug) ||
+        (teamName && (teamName.includes(queryLower) || queryLower.includes(teamName)))) {
       relevantProjects.push({
         project,
         score: 0.95,
-        reason: `Direct name match for "${project.name}"`
+        reason: `Direct name match for project "${project.name}"`
       });
     }
   });
 
-  // 3. Quoted project names
+  // 2. Exact substring matches for teams (highest priority)
+  teams.forEach(team => {
+    const teamName = team.name.toLowerCase();
+    const teamSlug = team.slug.toLowerCase();
+    
+    if (teamName.includes(queryLower) || queryLower.includes(teamName) || 
+        teamSlug.includes(queryLower) || queryLower.includes(teamSlug)) {
+      relevantTeams.push({
+        team,
+        score: 0.95,
+        reason: `Direct name match for team "${team.name}"`
+      });
+    }
+  });
+
+  // 3. Quoted project and team names
   const quotedMatches = queryLower.match(/["']([^"']+)["']/g);
   if (quotedMatches) {
     quotedMatches.forEach(quoted => {
@@ -61,17 +97,28 @@ function findRelevantProjects(prompt: string, projects: Array<{id: string, name:
           relevantProjects.push({
             project,
             score: 0.9,
-            reason: `Quoted match for "${project.name}"`
+            reason: `Quoted match for project "${project.name}"`
+          });
+        }
+      });
+      teams.forEach(team => {
+        const teamName = team.name.toLowerCase();
+        if (teamName.includes(quotedName) || quotedName.includes(teamName)) {
+          relevantTeams.push({
+            team,
+            score: 0.9,
+            reason: `Quoted match for team "${team.name}"`
           });
         }
       });
     });
   }
 
-  // 4. Pattern-based matches
+  // 4. Pattern-based matches for projects and teams
   const patterns = [
     /(?:project|in|for|about)\s+["']?([^"'\s]+(?:\s+[^"'\s]+)*?)["']?(?:\s|$|[,.!?])/gi,
     /(?:working on|update on|status of)\s+["']?([^"'\s]+(?:\s+[^"'\s]+)*?)["']?(?:\s|$|[,.!?])/gi,
+    /(?:team|group)\s+["']?([^"'\s]+(?:\s+[^"'\s]+)*?)["']?(?:\s|$|[,.!?])/gi,
   ];
 
   patterns.forEach(pattern => {
@@ -84,14 +131,24 @@ function findRelevantProjects(prompt: string, projects: Array<{id: string, name:
           relevantProjects.push({
             project,
             score: 0.8,
-            reason: `Pattern match for "${project.name}"`
+            reason: `Pattern match for project "${project.name}"`
+          });
+        }
+      });
+      teams.forEach(team => {
+        const teamName = team.name.toLowerCase();
+        if (teamName.includes(extractedName) || extractedName.includes(teamName)) {
+          relevantTeams.push({
+            team,
+            score: 0.8,
+            reason: `Pattern match for team "${team.name}"`
           });
         }
       });
     }
   });
 
-  // Remove duplicates and sort by score
+  // Remove duplicates and sort by score for projects
   const uniqueProjects = new Map<string, typeof relevantProjects[0]>();
   relevantProjects.forEach(item => {
     const existing = uniqueProjects.get(item.project.id);
@@ -100,7 +157,19 @@ function findRelevantProjects(prompt: string, projects: Array<{id: string, name:
     }
   });
 
-  return Array.from(uniqueProjects.values()).sort((a, b) => b.score - a.score);
+  // Remove duplicates and sort by score for teams
+  const uniqueTeams = new Map<string, typeof relevantTeams[0]>();
+  relevantTeams.forEach(item => {
+    const existing = uniqueTeams.get(item.team.id);
+    if (!existing || item.score > existing.score) {
+      uniqueTeams.set(item.team.id, item);
+    }
+  });
+
+  return {
+    projects: Array.from(uniqueProjects.values()).sort((a, b) => b.score - a.score),
+    teams: Array.from(uniqueTeams.values()).sort((a, b) => b.score - a.score)
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -133,139 +202,360 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Get all projects the user has access to (including detailed information)
-    const userProjects = await prisma.project.findMany({
-      where: {
-        OR: [
-          { createdById: user.id },
-          { 
-            members: { 
-              some: { 
-                userId: user.id,
-                status: "ACTIVE"
-              } 
-            } 
-          },
-          // Team-based access: if user is an active team member and project belongs to that team
-          {
-            team: {
-              members: {
-                some: {
+    // Get comprehensive data in parallel for better performance
+    const [userTeams, userProjects, allTeamMembers] = await Promise.all([
+      // Get all teams the user has access to with comprehensive data
+      prisma.team.findMany({
+        where: {
+          OR: [
+            { createdById: user.id },
+            { 
+              members: { 
+                some: { 
                   userId: user.id,
                   status: "ACTIVE"
+                } 
+              } 
+            }
+          ],
+          isArchived: false,
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, image: true }
+              }
+            },
+            where: { status: "ACTIVE" }
+          },
+          createdBy: {
+            select: { id: true, name: true, email: true }
+          },
+          projects: {
+            select: { 
+              id: true, 
+              name: true, 
+              slug: true, 
+              description: true,
+              tags: true,
+              createdAt: true,
+              lastActivityAt: true
+            },
+            where: { isArchived: false }
+          },
+          _count: {
+            select: {
+              projects: { where: { isArchived: false } },
+              members: { where: { status: "ACTIVE" } }
+            }
+          }
+        },
+        orderBy: { lastActivityAt: 'desc' }
+      }),
+
+      // Get all projects the user has access to (including detailed information)
+      prisma.project.findMany({
+        where: {
+          OR: [
+            { createdById: user.id },
+            { 
+              members: { 
+                some: { 
+                  userId: user.id,
+                  status: "ACTIVE"
+                } 
+              } 
+            },
+            // Team-based access: if user is an active team member and project belongs to that team
+            {
+              team: {
+                members: {
+                  some: {
+                    userId: user.id,
+                    status: "ACTIVE"
+                  }
                 }
               }
             }
-          }
-        ],
-        isArchived: false,
-      },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
+          ],
+          isArchived: false,
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, image: true }
+              }
+            },
+            where: { status: "ACTIVE" }
+          },
+          createdBy: {
+            select: { id: true, name: true, email: true }
+          },
+          team: {
+            select: { 
+              id: true, 
+              name: true, 
+              slug: true, 
+              description: true,
+              hackathonModeEnabled: true,
+              hackathonDeadline: true
             }
           },
-          where: { status: "ACTIVE" }
-        },
-        createdBy: {
-          select: { id: true, name: true, email: true }
-        },
-        _count: {
-          select: {
-            contextCards: {
-              where: { isArchived: false }
+          _count: {
+            select: {
+              contextCards: { where: { isArchived: false } },
+              members: { where: { status: "ACTIVE" } }
             }
           }
-        }
-      },
-    });
+        },
+        orderBy: { lastActivityAt: 'desc' }
+      }),
 
-    if (userProjects.length === 0) {
+      // Get all team members across all teams for comprehensive team analytics
+      prisma.teamMember.findMany({
+        where: {
+          team: {
+            members: {
+              some: {
+                userId: user.id,
+                status: "ACTIVE"
+              }
+            }
+          },
+          status: "ACTIVE"
+        },
+        include: {
+          user: {
+            select: { id: true, name: true, email: true, image: true }
+          },
+          team: {
+            select: { id: true, name: true, slug: true }
+          }
+        }
+      })
+    ]);
+
+    if (userProjects.length === 0 && userTeams.length === 0) {
       return NextResponse.json({ 
-        answer: "You don't have access to any projects yet. Create a project to get started! You can create projects to organize your context cards, tasks, insights, and decisions." 
+        answer: "You don't have access to any projects or teams yet. Create a project or join a team to get started! You can create projects to organize your context cards, tasks, insights, and decisions.",
+        metadata: {
+          scope: "empty",
+          projectsAnalyzed: 0,
+          cardsAnalyzed: 0,
+          teamsAnalyzed: 0,
+          relevantProjects: null
+        }
       });
     }
 
     // Get comprehensive context data for all projects
     const allProjectIds = userProjects.map(p => p.id);
+    const allTeamIds = userTeams.map(t => t.id);
     
-    // Fetch all context cards with comprehensive data
-    const allCards = await prisma.contextCard.findMany({
-      where: {
-        projectId: { in: allProjectIds },
-        isArchived: false,
-        OR: [
-          { visibility: "PUBLIC" },
-          { userId: user.id },
-          { assignedToId: user.id }
-        ]
-      },
-      include: {
-        project: { 
-          select: { id: true, name: true, slug: true } 
+    // Fetch comprehensive data in parallel
+    const [allCards, recentActivities, comments, teamActivities] = await Promise.all([
+      // Fetch all context cards with comprehensive data
+      prisma.contextCard.findMany({
+        where: {
+          projectId: { in: allProjectIds },
+          isArchived: false,
+          OR: [
+            { visibility: "PUBLIC" },
+            { userId: user.id },
+            { assignedToId: user.id }
+          ]
         },
-        user: { 
-          select: { id: true, name: true, email: true } 
+        include: {
+          project: { 
+            select: { 
+              id: true, 
+              name: true, 
+              slug: true, 
+              team: { select: { name: true, slug: true } }
+            } 
+          },
+          user: { 
+            select: { id: true, name: true, email: true } 
+          },
+          assignedTo: { 
+            select: { id: true, name: true, email: true } 
+          },
+          linkedCard: {
+            select: { id: true, title: true, type: true }
+          },
+          linkedFrom: {
+            select: { id: true, title: true, type: true }
+          },
+          _count: {
+            select: { comments: true }
+          }
         },
-        assignedTo: { 
-          select: { id: true, name: true, email: true } 
-        },
-        linkedCard: {
-          select: { id: true, title: true, type: true }
-        },
-        linkedFrom: {
-          select: { id: true, title: true, type: true }
-        }
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: 100, // Limit for performance but enough for comprehensive analysis
-    });
+        orderBy: { updatedAt: 'desc' },
+        take: 150, // Increased limit for comprehensive analysis
+      }),
 
-    // Fetch recent activities for context
-    const recentActivities = await prisma.activity.findMany({
-      where: {
-        projectId: { in: allProjectIds },
-      },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true }
+      // Fetch recent project activities
+      prisma.activity.findMany({
+        where: {
+          projectId: { in: allProjectIds },
         },
-        project: {
-          select: { id: true, name: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 20, // Recent activities for context
-    });
+        include: {
+          user: {
+            select: { id: true, name: true, email: true }
+          },
+          project: {
+            select: { 
+              id: true, 
+              name: true, 
+              team: { select: { name: true } }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+      }),
 
-    // Use enhanced fuzzy logic to find relevant projects
-    const relevantProjects = findRelevantProjects(prompt, userProjects);
+      // Fetch recent comments for engagement insights
+      prisma.comment.findMany({
+        where: {
+          card: {
+            projectId: { in: allProjectIds },
+            isArchived: false
+          }
+        },
+        include: {
+          author: {
+            select: { id: true, name: true, email: true }
+          },
+          card: {
+            select: { 
+              id: true, 
+              title: true, 
+              project: { 
+                select: { name: true, slug: true } 
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      }),
 
-    // Determine the scope of the response
+      // Get team-specific activities and insights
+      Promise.all(allTeamIds.map(teamId => 
+        prisma.project.findMany({
+          where: { teamId, isArchived: false },
+          select: {
+            id: true,
+            name: true,
+            lastActivityAt: true,
+            _count: {
+              select: {
+                contextCards: { where: { isArchived: false } },
+                activities: { 
+                  where: { 
+                    createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
+                  } 
+                }
+              }
+            }
+          }
+        })
+      ))
+    ]);
+
+    // Flatten team activities
+    const flatTeamActivities = teamActivities.flat();
+
+    // Use enhanced fuzzy logic to find relevant projects and teams
+    const projectsWithTeamNames = userProjects.map(p => ({
+      ...p,
+      teamName: p.team?.name
+    }));
+    
+    const relevantResults = findRelevantProjectsAndTeams(prompt, projectsWithTeamNames, userTeams);
+    const relevantProjects = relevantResults.projects;
+    const relevantTeams = relevantResults.teams;
+
+    // Determine the scope of the response and build focused context
     let focusedProjects: typeof userProjects = [];
+    let focusedTeams: typeof userTeams = [];
     let responseScope = "general";
 
-    if (relevantProjects.length > 0) {
+    if (relevantProjects.length > 0 || relevantTeams.length > 0) {
       // If we found specific project matches, focus on those
-      const relevantProjectIds = relevantProjects.slice(0, 3).map(rp => rp.project.id);
+      const relevantProjectIds = relevantProjects.slice(0, 3).map((rp: any) => rp.project.id);
       focusedProjects = userProjects.filter(p => relevantProjectIds.includes(p.id));
-      responseScope = relevantProjects.length === 1 ? "single-project" : "multi-project";
+      
+      // If we found specific team matches, focus on those and their projects
+      const relevantTeamIds = relevantTeams.slice(0, 3).map((rt: any) => rt.team.id);
+      focusedTeams = userTeams.filter(t => relevantTeamIds.includes(t.id));
+      
+      // Also include projects from relevant teams
+      const teamProjectIds = focusedTeams.flatMap(t => t.projects.map(p => p.id));
+      const teamProjects = userProjects.filter(p => teamProjectIds.includes(p.id));
+      focusedProjects = [...focusedProjects, ...teamProjects].filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i);
+      
+      responseScope = (relevantProjects.length === 1 && relevantTeams.length === 0) ? "single-project" : 
+                     (relevantProjects.length === 0 && relevantTeams.length === 1) ? "single-team" : "multi-entity";
     } else {
-      // For general queries, include all projects
+      // For general queries, include all projects and teams
       focusedProjects = userProjects;
+      focusedTeams = userTeams;
       responseScope = "general";
     }
 
-    // Filter cards based on focused projects
+    // Filter cards and activities based on focused projects
     const relevantCards = allCards.filter(card => 
       focusedProjects.some(project => project.id === card.projectId)
     );
 
-    // Build comprehensive context for AI
+    const relevantActivities = recentActivities.filter(activity => 
+      focusedProjects.some(project => project.id === activity.projectId)
+    );
+
+    // Build comprehensive team summaries with analytics
+    const teamSummaries = focusedTeams.map(team => {
+      const teamMemberCount = team.members.length;
+      const teamProjectCount = team.projects.length;
+      const teamProjects = team.projects.map(p => `${p.name} (${p.description || 'No description'})`).join(', ');
+      
+      // Calculate team activity metrics
+      const teamProjectIds = team.projects.map(p => p.id);
+      const teamProjectsData = flatTeamActivities.filter(project => 
+        teamProjectIds.includes(project.id)
+      );
+      
+      const totalTeamCards = teamProjectsData.reduce((sum: number, project: any) => sum + project._count.contextCards, 0);
+      const weeklyActivity = teamProjectsData.reduce((sum: number, project: any) => sum + project._count.activities, 0);
+      
+      // Member roles and expertise
+      const memberDetails = team.members.map(member => {
+        const userCards = relevantCards.filter(card => card.userId === member.userId);
+        const userActivities = relevantActivities.filter(activity => activity.userId === member.userId);
+        return `${member.user.name || member.user.email?.split('@')[0]} (${member.role.toLowerCase()}, ${userCards.length} cards, ${userActivities.length} recent activities)`;
+      }).join('; ');
+      
+      return `
+TEAM: ${team.name} (${team.slug})
+- Created by: ${team.createdBy.name || team.createdBy.email}
+- Members (${teamMemberCount}): ${memberDetails}
+- Projects (${teamProjectCount}): ${teamProjects || 'No projects'}
+- Total Context Cards: ${totalTeamCards}
+- Weekly Activity: ${weeklyActivity} activities
+- Description: ${team.description || 'No description provided'}
+- Hackathon Mode: ${team.hackathonModeEnabled ? 'Enabled' : 'Disabled'}
+${team.hackathonDeadline ? `- Hackathon Deadline: ${team.hackathonDeadline.toLocaleDateString()}` : ''}
+      `.trim();
+    });
+
+    // Build comprehensive project summaries with team context
     const projectSummaries = focusedProjects.map(project => {
       const projectCards = relevantCards.filter(card => card.projectId === project.id);
+      const projectActivities = relevantActivities.filter(activity => activity.projectId === project.id);
+      const projectComments = comments.filter(comment => comment.card.project.slug === project.slug);
       const memberCount = project.members.length;
       const cardCount = project._count.contextCards;
       
@@ -280,73 +570,127 @@ export async function POST(req: NextRequest) {
         CLOSED: projectCards.filter(c => c.status === 'CLOSED').length,
       };
 
+      // Calculate engagement metrics
+      const totalCommentsCount = projectComments.length;
+      const uniqueCommentators = new Set(projectComments.map(c => c.author.id)).size;
+      const cardsWithComments = projectCards.filter(card => card._count.comments > 0).length;
+      
+      // Member activity breakdown
+      const memberActivity = project.members.map(member => {
+        const memberCards = projectCards.filter(card => card.userId === member.userId || card.assignedToId === member.userId);
+        const memberActivities = projectActivities.filter(activity => activity.userId === member.userId);
+        const memberComments = projectComments.filter(comment => comment.author.id === member.userId);
+        return `${member.user.name || member.user.email?.split('@')[0]} (${member.role.toLowerCase()}: ${memberCards.length} cards, ${memberActivities.length} activities, ${memberComments.length} comments)`;
+      }).join('; ');
+
       return `
 PROJECT: ${project.name} (${project.slug})
+- Team: ${project.team?.name || 'Independent project'}
 - Created by: ${project.createdBy.name || project.createdBy.email}
-- Members: ${memberCount} active member(s)
-- Total Cards: ${cardCount}
-- Card Types: ${cardsByType.TASK} tasks, ${cardsByType.INSIGHT} insights, ${cardsByType.DECISION} decisions
-- Card Status: ${cardsByStatus.ACTIVE} active, ${cardsByStatus.CLOSED} closed
+- Members (${memberCount}): ${memberActivity}
+- Cards: ${cardCount} total (${cardsByType.TASK} tasks, ${cardsByType.INSIGHT} insights, ${cardsByType.DECISION} decisions)
+- Status: ${cardsByStatus.ACTIVE} active, ${cardsByStatus.CLOSED} closed
+- Engagement: ${totalCommentsCount} comments from ${uniqueCommentators} people on ${cardsWithComments} cards
+- Recent Activity: ${projectActivities.length} activities in recent period
 - Description: ${project.description || 'No description provided'}
 - Tags: ${project.tags.length > 0 ? project.tags.join(', ') : 'No tags'}
+- Last Updated: ${project.lastActivityAt?.toLocaleDateString() || 'Unknown'}
       `.trim();
     });
 
-    // Build detailed card context
+    // Build detailed card context with relationships
     const cardContext = relevantCards.map(card => {
       const assignedInfo = card.assignedTo ? ` | Assigned to: ${card.assignedTo.name || card.assignedTo.email}` : '';
-      const linkedInfo = card.linkedCard ? ` | Linked to: ${card.linkedCard.title}` : '';
+      const linkedInfo = card.linkedCard ? ` | Linked to: ${card.linkedCard.title} (${card.linkedCard.type})` : '';
+      const linkedFromInfo = card.linkedFrom.length > 0 ? ` | Referenced by: ${card.linkedFrom.map(lf => lf.title).join(', ')}` : '';
       const statusInfo = card.status ? ` | Status: ${card.status}` : '';
+      const commentsInfo = card._count.comments > 0 ? ` | ${card._count.comments} comments` : '';
+      const teamInfo = card.project.team ? ` | Team: ${card.project.team.name}` : '';
       
-      return `[${card.project.name}] (${card.type}${statusInfo}) ${card.title}: ${card.content}${assignedInfo}${linkedInfo}`;
+      return `[${card.project.name}${teamInfo}] (${card.type}${statusInfo}) ${card.title}: ${card.content}${assignedInfo}${linkedInfo}${linkedFromInfo}${commentsInfo}`;
     }).join('\n');
 
-    // Build activity context
-    const activityContext = recentActivities.map(activity => {
+    // Build activity context with team information
+    const activityContext = relevantActivities.map(activity => {
       const userName = activity.user?.name || activity.user?.email?.split('@')[0] || 'User';
-      return `[${activity.project.name}] ${userName}: ${activity.type} - ${activity.description}`;
+      const teamInfo = activity.project.team ? ` (${activity.project.team.name})` : '';
+      return `[${activity.project.name}${teamInfo}] ${userName}: ${activity.type} - ${activity.description}`;
     }).join('\n');
+
+    // Build engagement insights from comments
+    const engagementContext = comments.length > 0 ? comments.map(comment => {
+      const authorName = comment.author.name || comment.author.email?.split('@')[0] || 'User';
+      return `[${comment.card.project.name}] ${authorName} on "${comment.card.title}": ${comment.content.substring(0, 100)}${comment.content.length > 100 ? '...' : ''}`;
+    }).join('\n') : '';
+
+    // Generate user-specific insights
+    const userInsights = {
+      totalProjects: userProjects.length,
+      totalTeams: userTeams.length,
+      totalCards: allCards.length,
+      activeCards: allCards.filter(card => card.status === 'ACTIVE').length,
+      tasksAssigned: allCards.filter(card => card.assignedToId === user.id && card.type === 'TASK').length,
+      recentActivity: recentActivities.filter(activity => activity.userId === user.id).length,
+      teamRoles: allTeamMembers.filter(tm => tm.user.id === user.id).map(tm => `${tm.team.name}: ${tm.role.toLowerCase()}`).join(', '),
+    };
 
     // Generate comprehensive system prompt
     const systemPrompt = `
-You are an intelligent project assistant with comprehensive access to a user's project ecosystem.
+You are an intelligent project and team assistant with comprehensive access to a user's entire workspace ecosystem.
 
-SCOPE: ${responseScope.toUpperCase()} (${focusedProjects.length} project(s) in focus)
+SCOPE: ${responseScope.toUpperCase()} (${focusedProjects.length} project(s), ${focusedTeams.length} team(s) in focus)
 
-USER CONTEXT:
+USER PROFILE:
 - User: ${user.name || user.email}
-- Total Projects: ${userProjects.length}
-- Total Accessible Cards: ${allCards.length}
+- Total Teams: ${userInsights.totalTeams}
+- Total Projects: ${userInsights.totalProjects}
+- Total Cards: ${userInsights.totalCards} (${userInsights.activeCards} active)
+- Tasks Assigned to You: ${userInsights.tasksAssigned}
+- Your Team Roles: ${userInsights.teamRoles || 'No team roles'}
+- Your Recent Activity: ${userInsights.recentActivity} actions
 
-PROJECT SUMMARIES:
+${teamSummaries.length > 0 ? `TEAM ECOSYSTEM (${teamSummaries.length} teams):
+${teamSummaries.join('\n\n')}
+
+` : ''}PROJECT ECOSYSTEM (${projectSummaries.length} projects):
 ${projectSummaries.join('\n\n')}
 
 CONTEXT CARDS (${relevantCards.length} cards):
 ${cardContext}
 
-${activityContext.length > 0 ? `RECENT ACTIVITIES:
-${activityContext}` : ''}
+${activityContext.length > 0 ? `RECENT ACTIVITIES (${relevantActivities.length} activities):
+${activityContext}
 
-USER QUERY: ${prompt}
+` : ''}${engagementContext.length > 0 ? `COLLABORATION & ENGAGEMENT (${comments.length} recent comments):
+${engagementContext}
+
+` : ''}USER QUERY: ${prompt}
 
 INSTRUCTIONS:
-- Provide comprehensive, actionable insights based on the available data
-- Reference specific projects, cards, and team members when relevant
-- If the query is about a specific project, focus on that project's data
-- For general queries, provide overview insights across all projects
-- Suggest next actions or improvements when appropriate
-- Use the user's name and project-specific terminology
-- If no relevant data is found, suggest ways the user can add more context
-- Be concise but thorough in your response
+- Provide comprehensive, actionable insights based on the available team and project data
+- Reference specific teams, projects, cards, and team members when relevant
+- If the query mentions a specific team or project, focus on that entity's data
+- For general queries, provide strategic overview insights across all teams and projects
+- Identify patterns, trends, and potential issues across the workspace
+- Suggest next actions, improvements, or optimizations when appropriate
+- Consider team dynamics, workload distribution, and collaboration patterns
+- Use the user's name and project/team-specific terminology
+- If no relevant data is found, suggest concrete ways to add value to the workspace
+- Be concise but thorough, prioritizing actionable insights
 
-${relevantProjects.length > 0 ? `RELEVANT PROJECT MATCHES FOUND:
-${relevantProjects.map(rp => `- ${rp.project.name} (${rp.reason}, score: ${rp.score.toFixed(2)})`).join('\n')}` : ''}
+${relevantProjects.length > 0 ? `RELEVANT PROJECT MATCHES:
+${relevantProjects.map(rp => `- ${rp.project.name} (${rp.reason}, relevance: ${rp.score.toFixed(2)})`).join('\n')}
+
+` : ''}${relevantTeams.length > 0 ? `RELEVANT TEAM MATCHES:
+${relevantTeams.map(rt => `- ${rt.team.name} (${rt.reason}, relevance: ${rt.score.toFixed(2)})`).join('\n')}
+
+` : ''}CONTEXT: Respond as an intelligent workspace assistant who understands team dynamics, project management, and can provide strategic insights about collaboration, productivity, and project progress.
     `.trim();
 
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-flash",
       generationConfig: {
-        maxOutputTokens: 1000,
+        maxOutputTokens: 1200,
         temperature: 0.7,
       }
     });
@@ -356,18 +700,32 @@ ${relevantProjects.map(rp => `- ${rp.project.name} (${rp.reason}, score: ${rp.sc
     const text = response.text().trim();
 
     // Log for debugging (remove in production)
-    console.log(`🤖 AI Assistant - User: ${user.email}, Query: "${prompt.substring(0, 50)}...", Scope: ${responseScope}, Projects: ${focusedProjects.length}, Cards: ${relevantCards.length}`);
+    console.log(`🤖 AI Assistant - User: ${user.email}, Query: "${prompt.substring(0, 50)}...", Scope: ${responseScope}, Teams: ${focusedTeams.length}, Projects: ${focusedProjects.length}, Cards: ${relevantCards.length}`);
 
     return NextResponse.json({ 
       answer: text,
       metadata: {
         scope: responseScope,
+        teamsAnalyzed: focusedTeams.length,
         projectsAnalyzed: focusedProjects.length,
         cardsAnalyzed: relevantCards.length,
+        activitiesAnalyzed: relevantActivities.length,
+        commentsAnalyzed: comments.length,
+        userInsights: {
+          totalWorkspaceTeams: userTeams.length,
+          totalWorkspaceProjects: userProjects.length,
+          personalTasksAssigned: userInsights.tasksAssigned,
+          teamRoles: userInsights.teamRoles
+        },
         relevantProjects: relevantProjects.length > 0 ? relevantProjects.slice(0, 3).map(rp => ({
           name: rp.project.name,
           reason: rp.reason,
           score: rp.score
+        })) : null,
+        relevantTeams: relevantTeams.length > 0 ? relevantTeams.slice(0, 3).map(rt => ({
+          name: rt.team.name,
+          reason: rt.reason,
+          score: rt.score
         })) : null
       }
     });
