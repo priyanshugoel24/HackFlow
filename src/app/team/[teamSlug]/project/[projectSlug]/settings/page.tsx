@@ -12,8 +12,9 @@ import { getAblyClient } from "@/lib/ably";
 import { useSession } from "next-auth/react";
 
 export default function ProjectSettingsPage() {
+  // Team Project Settings Page - Route: /team/[teamSlug]/project/[projectSlug]/settings
   const { data: session } = useSession();
-  const { slug: projectSlug } = useParams();
+  const { projectSlug } = useParams();
   const router = useRouter();
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);

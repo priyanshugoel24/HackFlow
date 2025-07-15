@@ -7,6 +7,7 @@ import OnlineUsers from '@/components/OnlineUsers';
 import ProjectModal from '@/components/ProjectModal';
 import TeamStandupDigest from '@/components/TeamStandupDigest';
 import InviteTeamMemberModal from '@/components/InviteTeamMemberModal';
+import AssignedCards from '@/components/AssignedCards';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -187,6 +188,23 @@ export default function TeamPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Assigned Cards Section - Moved to Top */}
+        <div className="mb-8">
+          <div className="bg-card border rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-semibold text-foreground">My Assigned Cards</h2>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => router.push(`/team/${teamSlug}/assigned-cards`)}
+              >
+                View All
+              </Button>
+            </div>
+            <AssignedCards teamId={team.id} currentUserOnly={true} />
           </div>
         </div>
 

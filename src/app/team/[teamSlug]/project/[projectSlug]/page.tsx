@@ -241,7 +241,7 @@ export default function TeamProjectPage() {
               </Button>
 
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/projects/${projectSlug}/settings`}>
+                <Link href={`/team/${teamSlug}/project/${projectSlug}/settings`}>
                   <Settings className="h-4 w-4 mr-1" />
                   Settings
                 </Link>
