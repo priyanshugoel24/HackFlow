@@ -268,7 +268,7 @@ export default function TeamProjectPage() {
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border p-4">
               <h3 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center">
                 <UserRound className="h-4 w-4 mr-2" />
-                Team Status
+                Online Now
               </h3>
               <OnlineUsers />
             </div>

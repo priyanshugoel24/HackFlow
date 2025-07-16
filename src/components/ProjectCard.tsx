@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { ExternalLink, Folder, Users, Calendar, Archive } from "lucide-react";
+import { Folder, Users, Calendar, Archive } from "lucide-react";
 import axios from "axios";
 
 export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: { 
@@ -137,17 +137,6 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
                   {project.name}
                 </CardTitle>
               </div>
-              {project.link && (
-                <a
-                  href={project.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex-shrink-0"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              )}
             </CardHeader>
             
             <CardContent className="space-y-2 px-2 pb-3">

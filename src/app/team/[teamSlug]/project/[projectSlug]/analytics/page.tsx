@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
+import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, BarChart3, Users, Target, Activity } from 'lucide-react';
@@ -89,7 +90,10 @@ export default function TeamProjectAnalyticsPage() {
   }));
 
   return (
+
     <div className="min-h-screen bg-background">
+
+      <Navbar />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

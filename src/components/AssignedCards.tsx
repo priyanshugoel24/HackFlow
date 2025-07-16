@@ -170,10 +170,7 @@ export default function AssignedCards({
           open={modalOpen}
           setOpen={setModalOpen}
           projectSlug={selectedCard.project?.slug || ""}
-          project={selectedCard.project ? {
-            ...selectedCard.project,
-            members: [], // Provide empty array to satisfy required prop
-          } : undefined}
+          project={selectedCard.project as any}
           existingCard={{
             ...selectedCard,
             why: selectedCard.why ?? undefined,

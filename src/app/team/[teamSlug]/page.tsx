@@ -17,10 +17,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, ExternalLink, Calendar, Settings, UserPlus, BarChart3, Target, MoreVertical, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus, Calendar, Settings, UserPlus, BarChart3, Target, Archive, ArchiveRestore } from 'lucide-react';
 import { ContextCardWithRelations } from '@/types';
 
 interface Team {
@@ -396,38 +396,7 @@ export default function TeamPage() {
                                 )}
                               </div>
                             </CardTitle>
-                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                              {project.link && (
-                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                              )}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleToggleArchiveProject(project.id, project.isArchived || false);
-                                    }}
-                                  >
-                                    {project.isArchived ? (
-                                      <>
-                                        <ArchiveRestore className="h-4 w-4 mr-2" />
-                                        Unarchive Project
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Archive className="h-4 w-4 mr-2" />
-                                        Archive Project
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
+
                           </div>
                           {project.description && (
                             <p className="text-sm text-muted-foreground line-clamp-2">

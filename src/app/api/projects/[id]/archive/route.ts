@@ -15,6 +15,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { isArchived } = await req.json();
 
   try {
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: token.email! },
+      update: {
+        name: token.name,
+        image: token.picture,
+      },
+      create: {
+        email: token.email!,
+        name: token.name,
+        image: token.picture,
+      },
+    });
+
     // Check if the id is a CUID (database ID) or a slug
     const isCUID = /^c[a-z0-9]{24}$/.test(id);
     
@@ -26,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       include: {
         members: {
           where: {
-            userId: token.sub,
+            userId: user.id,
             status: "ACTIVE"
           }
         }
@@ -38,9 +52,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Check if user is project creator or a manager
-    const isProjectCreator = project.createdById === token.sub;
+    const isProjectCreator = project.createdById === user.id;
     const isManager = project.members.some(member => 
-      member.userId === token.sub && member.role === "MANAGER"
+      member.userId === user.id && member.role === "MANAGER"
     );
 
     if (!isProjectCreator && !isManager) {
@@ -76,7 +90,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       type: isArchived ? "PROJECT_ARCHIVED" : "PROJECT_UNARCHIVED",
       description: `${isArchived ? 'Archived' : 'Unarchived'} project "${project.name}"`,
       metadata: { projectId: project.id },
-      userId: token.sub,
+      userId: user.id,
       projectId: project.id,
     });
 
@@ -88,7 +102,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await channel.publish("project:archive_status_changed", {
         projectId: project.id,
         isArchived,
-        updatedBy: token.sub,
+        updatedBy: user.id,
         updatedAt: new Date().toISOString(),
       });
       

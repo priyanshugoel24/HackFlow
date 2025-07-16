@@ -108,6 +108,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           where: includeArchived ? {} : { isArchived: false },
           orderBy: { updatedAt: "desc" },
           include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+              },
+            },
             linkedCard: {
               select: {
                 id: true,

@@ -290,9 +290,9 @@ export default function ProjectSettingsPage() {
                 </p>
               </div>
               {/* Only show if user is project creator or manager */}
-              {(project?.createdById === session?.user?.email || 
+              {(project?.createdById === (session?.user as any)?.id || 
                 project?.members?.some((m: any) => 
-                  m.user.id === session?.user?.email && m.role === "MANAGER" && m.status === "ACTIVE"
+                  m.userId === (session?.user as any)?.id && m.role === "MANAGER" && m.status === "ACTIVE"
                 )) && (
                 <Button
                   variant="outline"

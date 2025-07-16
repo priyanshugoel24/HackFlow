@@ -123,26 +123,56 @@ export default function ContextCardModal({
       image?: string | null;
     };
     
+    // Check if user is card creator (by user ID - this is the main creator field)
     const isCardCreator = existingCard.userId === user.id;
+    
+    // Check if user is project creator (by ID)
     const isProjectCreator = project.createdById === user.id;
-    const isManager = project.members.some(
-      (member) =>
+    
+    // Check if user is project manager by user ID
+    const isManager = project.members && project.members.some(
+      (member: any) =>
         member.userId === user.id &&
         member.role === "MANAGER" &&
         member.status === "ACTIVE"
     );
 
+    // Additional check: if user email matches any of the member emails 
+    // (to handle cases where user ID might be inconsistent)
+    const isManagerByEmail = user.email && project.members && project.members.some(
+      (member: any) =>
+        member.user?.email === user.email &&
+        member.role === "MANAGER" &&
+        member.status === "ACTIVE"
+    );
+
+    // Check if user is creator by email (for projects where the creator's user ID might be different)
+    const projectData = project as any;
+    const isProjectCreatorByEmail = user.email && projectData.createdBy?.email === user.email;
+
+    const canArchive = isCardCreator || isProjectCreator || isManager || isManagerByEmail || isProjectCreatorByEmail;
+
     console.log('🔍 canArchive check:', {
       userId: user.id,
+      userEmail: user.email,
       cardUserId: existingCard.userId,
       projectCreatedById: project.createdById,
+      projectCreatorEmail: projectData.createdBy?.email,
       isCardCreator,
       isProjectCreator,
+      isProjectCreatorByEmail,
       isManager,
-      canArchive: isCardCreator || isProjectCreator || isManager
+      isManagerByEmail,
+      canArchive,
+      projectMembers: project.members ? project.members.map((m: any) => ({ 
+        userId: m.userId, 
+        email: m.user?.email, 
+        role: m.role, 
+        status: m.status 
+      })) : []
     });
 
-    return isCardCreator || isProjectCreator || isManager;
+    return canArchive;
   }, [existingCard, session?.user, project]);
 
   // Use card presence hook to track who's editing

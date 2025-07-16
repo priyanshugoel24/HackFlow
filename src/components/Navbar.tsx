@@ -2,10 +2,8 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
-import { useStatus } from "@/components/StatusProvider";
-import { usePresence } from "@/lib/socket/usePresence";
-import ActivityFeed from "@/components/ActivityFeed";
-import { Bell } from "lucide-react";
+import { useStatus, type UserStatus } from "@/components/StatusProvider";
+import { useAblyPresence } from "@/lib/ably/useAblyPresence";
 import { useParams } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import SearchBar from "./SearchBar";
@@ -13,27 +11,28 @@ import SearchBar from "./SearchBar";
 export default function Navbar() {
   const { data: session } = useSession();
   const { status: userStatus, updateStatus: updateUserStatus } = useStatus();
-  const { isConnected } = usePresence();
+  const { isConnected } = useAblyPresence();
   const [statusLoading, setStatusLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [error, setError] = useState<string>("");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { slug } = useParams<{ slug: string }>(); // Get current project slug
-  const [showNotifications, setShowNotifications] = useState(false);
 
-  const statusOptions = [
+  const statusOptions: Array<{ value: UserStatus; label: string; color: string }> = [
     { value: "Available", label: "Available", color: "bg-green-500" },
     { value: "Busy", label: "Busy", color: "bg-yellow-500" },
     { value: "Focused", label: "Focused", color: "bg-red-500" },
   ];
 
-  const updateStatus = async (newState: string) => {
+  const updateStatus = async (newState: UserStatus) => {
     setStatusLoading(true);
     setError("");
+    
     try {
+      // Update the status immediately for instant UI feedback
       await updateUserStatus(newState);
       setDropdownOpen(false);
-      console.log("✅ Status updated via Ably:", newState);
+      console.log("✅ Status updated instantly:", newState);
     } catch (err) {
       setError("Failed to update status");
       console.error("❌ Error updating status:", err);
@@ -91,12 +90,6 @@ export default function Navbar() {
           {/* Theme Toggle */}
           <ThemeToggle />
 
-          <button
-            onClick={() => setShowNotifications((prev) => !prev)}
-            className="relative"
-          >
-            <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white" />
-          </button>
           {/* Profile Button */}
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -183,37 +176,6 @@ export default function Navbar() {
           </div>
         )}
       </div>
-      {showNotifications && (
-        <div className="fixed top-16 right-0 w-[380px] max-h-[calc(100vh-64px)] shadow-lg border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 z-50 flex flex-col animate-slide-in transition-all duration-300">
-          <div className="flex items-center justify-between px-4 py-3 border-b">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-              Activity Feed
-            </h2>
-            <button
-              onClick={() => setShowNotifications(false)}
-              className="text-gray-500 dark:text-gray-300 hover:text-black dark:hover:text-white transition"
-            >
-              <span className="sr-only">Close</span>
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <div className="overflow-y-auto px-4 py-2 flex-1 text-gray-800 dark:text-gray-200">
-            <ActivityFeed slug={slug} />
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

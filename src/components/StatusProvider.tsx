@@ -1,12 +1,13 @@
 "use client";
 import React, { createContext, useContext } from "react";
-import { useAblyPresence } from "@/lib/ably/useAblyPresence";
+import { useAblyPresence, type UserStatus } from "@/lib/ably/useAblyPresence";
 
-export type UserStatus = "Available" | "Busy" | "Focused" | "Away";
+// Re-export the UserStatus type for convenience
+export type { UserStatus };
 
 interface StatusContextType {
-  status: string;
-  updateStatus: (status: string) => void;
+  status: UserStatus;
+  updateStatus: (status: UserStatus) => Promise<void>;
   isConnected: boolean;
 }
 
