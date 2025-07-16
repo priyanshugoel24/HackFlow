@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { validationConfig } from '@/config/validation';
 
 /**
  * Security utility functions to prevent SQL injection and code injection attacks

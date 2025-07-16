@@ -38,8 +38,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { TeamAnalytics } from '@/interfaces/TeamAnalytics';
-
-const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+import { analyticsConfig } from '@/config/analytics';
 
 export default function TeamAnalyticsPage() {
   const { teamSlug } = useParams();
@@ -267,7 +266,7 @@ export default function TeamAnalyticsPage() {
                           label={({ type, percentage }) => `${type}: ${percentage}%`}
                         >
                           {analytics.cardTypeDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Cell key={`cell-${index}`} fill={analyticsConfig.chartColors[index % analyticsConfig.chartColors.length]} />
                           ))}
                         </Pie>
                         <Tooltip 
@@ -287,7 +286,7 @@ export default function TeamAnalyticsPage() {
                         <div className="flex items-center gap-2">
                           <div 
                             className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            style={{ backgroundColor: analyticsConfig.chartColors[index % analyticsConfig.chartColors.length] }}
                           />
                           <span className="text-sm font-medium">{item.type}</span>
                         </div>

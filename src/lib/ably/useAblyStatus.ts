@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { getAblyClient, CHANNELS, type AblyStatusData } from "@/lib/ably";
+import { getAblyClient, type AblyStatusData } from "@/lib/ably";
+import { channelsConfig } from '@/config';
 import type Ably from "ably";
 import axios from "axios";
 import { UserStatus } from "@/interfaces/UserStatus";
@@ -103,7 +104,7 @@ export function useAblyStatus() {
       const ably = getAblyClient(user.id);
       ablyRef.current = ably;
 
-      const statusChannel = ably.channels.get(CHANNELS.STATUS_UPDATES);
+      const statusChannel = ably.channels.get(channelsConfig.STATUS_UPDATES);
       statusChannelRef.current = statusChannel;
 
       // Set up connection state listener

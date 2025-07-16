@@ -84,24 +84,9 @@ export function getAblyServer(): Ably.Rest {
   return serverAbly;
 }
 
-// Channel names
-export const CHANNELS = {
-  PRESENCE_GLOBAL: 'presence:global',
-  STATUS_UPDATES: 'status:updates',
-  PROJECT_PRESENCE: (projectId: string) => `presence:project:${projectId}`,
-} as const;
+// Re-export from centralized config
+export { channelsConfig as CHANNELS } from '@/config/channels';
 
-// Types for Ably presence data
-export interface AblyPresenceData {
-  name: string;
-  email?: string;
-  image?: string;
-  status?: string;
-  lastSeen: string;
-}
-
-export interface AblyStatusData {
-  userId: string;
-  state: string;
-  timestamp: string;
-}
+// Re-export from interfaces for backwards compatibility
+export type { AblyPresenceData } from '@/interfaces/AblyPresenceData';
+export type { AblyStatusData } from '@/interfaces/AblyStatusData';

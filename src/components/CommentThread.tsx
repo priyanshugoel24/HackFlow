@@ -10,6 +10,8 @@ import { getAblyClient } from "@/lib/ably";
 import axios from "axios";
 import type * as Ably from 'ably';
 import { Comment } from "@/interfaces/Comment";
+import { paginationConfig } from '@/config/pagination';
+import { channelsConfig } from '@/config/channels';
 
 export default function CommentThread({ cardId }: { cardId: string }) {
   const { data: session } = useSession();
@@ -22,7 +24,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
   const fetchComments = async (cursor?: string) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`/api/context-cards/${cardId}/comments?limit=10${cursor ? `&cursor=${cursor}` : ""}`);
+      const res = await axios.get(`/api/context-cards/${cardId}/comments?limit=${paginationConfig.commentLimit}${cursor ? `&cursor=${cursor}` : ""}`);
       const data = res.data;
 
       if (cursor) {
@@ -66,7 +68,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
     fetchComments();
 
     const ably = getAblyClient();
-    const channel = ably.channels.get(`card:${cardId}:comments`);
+    const channel = ably.channels.get(channelsConfig.CARD_COMMENTS(cardId));
 
     const handleNewComment = (msg: Ably.Message) => {
       setComments((prev) => {
@@ -96,7 +98,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
       channel.once("attached", () => {
         channel.detach();
         channel.once("detached", () => {
-          ably.channels.release(`card:${cardId}:comments`);
+          ably.channels.release(channelsConfig.CARD_COMMENTS(cardId));
         });
       });
     };

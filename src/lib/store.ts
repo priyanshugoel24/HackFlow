@@ -1,26 +1,7 @@
 import { create } from 'zustand';
-
-export type UserStatus = "Available" | "Busy" | "Focused";
-
-export type PresenceUser = {
-  id: string;
-  name: string;
-  image?: string;
-  status: UserStatus;
-  lastSeen: string;
-};
-
-interface PresenceState {
-  onlineUsers: PresenceUser[];
-  isConnected: boolean;
-  currentStatus: UserStatus;
-  setOnlineUsers: (users: PresenceUser[]) => void;
-  addOrUpdateUser: (user: PresenceUser) => void;
-  removeUser: (userId: string) => void;
-  setIsConnected: (isConnected: boolean) => void;
-  setCurrentStatus: (status: UserStatus) => void;
-  updateUserStatus: (userId: string, status: UserStatus) => void;
-}
+import { UserStatus } from '@/interfaces/UserStatus';
+import { PresenceUser } from '@/interfaces/PresenceUser';
+import { PresenceState } from '@/interfaces/PresenceState';
 
 export const usePresenceStore = create<PresenceState>((set) => ({
   onlineUsers: [],

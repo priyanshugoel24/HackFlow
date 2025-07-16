@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import ContextCardModal from "./ContextCardModal";
 import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
 import { useSession } from "next-auth/react";
+import { paginationConfig } from '@/config/pagination';
 import axios from "axios";
 
 export default function AssignedCards({
@@ -27,7 +28,6 @@ export default function AssignedCards({
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<ContextCardWithRelations | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const pageSize = 10;
   const isFetching = useRef(false);
 
   // Fetch cards with pagination
@@ -38,7 +38,7 @@ export default function AssignedCards({
     setLoading(true);
     try {
       // Build query parameters
-      let queryParams = `status=ACTIVE&offset=${pageNum * pageSize}&limit=${pageSize}`;
+      let queryParams = `status=ACTIVE&offset=${pageNum * paginationConfig.pageSize}&limit=${paginationConfig.pageSize}`;
       
       if (currentUserOnly) {
         // Fetch only cards assigned to current user
@@ -64,7 +64,7 @@ export default function AssignedCards({
           const newCards = data.cards.filter((c: ContextCardWithRelations) => !ids.has(c.id));
           return [...prev, ...newCards];
         });
-        setHasMore(data.cards.length === pageSize);
+        setHasMore(data.cards.length === paginationConfig.pageSize);
       } else {
         setHasMore(false);
       }

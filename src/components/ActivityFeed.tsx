@@ -10,6 +10,7 @@ import axios from "axios";
 import type * as Ably from 'ably';
 import { ActivityFeedProps } from "@/interfaces/ActivityFeedProps";
 import { Activity } from "@/interfaces/Activity";
+import { channelsConfig } from '@/config/channels';
 
 export default function ActivityFeed({ projectId, slug, teamSlug }: ActivityFeedProps) {
   const { data: session } = useSession();
@@ -65,7 +66,7 @@ export default function ActivityFeed({ projectId, slug, teamSlug }: ActivityFeed
     console.log("🔌 ActivityFeed connecting to Ably for project:", actualProjectId);
     
     const ably = getAblyClient(user.id);
-    const channel = ably.channels.get(`project:${actualProjectId}`);
+    const channel = ably.channels.get(channelsConfig.PROJECT_CHANNEL(actualProjectId));
 
     const handleNewActivity = (msg: Ably.Message) => {
       console.log("📨 ActivityFeed received activity:", msg.name, msg.data);

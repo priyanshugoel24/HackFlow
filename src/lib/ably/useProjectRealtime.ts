@@ -2,6 +2,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { getAblyClient } from "@/lib/ably";
+import { channelsConfig } from '@/config/channels';
 import type Ably from 'ably';
 import { CardUpdate } from "@/interfaces/CardUpdate";
 import { ActivityUpdate } from "@/interfaces/ActivityUpdate";
@@ -27,7 +28,7 @@ export function useProjectRealtime(
       const ably = getAblyClient(user.id);
       ablyRef.current = ably;
 
-      const channel = ably.channels.get(`project:${projectId}`);
+      const channel = ably.channels.get(channelsConfig.PROJECT_CHANNEL(projectId));
       channelRef.current = channel;
 
       // Subscribe to card events

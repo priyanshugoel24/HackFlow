@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { getAblyClient, CHANNELS, type AblyPresenceData } from "@/lib/ably";
+import { getAblyClient, type AblyPresenceData } from "@/lib/ably";
+import { channelsConfig } from '@/config';
 import type Ably from 'ably';
 import axios from "axios";
 import { usePresenceStore } from '@/lib/store';
@@ -153,7 +154,7 @@ export function useAblyPresence() {
       try {
         const user = session.user as { id: string };
         const client = getAblyClient(user.id);
-        const channel = client.channels.get(CHANNELS.PRESENCE_GLOBAL);
+        const channel = client.channels.get(channelsConfig.PRESENCE_GLOBAL);
         
         channelRef.current = channel;
         presenceRef.current = channel.presence;

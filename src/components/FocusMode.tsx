@@ -7,8 +7,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Target, CheckCircle2, Play, Pause, Timer, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
-import axios from "axios";
 import { FocusModeProps } from "@/interfaces/FocusModeProps";
+import { focusModeConfig } from '@/config/focusMode';
+import axios from "axios";
 
 export default function FocusMode({ 
   cards, 
@@ -175,15 +176,6 @@ export default function FocusMode({
   const completedCount = completed.length;
   const totalCount = taskCards.length;
   const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-
-  // Motivational quotes for session summary
-  const motivationalQuotes = [
-    "Focus is the key to productivity! 🔑",
-    "Every task completed is a step forward! 🚀",
-    "You're building great habits! 💪",
-    "Consistency is the mother of mastery! ⭐",
-    "Small progress is still progress! 🌱"
-  ];
 
   return (
     <>
@@ -386,7 +378,7 @@ export default function FocusMode({
               
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-4 rounded-lg">
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  {motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]}
+                  {focusModeConfig.motivationalQuotes[Math.floor(Math.random() * focusModeConfig.motivationalQuotes.length)]}
                 </p>
               </div>
             </div>

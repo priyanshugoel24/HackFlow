@@ -24,6 +24,7 @@ import SmartComposeModal from "./SmartComposeModal";
 import { useProjectRealtime } from "@/lib/ably/useProjectRealtime";
 import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
 import { ProjectWithRelations } from "@/interfaces/ProjectWithRelations";
+import { cardConfig } from '@/config/cards';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -131,20 +132,14 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
 
   const formatDate = (dateString: string | Date) => {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return date.toLocaleDateString(cardConfig.dateFormat.locale, cardConfig.dateFormat.options);
   };
 
   // Sort cards: DECISION → INSIGHT → TASK
   const sortCards = (cards: ContextCardWithRelations[]) => {
-    const typeOrder = { 'DECISION': 0, 'INSIGHT': 1, 'TASK': 2 };
     return [...cards].sort((a, b) => {
-      const aOrder = typeOrder[a.type as keyof typeof typeOrder] ?? 3;
-      const bOrder = typeOrder[b.type as keyof typeof typeOrder] ?? 3;
+      const aOrder = cardConfig.typeOrder[a.type as keyof typeof cardConfig.typeOrder] ?? 3;
+      const bOrder = cardConfig.typeOrder[b.type as keyof typeof cardConfig.typeOrder] ?? 3;
       return aOrder - bOrder;
     });
   };

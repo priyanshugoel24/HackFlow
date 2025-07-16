@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useDebounce } from "@/lib/hooks/useDebounce";
+import { paginationConfig } from '@/config/pagination';
 import { FileText, Folder, User, Tag, Search, Loader2, X, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -12,7 +13,7 @@ export default function SearchBar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAIEnabled, setIsAIEnabled] = useState(false);
-  const debounced = useDebounce(query, 300);
+  const debounced = useDebounce(query, paginationConfig.searchDebounceDelay);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);

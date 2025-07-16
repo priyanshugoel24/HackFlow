@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { getAblyClient } from "../ably";
+import { channelsConfig } from '@/config/channels';
 import type * as Ably from 'ably';
 import { EditingUser } from "@/interfaces/EditingUser";
 
@@ -19,7 +20,7 @@ export function useCardPresence(cardId: string, user: EditingUser) {
       return;
     }
     
-    const channel = client.channels.get(`card:${cardId}`);
+    const channel = client.channels.get(channelsConfig.CARD_PRESENCE(cardId));
 
     const handleUserEditing = (msg: Ably.Message) => {
       console.log("📝 User started editing:", msg.data);
