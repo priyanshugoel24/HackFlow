@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
 import BackButton from '@/components/ui/BackButton';
+import axios from 'axios';
 import { 
   BarChart, 
   Bar, 
@@ -90,11 +91,8 @@ export default function TeamAnalyticsPage() {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await fetch(`/api/teams/${teamSlug}/analytics`);
-      if (response.ok) {
-        const data = await response.json();
-        setAnalytics(data);
-      }
+      const response = await axios.get(`/api/teams/${teamSlug}/analytics`);
+      setAnalytics(response.data);
     } catch (error) {
       console.error('Error fetching team analytics:', error);
     } finally {

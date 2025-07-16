@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import OnlineUsers from '@/components/OnlineUsers';
 import { Button } from '@/components/ui/button';
@@ -121,9 +122,8 @@ export default function TeamHackathonRoom() {
       setLoading(true);
       
       // Fetch team details
-      const teamResponse = await fetch(`/api/teams/${teamSlug}`);
-      if (!teamResponse.ok) throw new Error('Failed to fetch team');
-      const teamData = await teamResponse.json();
+      const teamResponse = await axios.get(`/api/teams/${teamSlug}`);
+      const teamData = teamResponse.data;
       
       if (!teamData.hackathonModeEnabled) {
         // Show placeholder instead of redirecting
@@ -135,17 +135,19 @@ export default function TeamHackathonRoom() {
       setTeam(teamData);
 
       // Fetch active task cards from all team projects
-      const cardsResponse = await fetch(`/api/teams/${teamSlug}/hackathon-cards`);
-      if (cardsResponse.ok) {
-        const cardsData = await cardsResponse.json();
-        setCards(cardsData.cards || []);
+      try {
+        const cardsResponse = await axios.get(`/api/teams/${teamSlug}/hackathon-cards`);
+        setCards(cardsResponse.data.cards || []);
+      } catch (error) {
+        console.error('Error fetching hackathon cards:', error);
       }
 
       // Fetch hackathon updates
-      const updatesResponse = await fetch(`/api/teams/${teamSlug}/hackathon-updates`);
-      if (updatesResponse.ok) {
-        const updatesData = await updatesResponse.json();
-        setUpdates(updatesData.updates || []);
+      try {
+        const updatesResponse = await axios.get(`/api/teams/${teamSlug}/hackathon-updates`);
+        setUpdates(updatesResponse.data.updates || []);
+      } catch (error) {
+        console.error('Error fetching hackathon updates:', error);
       }
 
     } catch (error) {
@@ -161,26 +163,16 @@ export default function TeamHackathonRoom() {
 
     try {
       setSubmittingUpdate(true);
-      const response = await fetch(`/api/teams/${teamSlug}/hackathon-updates`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: newUpdate.trim(),
-        }),
+      await axios.post(`/api/teams/${teamSlug}/hackathon-updates`, {
+        content: newUpdate.trim(),
       });
 
-      if (response.ok) {
-        setNewUpdate('');
-        fetchTeamData(); // Refresh updates
-        toast.success('Update posted!');
-      } else {
-        throw new Error('Failed to post update');
-      }
-    } catch (error) {
+      setNewUpdate('');
+      fetchTeamData(); // Refresh updates
+      toast.success('Update posted!');
+    } catch (error: any) {
       console.error('Error posting update:', error);
-      toast.error('Failed to post update');
+      toast.error(error.response?.data?.error || 'Failed to post update');
     } finally {
       setSubmittingUpdate(false);
     }
@@ -195,26 +187,16 @@ export default function TeamHackathonRoom() {
 
     try {
       setEndingHackathon(true);
-      const response = await fetch(`/api/teams/${teamSlug}/hackathon`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          hackathonModeEnabled: false,
-          hackathonDeadline: null,
-        }),
+      await axios.patch(`/api/teams/${teamSlug}/hackathon`, {
+        hackathonModeEnabled: false,
+        hackathonDeadline: null,
       });
 
-      if (response.ok) {
-        toast.success('Hackathon ended successfully!');
-        fetchTeamData(); // Refresh to show placeholder
-      } else {
-        throw new Error('Failed to end hackathon');
-      }
-    } catch (error) {
+      toast.success('Hackathon ended successfully!');
+      fetchTeamData(); // Refresh to show placeholder
+    } catch (error: any) {
       console.error('Error ending hackathon:', error);
-      toast.error('Failed to end hackathon');
+      toast.error(error.response?.data?.error || 'Failed to end hackathon');
     } finally {
       setEndingHackathon(false);
     }

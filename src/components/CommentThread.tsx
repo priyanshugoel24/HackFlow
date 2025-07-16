@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { getAblyClient } from "@/lib/ably";
+import axios from "axios";
 import type * as Ably from 'ably';
 
 interface Comment {
@@ -31,36 +32,34 @@ export default function CommentThread({ cardId }: { cardId: string }) {
   const fetchComments = async (cursor?: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/context-cards/${cardId}/comments?limit=10${cursor ? `&cursor=${cursor}` : ""}`);
-      const data = await res.json();
+      const res = await axios.get(`/api/context-cards/${cardId}/comments?limit=10${cursor ? `&cursor=${cursor}` : ""}`);
+      const data = res.data;
 
-      if (res.ok) {
-        if (cursor) {
-          // For pagination, append older comments and ensure no duplicates
-          setComments((prev) => {
-            const commentMap = new Map();
-            
-            // Add existing comments
-            prev.forEach(comment => {
-              commentMap.set(comment.id, comment);
-            });
-            
-            // Add new comments
-            data.comments.forEach((comment: Comment) => {
-              commentMap.set(comment.id, comment);
-            });
-            
-            // Return sorted array
-            return Array.from(commentMap.values()).sort((a, b) => 
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-            );
+      if (cursor) {
+        // For pagination, append older comments and ensure no duplicates
+        setComments((prev) => {
+          const commentMap = new Map();
+          
+          // Add existing comments
+          prev.forEach(comment => {
+            commentMap.set(comment.id, comment);
           });
-        } else {
-          // For initial load, replace all comments
-          setComments(data.comments);
-        }
-        setNextCursor(data.nextCursor ?? null);
+          
+          // Add new comments
+          data.comments.forEach((comment: Comment) => {
+            commentMap.set(comment.id, comment);
+          });
+          
+          // Return sorted array
+          return Array.from(commentMap.values()).sort((a, b) => 
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        });
+      } else {
+        // For initial load, replace all comments
+        setComments(data.comments);
       }
+      setNextCursor(data.nextCursor ?? null);
     } catch (err) {
       console.error("Error loading comments", err);
     } finally {
@@ -118,16 +117,12 @@ export default function CommentThread({ cardId }: { cardId: string }) {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch(`/api/context-cards/${cardId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newComment }),
+      const res = await axios.post(`/api/context-cards/${cardId}/comments`, {
+        content: newComment
       });
 
-      if (res.ok) {
-        setNewComment("");
-        // Don't manually add the comment here since it will come through the real-time subscription
-      }
+      setNewComment("");
+      // Don't manually add the comment here since it will come through the real-time subscription
     } catch (error) {
       console.error("Error posting comment:", error);
     } finally {

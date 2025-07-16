@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
+import axios from "axios";
 
 export default function StandupDigest({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
@@ -15,14 +16,12 @@ export default function StandupDigest({ projectId }: { projectId: string }) {
     if (status !== "authenticated") return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/standup/${projectId}`);
-      if (!res.ok) throw new Error("Request failed");
-      const data = await res.json();
-      setDigest(data.summary);
-    } catch (err) {
-      console.error(err);
+      const res = await axios.get(`/api/standup/${projectId}`);
+      setDigest(res.data.summary);
+    } catch (error: any) {
+      console.error(error);
       toast.error("Could not fetch digest", {
-        description: "Failed to retrieve the latest updates",
+        description: error.response?.data?.error || "Failed to retrieve the latest updates",
       });
     } finally {
       setIsLoading(false);

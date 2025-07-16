@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,17 +36,13 @@ export default function TeamProjectAnalyticsPage() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const response = await fetch(`/api/projects/${projectSlug}/analytics`);
-        const data = await response.json();
+        const response = await axios.get(`/api/projects/${projectSlug}/analytics`);
+        const data = response.data;
         
-        if (response.ok) {
-          setAnalytics(data.analytics);
-        } else {
-          toast.error(data.error || 'Failed to fetch analytics');
-        }
-      } catch (error) {
+        setAnalytics(data.analytics);
+      } catch (error: any) {
         console.error('Error fetching analytics:', error);
-        toast.error('Failed to fetch analytics');
+        toast.error(error.response?.data?.error || 'Failed to fetch analytics');
       } finally {
         setLoading(false);
       }

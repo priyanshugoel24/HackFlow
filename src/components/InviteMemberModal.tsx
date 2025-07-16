@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
+import axios from "axios";
 
 export default function InviteMemberModal({
   open,
@@ -39,46 +40,28 @@ export default function InviteMemberModal({
       let response;
       
       if (mode === "team" && teamSlug) {
-        response = await fetch(`/api/teams/${teamSlug}/members`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: email.trim(),
-            role: role, // Teams only have OWNER and MEMBER, no more ADMIN
-          }),
+        response = await axios.post(`/api/teams/${teamSlug}/members`, {
+          email: email.trim(),
+          role: role, // Teams only have OWNER and MEMBER, no more ADMIN
         });
       } else if (mode === "project" && projectSlug) {
-        response = await fetch(`/api/projects/${projectSlug}/invite`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ 
-            email: email.trim(),
-            role: role === 'MANAGER' ? 'MANAGER' : 'MEMBER' // Projects have MANAGER and MEMBER
-          }),
+        response = await axios.post(`/api/projects/${projectSlug}/invite`, { 
+          email: email.trim(),
+          role: role === 'MANAGER' ? 'MANAGER' : 'MEMBER' // Projects have MANAGER and MEMBER
         });
       } else {
         toast.error('Invalid configuration');
         return;
       }
 
-      if (response && response.ok) {
-        const result = await response.json();
-        toast.success(result.message || 'Invitation sent successfully');
-        setEmail('');
-        setRole('MEMBER');
-        setOpen(false);
-        onSuccess?.();
-      } else {
-        const error = await response?.json();
-        toast.error(error?.error || 'Failed to invite member');
-      }
-    } catch (error) {
+      toast.success(response.data.message || 'Invitation sent successfully');
+      setEmail('');
+      setRole('MEMBER');
+      setOpen(false);
+      onSuccess?.();
+    } catch (error: any) {
       console.error('Error inviting member:', error);
-      toast.error('Failed to invite member');
+      toast.error(error.response?.data?.error || 'Failed to invite member');
     } finally {
       setLoading(false);
     }

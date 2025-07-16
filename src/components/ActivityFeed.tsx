@@ -6,6 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 import type * as Ably from 'ably';
 
 interface ActivityFeedProps {
@@ -47,19 +48,19 @@ export default function ActivityFeed({ projectId, slug, teamSlug }: ActivityFeed
         let res;
         if (teamSlug) {
           // Fetch team activities
-          res = await fetch(`/api/teams/${teamSlug}/activities`);
+          res = await axios.get(`/api/teams/${teamSlug}/activities`);
         } else {
           // Fetch project activities
-          res = await fetch(`/api/projects/${identifier}/activities`);
+          res = await axios.get(`/api/projects/${identifier}/activities`);
         }
         
-        const data = await res.json();
+        const data = res.data;
         setActivities(data.activities || []);
         
         // If we used slug, we need to get the actual projectId for Ably channel
         if (slug && !projectId && !teamSlug) {
-          const projectRes = await fetch(`/api/projects/${identifier}`);
-          const projectData = await projectRes.json();
+          const projectRes = await axios.get(`/api/projects/${identifier}`);
+          const projectData = projectRes.data;
           if (projectData.project?.id) {
             setActualProjectId(projectData.project.id);
           }

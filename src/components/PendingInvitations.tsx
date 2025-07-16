@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Mail, User, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import axios from "axios";
 
 interface ProjectInvitation {
   id: string;
@@ -67,8 +68,8 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
 
   const fetchInvitations = async () => {
     try {
-      const res = await fetch("/api/invitations");
-      const data = await res.json();
+      const res = await axios.get("/api/invitations");
+      const data = res.data;
       setProjectInvitations(data.projectInvitations || data.invitations || []);
       setTeamInvitations(data.teamInvitations || []);
     } catch (error) {
@@ -87,22 +88,15 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
     setProcessingIds(prev => new Set(prev).add(invitationId));
     
     try {
-      const res = await fetch(`/api/projects/${projectSlug}/accept-invite`, {
-        method: "POST",
-      });
+      const res = await axios.post(`/api/projects/${projectSlug}/accept-invite`);
 
-      if (res.ok) {
-        toast.success("Invitation accepted! Project added to your dashboard.");
-        // Remove from project invitations list
-        setProjectInvitations(prev => prev.filter(inv => inv.id !== invitationId));
-        // Notify parent component to refresh project list
-        onInvitationAccepted?.();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to accept invitation");
-      }
-    } catch {
-      toast.error("Error accepting invitation");
+      toast.success("Invitation accepted! Project added to your dashboard.");
+      // Remove from project invitations list
+      setProjectInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+      // Notify parent component to refresh project list
+      onInvitationAccepted?.();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to accept invitation");
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
@@ -116,20 +110,13 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
     setProcessingIds(prev => new Set(prev).add(invitationId));
     
     try {
-      const res = await fetch(`/api/projects/${projectSlug}/decline-invite`, {
-        method: "POST",
-      });
+      const res = await axios.post(`/api/projects/${projectSlug}/decline-invite`);
 
-      if (res.ok) {
-        toast.success("Invitation declined");
-        // Remove from project invitations list
-        setProjectInvitations(prev => prev.filter(inv => inv.id !== invitationId));
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to decline invitation");
-      }
-    } catch {
-      toast.error("Error declining invitation");
+      toast.success("Invitation declined");
+      // Remove from project invitations list
+      setProjectInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to decline invitation");
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
@@ -143,22 +130,15 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
     setProcessingIds(prev => new Set(prev).add(invitationId));
     
     try {
-      const res = await fetch(`/api/teams/${teamSlug}/accept-invite`, {
-        method: "POST",
-      });
+      const res = await axios.post(`/api/teams/${teamSlug}/accept-invite`);
 
-      if (res.ok) {
-        toast.success("Team invitation accepted!");
-        // Remove from team invitations list
-        setTeamInvitations(prev => prev.filter(inv => inv.id !== invitationId));
-        // Notify parent component to refresh
-        onInvitationAccepted?.();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to accept team invitation");
-      }
-    } catch {
-      toast.error("Error accepting team invitation");
+      toast.success("Team invitation accepted!");
+      // Remove from team invitations list
+      setTeamInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+      // Notify parent component to refresh
+      onInvitationAccepted?.();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to accept team invitation");
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
@@ -172,20 +152,13 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
     setProcessingIds(prev => new Set(prev).add(invitationId));
     
     try {
-      const res = await fetch(`/api/teams/${teamSlug}/decline-invite`, {
-        method: "POST",
-      });
+      const res = await axios.post(`/api/teams/${teamSlug}/decline-invite`);
 
-      if (res.ok) {
-        toast.success("Team invitation declined");
-        // Remove from team invitations list
-        setTeamInvitations(prev => prev.filter(inv => inv.id !== invitationId));
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to decline team invitation");
-      }
-    } catch {
-      toast.error("Error declining team invitation");
+      toast.success("Team invitation declined");
+      // Remove from team invitations list
+      setTeamInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to decline team invitation");
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);

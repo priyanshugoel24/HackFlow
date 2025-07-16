@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { getAblyClient, CHANNELS, type AblyStatusData } from "@/lib/ably";
 import type Ably from 'ably';
+import axios from "axios";
 
 export type UserStatus = "Available" | "Busy" | "Focused" | "Away";
 
@@ -24,22 +25,9 @@ export function useAblyStatus() {
       setStatus(newStatus);
       
       // Update via API (which will also publish to Ably)
-      const response = await fetch("/api/status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ state: newStatus }),
-      });
-
-      if (response.ok) {
-        console.log("✅ Status updated via API:", newStatus);
-      } else {
-        console.error("❌ Failed to update status via API");
-        // Revert local state if API call failed
-        setStatus(status);
-      }
-    } catch (error) {
+      await axios.post("/api/status", { state: newStatus });
+      console.log("✅ Status updated via API:", newStatus);
+    } catch (error: any) {
       console.error("❌ Error updating status:", error);
       // Revert local state if there was an error
       setStatus(status);
@@ -52,13 +40,10 @@ export function useAblyStatus() {
     if (!user?.id) return;
 
     try {
-      const response = await fetch("/api/status");
-      if (response.ok) {
-        const data = await response.json();
-        const initialStatus = data.status?.state || "Available";
-        setStatus(initialStatus);
-        console.log("📥 Fetched initial status:", initialStatus);
-      }
+      const response = await axios.get("/api/status");
+      const initialStatus = response.data.status?.state || "Available";
+      setStatus(initialStatus);
+      console.log("📥 Fetched initial status:", initialStatus);
     } catch (error) {
       console.error("❌ Error fetching initial status:", error);
     }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import OnlineUsers from '@/components/OnlineUsers';
 import ProjectModal from '@/components/ProjectModal';
@@ -99,11 +100,9 @@ export default function TeamPage() {
 
   const fetchTeam = async () => {
     try {
-      const response = await fetch(`/api/teams/${teamSlug}`);
-      if (response.ok) {
-        const teamData = await response.json();
-        setTeam(teamData);
-      }
+      const response = await axios.get(`/api/teams/${teamSlug}`);
+      const teamData = response.data;
+      setTeam(teamData);
     } catch (error) {
       console.error('Error fetching team:', error);
     } finally {
@@ -151,55 +150,33 @@ export default function TeamPage() {
     }
 
     try {
-      const response = await fetch(`/api/teams/${teamSlug}/hackathon`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          hackathonModeEnabled: true,
-          hackathonDeadline: hackathonDeadline,
-        }),
+      await axios.patch(`/api/teams/${teamSlug}/hackathon`, {
+        hackathonModeEnabled: true,
+        hackathonDeadline: hackathonDeadline,
       });
 
-      if (response.ok) {
-        setShowHackathonModal(false);
-        setHackathonDeadline('');
-        fetchTeam(); // Refresh team data
-        // Navigate to hackathon room
-        router.push(`/team/${teamSlug}/hackathon`);
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to start hackathon');
-      }
-    } catch (error) {
+      setShowHackathonModal(false);
+      setHackathonDeadline('');
+      fetchTeam(); // Refresh team data
+      // Navigate to hackathon room
+      router.push(`/team/${teamSlug}/hackathon`);
+    } catch (error: any) {
       console.error('Error starting hackathon:', error);
-      alert('Failed to start hackathon');
+      alert(error.response?.data?.error || 'Failed to start hackathon');
     }
   };
 
   const handleToggleArchiveProject = async (projectId: string, isArchived: boolean) => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/archive`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          isArchived: !isArchived,
-        }),
+      await axios.patch(`/api/projects/${projectId}/archive`, {
+        isArchived: !isArchived,
       });
 
-      if (response.ok) {
-        // Refresh team data to update the project list
-        fetchTeam();
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to update project');
-      }
-    } catch (error) {
+      // Refresh team data to update the project list
+      fetchTeam();
+    } catch (error: any) {
       console.error('Error archiving/unarchiving project:', error);
-      alert('Failed to update project');
+      alert(error.response?.data?.error || 'Failed to update project');
     }
   };
 

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
 import { getAblyClient } from "@/lib/ably";
 import { useSession } from "next-auth/react";
+import axios from "axios";
 
 export default function ProjectSettingsPage() {
   // Team Project Settings Page - Route: /team/[teamSlug]/project/[projectSlug]/settings
@@ -29,8 +30,8 @@ export default function ProjectSettingsPage() {
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const res = await fetch(`/api/projects/${projectSlug}`);
-        const data = await res.json();
+        const res = await axios.get(`/api/projects/${projectSlug}`);
+        const data = res.data;
         setProject(data.project);
         setName(data.project.name || "");
         setDescription(data.project.description || "");
@@ -94,8 +95,8 @@ export default function ProjectSettingsPage() {
           channel.unsubscribe("member:declined");
           ably.channels.release(`project:${data.project.id}`);
         };
-      } catch (error) {
-        toast.error("Failed to fetch project");
+      } catch (error: any) {
+        toast.error(error.response?.data?.error || "Failed to fetch project");
       } finally {
         setLoading(false);
       }
@@ -107,19 +108,15 @@ export default function ProjectSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/projects/${projectSlug}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description, link, tags }),
+      await axios.patch(`/api/projects/${projectSlug}`, {
+        name,
+        description,
+        link,
+        tags
       });
-
-      if (res.ok) {
-        toast.success("Project updated successfully");
-      } else {
-        toast.error("Failed to update project");
-      }
-    } catch (err) {
-      toast.error("Error updating project");
+      toast.success("Project updated successfully");
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Error updating project");
     } finally {
       setSaving(false);
     }
@@ -256,23 +253,17 @@ export default function ProjectSettingsPage() {
                         return;
                       }
                       try {
-                        const res = await fetch(`/api/projects/${projectSlug}/members/${member.user.id}`, {
-                          method: "DELETE",
-                        });
-                        if (res.ok) {
-                          toast.success("Member removed");
-                          setProject((prev: any) => ({
-                            ...prev,
-                            members: prev.members.filter((m: any) => m.user.id !== member.user.id),
-                          }));
-                          const ably = getAblyClient();
-                          const channel = ably.channels.get(`project:${project.id}`);
-                          channel.publish("member:removed", { userId: member.user.id });
-                        } else {
-                          toast.error("Failed to remove member");
-                        }
-                      } catch {
-                        toast.error("Error removing member");
+                        await axios.delete(`/api/projects/${projectSlug}/members/${member.user.id}`);
+                        toast.success("Member removed");
+                        setProject((prev: any) => ({
+                          ...prev,
+                          members: prev.members.filter((m: any) => m.user.id !== member.user.id),
+                        }));
+                        const ably = getAblyClient();
+                        const channel = ably.channels.get(`project:${project.id}`);
+                        channel.publish("member:removed", { userId: member.user.id });
+                      } catch (error: any) {
+                        toast.error(error.response?.data?.error || "Error removing member");
                       }
                     }}
                   >
@@ -317,34 +308,20 @@ export default function ProjectSettingsPage() {
                     }
 
                     try {
-                      const res = await fetch(`/api/projects/${project.id}/archive`, {
-                        method: "PATCH",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                          isArchived: !project.isArchived,
-                        }),
+                      await axios.patch(`/api/projects/${project.id}/archive`, {
+                        isArchived: !project.isArchived,
                       });
-
-                      if (res.ok) {
-                        setProject({
-                          ...project,
-                          isArchived: !project.isArchived,
-                        });
-                        toast.success(`Project ${action}d`, {
-                          description: `The project has been ${action}d successfully.`,
-                        });
-                      } else {
-                        const errorData = await res.json();
-                        toast.error(`Failed to ${action} project`, {
-                          description: errorData.error || `Unable to ${action} the project. Please try again.`,
-                        });
-                      }
-                    } catch (err) {
-                      console.error(`Error ${action}ing project:`, err);
+                      setProject({
+                        ...project,
+                        isArchived: !project.isArchived,
+                      });
+                      toast.success(`Project ${action}d`, {
+                        description: `The project has been ${action}d successfully.`,
+                      });
+                    } catch (error: any) {
+                      console.error(`Error ${action}ing project:`, error);
                       toast.error(`Error ${action}ing project`, {
-                        description: "An unexpected error occurred. Please try again.",
+                        description: error.response?.data?.error || "An unexpected error occurred. Please try again.",
                       });
                     }
                   }}

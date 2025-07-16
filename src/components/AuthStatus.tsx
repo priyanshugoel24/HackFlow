@@ -1,6 +1,7 @@
 "use client";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 export default function AuthStatus() {
   const { data: session, status } = useSession();
@@ -14,16 +15,10 @@ export default function AuthStatus() {
     setStatusLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/status");
-      if (response.ok) {
-        const data = await response.json();
-        setUserStatus(data.status);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to fetch status");
-      }
-    } catch {
-      setError("Network error");
+      const response = await axios.get("/api/status");
+      setUserStatus(response.data.status);
+    } catch (error: any) {
+      setError(error.response?.data?.error || "Failed to fetch status");
     } finally {
       setStatusLoading(false);
     }
@@ -33,23 +28,13 @@ export default function AuthStatus() {
     setStatusLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ state: newState }),
+      const response = await axios.post("/api/status", {
+        state: newState
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        setUserStatus(data.status);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to update status");
-      }
-    } catch {
-      setError("Network error");
+      setUserStatus(response.data.status);
+    } catch (error: any) {
+      setError(error.response?.data?.error || "Failed to update status");
     } finally {
       setStatusLoading(false);
     }

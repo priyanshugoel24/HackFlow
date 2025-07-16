@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { getAblyClient, CHANNELS, type AblyPresenceData, type AblyStatusData } from "@/lib/ably";
 import type Ably from 'ably';
+import axios from "axios";
 
 export type PresenceUser = {
   id: string;
@@ -93,13 +94,10 @@ export function useAblyPresence() {
     if (!user?.id) return;
 
     try {
-      const response = await fetch("/api/status");
-      if (response.ok) {
-        const data = await response.json();
-        const initialStatus = data.status?.state || "Available";
-        setCurrentStatus(initialStatus);
-        console.log("📥 Fetched initial status:", initialStatus);
-      }
+      const response = await axios.get("/api/status");
+      const initialStatus = response.data.status?.state || "Available";
+      setCurrentStatus(initialStatus);
+      console.log("📥 Fetched initial status:", initialStatus);
     } catch (error) {
       console.error("❌ Error fetching initial status:", error);
     }
@@ -453,21 +451,13 @@ export function useAblyPresence() {
     }
     
     persistStatusTimeoutRef.current = setTimeout(() => {
-      fetch("/api/status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ state: newStatus }),
-      }).then(response => {
-        if (response.ok) {
+      axios.post("/api/status", { state: newStatus })
+        .then(() => {
           console.log("✅ Status persisted to database (background):", newStatus);
-        } else {
-          console.warn("⚠️ Failed to persist status to database (background)");
-        }
-      }).catch(error => {
-        console.warn("⚠️ Error persisting status to database (background):", error);
-      });
+        })
+        .catch(error => {
+          console.warn("⚠️ Error persisting status to database (background):", error);
+        });
     }, 1000); // Longer debounce for background persistence
   }, [session?.user]);
 

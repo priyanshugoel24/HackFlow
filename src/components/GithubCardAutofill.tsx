@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GithubIcon } from "lucide-react";
+import axios from "axios";
 
 interface GitHubCardAutoFillProps {
   onAutoFill: (title: string, content: string) => void;
@@ -20,15 +21,8 @@ export function GitHubCardAutoFill({ onAutoFill }: GitHubCardAutoFillProps) {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/github-metadata", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-
-      if (!res.ok) throw new Error();
-
-      const data = await res.json();
+      const res = await axios.post("/api/github-metadata", { url });
+      const data = res.data;
 
       onAutoFill(
         data.title,

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import axios from "axios";
 import { 
   Pin, 
   Link, 
@@ -44,8 +45,8 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
     if (!projectSlug) return;
     
     try {
-      const res = await fetch(`/api/projects/${projectSlug}?includeArchived=true`);
-      const data = await res.json();
+      const res = await axios.get(`/api/projects/${projectSlug}?includeArchived=true`);
+      const data = res.data;
       setAllCards(data.project?.contextCards || []);
       // Filter cards based on showArchived state
       const filteredCards = data.project?.contextCards?.filter((card: any) => 

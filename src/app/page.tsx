@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Users, FolderOpen } from "lucide-react";
+import axios from "axios";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -41,28 +42,22 @@ export default function Home() {
     try {
       setLoading(true);
       setError(null); // Clear any previous errors
-      const response = await fetch("/api/teams");
+      const response = await axios.get("/api/teams");
       
-      if (response.ok) {
-        const data = await response.json();
-        setTeams(data || []); // Ensure we always set an array
+      setTeams(response.data || []); // Ensure we always set an array
+    } catch (error: any) {
+      // Handle different error scenarios gracefully
+      if (error.response?.status === 401) {
+        console.error("Unauthorized - please log in again");
+        setError("Please log in again to access your teams");
+      } else if (error.response?.status === 404) {
+        // User not found, but treat as no teams available
+        console.warn("User not found, treating as no teams available");
+        setTeams([]);
       } else {
-        // Handle different error scenarios gracefully
-        if (response.status === 401) {
-          console.error("Unauthorized - please log in again");
-          setError("Please log in again to access your teams");
-        } else if (response.status === 404) {
-          // User not found, but treat as no teams available
-          console.warn("User not found, treating as no teams available");
-          setTeams([]);
-        } else {
-          console.error(`Failed to fetch teams: ${response.status}`);
-          setError("Unable to load teams. Please try again.");
-        }
+        console.error(`Failed to fetch teams: ${error.response?.status}`);
+        setError("Unable to load teams. Please try again.");
       }
-    } catch (error) {
-      console.error("Error fetching teams:", error);
-      setError("Network error. Please check your connection and try again.");
       setTeams([]); // Set empty array on error
     } finally {
       setLoading(false);
@@ -75,24 +70,13 @@ export default function Home() {
     setError(null); // Clear any fetch errors
 
     try {
-      const response = await fetch("/api/teams", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await axios.post("/api/teams", formData);
 
-      if (response.ok) {
-        setCreateModalOpen(false);
-        setFormData({ name: "", slug: "", description: "" });
-        fetchTeams(); // Refresh teams list
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to create team");
-      }
-    } catch (err) {
-      setError("An error occurred while creating the team");
+      setCreateModalOpen(false);
+      setFormData({ name: "", slug: "", description: "" });
+      fetchTeams(); // Refresh teams list
+    } catch (error: any) {
+      setError(error.response?.data?.error || "Failed to create team");
     } finally {
       setCreateLoading(false);
     }

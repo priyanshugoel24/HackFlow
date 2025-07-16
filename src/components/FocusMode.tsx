@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Target, CheckCircle2, Play, Pause, Timer, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { ContextCardWithRelations } from "@/types";
+import axios from "axios";
 
 interface FocusModeProps {
   cards: ContextCardWithRelations[];
@@ -125,22 +126,11 @@ export default function FocusMode({
     try {
       // Update each completed card's status to CLOSED in the database
       const updatePromises = completedCardIds.map(async (cardId) => {
-        const response = await fetch(`/api/context-cards/${cardId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            status: 'CLOSED'
-          }),
+        const response = await axios.patch(`/api/context-cards/${cardId}`, {
+          status: 'CLOSED'
         });
 
-        if (!response.ok) {
-          console.error(`Failed to update card ${cardId}:`, await response.text());
-          throw new Error(`Failed to update card ${cardId}`);
-        }
-
-        return response.json();
+        return response.data;
       });
 
       await Promise.all(updatePromises);

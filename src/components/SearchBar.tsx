@@ -4,6 +4,7 @@ import { useDebounce } from "@/lib/hooks/useDebounce";
 import { FileText, Folder, User, Tag, Search, Loader2, X, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import axios from "axios";
 
 type SearchResult = {
   type: "card" | "project" | "member" | "tag" | "team";
@@ -68,27 +69,16 @@ export default function SearchBar() {
     
     try {
       if (isAIEnabled) {
-        const res = await fetch(`/api/assistant`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: query }),
-        });
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Failed to get AI response");
-        }
-        const data = await res.json();
-        setAIResponse(data.answer || "No response.");
-        setAIMetadata(data.metadata || null);
+        const res = await axios.post(`/api/assistant`, { prompt: query });
+        setAIResponse(res.data.answer || "No response.");
+        setAIMetadata(res.data.metadata || null);
       } else {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        if (!res.ok) throw new Error("Search failed");
-        const data = await res.json();
-        setResults(data.results || []);
+        const res = await axios.get(`/api/search?q=${encodeURIComponent(query)}`);
+        setResults(res.data.results || []);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Search/AI failed:", error);
-      setError(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+      setError(error.response?.data?.error || "Something went wrong. Please try again.");
       setResults([]);
     } finally {
       setIsLoading(false);
@@ -177,13 +167,11 @@ export default function SearchBar() {
         setAIMetadata(null);
         setSubmitted(false);
         try {
-          const res = await fetch(`/api/search?q=${encodeURIComponent(debounced)}`);
-          if (!res.ok) throw new Error("Search failed");
-          const data = await res.json();
-          setResults(data.results || []);
-        } catch (error) {
+          const res = await axios.get(`/api/search?q=${encodeURIComponent(debounced)}`);
+          setResults(res.data.results || []);
+        } catch (error: any) {
           console.error("Search failed:", error);
-          setError("Something went wrong. Please try again.");
+          setError(error.response?.data?.error || "Something went wrong. Please try again.");
           setResults([]);
         } finally {
           setIsLoading(false);

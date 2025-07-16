@@ -10,6 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ExternalLink, Folder, Users, Calendar, Archive } from "lucide-react";
+import axios from "axios";
 
 export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: { 
   onSelect: (id: string) => void;
@@ -23,11 +24,10 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch("/api/projects?includeArchived=true");
-      const data = await res.json();
-      setAllProjects(data.projects || []);
+      const res = await axios.get("/api/projects?includeArchived=true");
+      setAllProjects(res.data.projects || []);
       // Filter out archived projects
-      const filteredProjects = data.projects?.filter((project: any) => 
+      const filteredProjects = res.data.projects?.filter((project: any) => 
         showArchived ? true : !project.isArchived
       ) || [];
       setProjects(filteredProjects);

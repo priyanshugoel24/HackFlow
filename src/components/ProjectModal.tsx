@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import axios from "axios";
 
 export default function ProjectModal({ 
   open, 
@@ -26,31 +27,23 @@ export default function ProjectModal({
     
     setIsLoading(true);
     try {
-      const response = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          name: name.trim(), 
-          link: link.trim() || undefined,
-          description: description.trim() || undefined,
-          tags: tags.trim() ? tags.split(",").map(tag => tag.trim()).filter(Boolean) : [],
-          teamId: teamId || undefined
-        }),
+      await axios.post("/api/projects", { 
+        name: name.trim(), 
+        link: link.trim() || undefined,
+        description: description.trim() || undefined,
+        tags: tags.trim() ? tags.split(",").map(tag => tag.trim()).filter(Boolean) : [],
+        teamId: teamId || undefined
       });
       
-      if (response.ok) {
-        setOpen(false);
-        // Reset form
-        setName("");
-        setLink("");
-        setDescription("");
-        setTags("");
-        onSuccess?.();
-      } else {
-        console.error("Failed to create project");
-      }
-    } catch (error) {
-      console.error("Error creating project:", error);
+      setOpen(false);
+      // Reset form
+      setName("");
+      setLink("");
+      setDescription("");
+      setTags("");
+      onSuccess?.();
+    } catch (error: any) {
+      console.error("Failed to create project:", error);
     } finally {
       setIsLoading(false);
     }

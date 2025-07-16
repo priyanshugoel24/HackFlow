@@ -1,5 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
+import axios from "axios";
 
 export async function POST(req: NextRequest) {
   const token = await getToken({ req });
@@ -34,18 +35,14 @@ export async function POST(req: NextRequest) {
       : `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`;
 
   try {
-    const res = await fetch(apiUrl, {
+    const res = await axios.get(apiUrl, {
       headers: {
         Accept: "application/vnd.github+json",
         Authorization: `Bearer ${githubToken || process.env.GITHUB_TOKEN}`,
       },
     });
 
-    if (!res.ok) {
-      return NextResponse.json({ error: "GitHub API error" }, { status: res.status });
-    }
-
-    const data = await res.json();
+    const data = res.data;
 
     return NextResponse.json({
       title: data.title,
@@ -57,6 +54,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("GitHub fetch failed:", err);
+    if (axios.isAxiosError(err) && err.response) {
+      return NextResponse.json({ error: "GitHub API error" }, { status: err.response.status });
+    }
     return NextResponse.json({ error: "Failed to fetch GitHub data" }, { status: 500 });
   }
 }

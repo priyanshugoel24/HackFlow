@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AssignedCards from '@/components/AssignedCards';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BackButton from '@/components/ui/BackButton';
+import axios from 'axios';
 
 interface Team {
   id: string;
@@ -23,11 +24,8 @@ export default function TeamAssignedCardsPage() {
   useEffect(() => {
     const fetchTeam = async () => {
       try {
-        const response = await fetch(`/api/teams/${teamSlug}`);
-        if (response.ok) {
-          const teamData = await response.json();
-          setTeam(teamData);
-        }
+        const response = await axios.get(`/api/teams/${teamSlug}`);
+        setTeam(response.data);
       } catch (error) {
         console.error('Error fetching team:', error);
       } finally {

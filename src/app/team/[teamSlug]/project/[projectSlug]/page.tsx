@@ -23,6 +23,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import Image from "next/image";
+import axios from "axios";
 
 interface Project {
   id: string;
@@ -66,11 +67,8 @@ export default function TeamProjectPage() {
   const fetchData = useCallback(async () => {
     try {
       // Fetch team first
-      const teamRes = await fetch(`/api/teams/${teamSlug}`);
-      if (!teamRes.ok) {
-        throw new Error("Failed to fetch team");
-      }
-      const teamData = await teamRes.json();
+      const teamRes = await axios.get(`/api/teams/${teamSlug}`);
+      const teamData = teamRes.data;
       setTeam(teamData);
 
       // Find the project within the team

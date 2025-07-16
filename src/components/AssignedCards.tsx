@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import ContextCardModal from "./ContextCardModal";
 import { ContextCardWithRelations } from "../types";
 import { useSession } from "next-auth/react";
+import axios from "axios";
 
 export default function AssignedCards({
   onToggleFocusCard,
@@ -54,8 +55,8 @@ export default function AssignedCards({
         queryParams += `&assignedTo=${encodeURIComponent(userEmail)}`;
       }
 
-      const res = await fetch(`/api/context-cards?${queryParams}`);
-      const data = await res.json();
+      const res = await axios.get(`/api/context-cards?${queryParams}`);
+      const data = res.data;
       if (Array.isArray(data.cards)) {
         setCards((prev) => {
           // Avoid duplicates

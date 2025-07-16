@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import axios from "axios";
 
 interface SmartComposeModalProps {
   open: boolean;
@@ -31,23 +32,20 @@ export default function SmartComposeModal({
     if (!input.trim()) return;
     setLoading(true);
     try {
-      const parsedRes = await fetch("/api/context-cards/parse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input, projectId: projectSlug }),
+      const parsedRes = await axios.post("/api/context-cards/parse", { 
+        input, 
+        projectId: projectSlug 
       });
-
-      if (!parsedRes.ok) throw new Error("Failed to parse input with Gemini");
-      const { parsedCard } = await parsedRes.json();
+      const { parsedCard } = parsedRes.data;
 
       if (!parsedCard?.title || !parsedCard?.content || !parsedCard?.type || !parsedCard?.visibility) {
         throw new Error("Incomplete card details received from Gemini");
       }
 
       setParsedCard(parsedCard);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to create card. Please try again.");
+      toast.error(error.response?.data?.error || "Failed to create card. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -64,21 +62,16 @@ export default function SmartComposeModal({
       formData.append("visibility", parsedCard.visibility);
       formData.append("projectId", projectSlug);
 
-      const res = await fetch("/api/context-cards", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error("Failed to create context card");
+      await axios.post("/api/context-cards", formData);
 
       toast.success("Card created successfully via AI ✨");
       setOpen(false);
       setInput("");
       setParsedCard(null);
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to create card. Please try again.");
+      toast.error(error.response?.data?.error || "Failed to create card. Please try again.");
     } finally {
       setLoading(false);
     }

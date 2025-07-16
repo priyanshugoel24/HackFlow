@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Settings, Users, Plus, Mail, Crown, Shield, User } from 'lucide-react';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 interface Team {
   id: string;
@@ -64,11 +65,8 @@ export default function TeamSettingsPage() {
 
   const fetchTeam = async () => {
     try {
-      const response = await fetch(`/api/teams/${teamSlug}`);
-      if (response.ok) {
-        const teamData = await response.json();
-        setTeam(teamData);
-      }
+      const response = await axios.get(`/api/teams/${teamSlug}`);
+      setTeam(response.data);
     } catch (error) {
       console.error('Error fetching team:', error);
     } finally {
@@ -81,27 +79,15 @@ export default function TeamSettingsPage() {
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/teams/${teamSlug}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: teamName,
-          description: teamDescription,
-        }),
+      const response = await axios.patch(`/api/teams/${teamSlug}`, {
+        name: teamName,
+        description: teamDescription,
       });
-
-      if (response.ok) {
-        const updatedTeam = await response.json();
-        setTeam(updatedTeam);
-        toast.success('Team updated successfully');
-      } else {
-        toast.error('Failed to update team');
-      }
-    } catch (error) {
+      setTeam(response.data);
+      toast.success('Team updated successfully');
+    } catch (error: any) {
       console.error('Error updating team:', error);
-      toast.error('Failed to update team');
+      toast.error(error.response?.data?.error || 'Failed to update team');
     } finally {
       setSaving(false);
     }
@@ -114,30 +100,18 @@ export default function TeamSettingsPage() {
     }
 
     try {
-      const response = await fetch(`/api/teams/${teamSlug}/members`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: inviteEmail,
-          role: inviteRole,
-        }),
+      await axios.post(`/api/teams/${teamSlug}/members`, {
+        email: inviteEmail,
+        role: inviteRole,
       });
-
-      if (response.ok) {
-        toast.success('Member invited successfully');
-        setInviteEmail('');
-        setInviteRole('MEMBER');
-        setShowInviteModal(false);
-        fetchTeam(); // Refresh team data
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to invite member');
-      }
-    } catch (error) {
+      toast.success('Member invited successfully');
+      setInviteEmail('');
+      setInviteRole('MEMBER');
+      setShowInviteModal(false);
+      fetchTeam(); // Refresh team data
+    } catch (error: any) {
       console.error('Error inviting member:', error);
-      toast.error('Failed to invite member');
+      toast.error(error.response?.data?.error || 'Failed to invite member');
     }
   };
 
@@ -147,19 +121,12 @@ export default function TeamSettingsPage() {
     }
 
     try {
-      const response = await fetch(`/api/teams/${teamSlug}/members/${userId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        toast.success('Member removed successfully');
-        fetchTeam(); // Refresh team data
-      } else {
-        toast.error('Failed to remove member');
-      }
-    } catch (error) {
+      await axios.delete(`/api/teams/${teamSlug}/members/${userId}`);
+      toast.success('Member removed successfully');
+      fetchTeam(); // Refresh team data
+    } catch (error: any) {
       console.error('Error removing member:', error);
-      toast.error('Failed to remove member');
+      toast.error(error.response?.data?.error || 'Failed to remove member');
     }
   };
 

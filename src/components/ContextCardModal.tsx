@@ -35,6 +35,7 @@ import { sanitizeHtml } from "@/lib/security-client";
 import ExistingCard from "@/interfaces/ExistingCard";
 import Project from "@/interfaces/Project";
 import { GitHubCardAutoFill } from "./GithubCardAutofill";
+import axios from "axios";
 
 export default function ContextCardModal({
   open,
@@ -233,23 +234,21 @@ export default function ContextCardModal({
     if (teamSlug) {
       const fetchTeamMembers = async () => {
         try {
-          const response = await fetch(`/api/teams/${teamSlug}/members`);
-          if (response.ok) {
-            const members = await response.json();
-            const teamMembersList = members
-              .filter((m: any) => m.status === "ACTIVE")
-              .map((member: any) => ({
-                userId: member.user.id,
-                name: member.user.name,
-                email: member.user.email,
-                image: member.user.image,
-              }));
-            setTeamMembers(teamMembersList);
-            
-            // If no project members, use team members as filtered members
-            if (!project || !project.members) {
-              setFilteredMembers(teamMembersList);
-            }
+          const response = await axios.get(`/api/teams/${teamSlug}/members`);
+          const members = response.data;
+          const teamMembersList = members
+            .filter((m: any) => m.status === "ACTIVE")
+            .map((member: any) => ({
+              userId: member.user.id,
+              name: member.user.name,
+              email: member.user.email,
+              image: member.user.image,
+            }));
+          setTeamMembers(teamMembersList);
+          
+          // If no project members, use team members as filtered members
+          if (!project || !project.members) {
+            setFilteredMembers(teamMembersList);
           }
         } catch (error) {
           console.error('Error fetching team members:', error);
@@ -407,28 +406,18 @@ export default function ContextCardModal({
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
+      const res = await axios.post("/api/upload", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      if (!res.ok) {
-        const errorData = await res
-          .json()
-          .catch(() => ({ error: "Unknown error" }));
-        console.error("Upload API error:", errorData);
-        toast.error(`Upload failed: ${errorData.error || "Unknown error"}`, {
-          description: `Failed to upload ${file.name}`,
-          duration: 4000,
-          position: "top-right",
-        });
-        return null;
-      }
-      const data = await res.json();
-      return data.url;
-    } catch (error) {
+      
+      return res.data;
+    } catch (error: any) {
       console.error("Upload API error:", error);
-      toast.error("Upload failed", {
-        description: `Network error while uploading ${file.name}`,
+      const errorMessage = error.response?.data?.error || "Unknown error";
+      toast.error(`Upload failed: ${errorMessage}`, {
+        description: `Failed to upload ${file.name}`,
         duration: 4000,
         position: "top-right",
       });
@@ -440,37 +429,25 @@ export default function ContextCardModal({
     if (!existingCard?.id) return;
     setIsSummarizing(true);
     try {
-      const res = await fetch(
+      const res = await axios.post(
         `/api/context-cards/${existingCard.id}/summarize`,
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            projectId: projectSlug,
-            cardId: existingCard.id,
-          }),
+          projectId: projectSlug,
+          cardId: existingCard.id,
         }
       );
-      const data = await res.json();
-      if (res.ok) {
-        setSummaryText(data.summary);
-        toast.success("Summary generated!");
-      } else {
-        console.error(
-          "Failed to generate summary for card:",
-          existingCard.id,
-          data
-        );
-        toast.error("Failed to generate summary", { description: data.error });
-      }
-    } catch (error) {
+      
+      setSummaryText(res.data.summary);
+      toast.success("Summary generated!");
+    } catch (error: any) {
       console.error(
         "Error generating summary for card:",
         existingCard.id,
         error
       );
+      toast.error("Failed to generate summary", { 
+        description: error.response?.data?.error || "Unknown error" 
+      });
       toast.error("Something went wrong");
     } finally {
       setIsSummarizing(false);
@@ -620,13 +597,7 @@ export default function ContextCardModal({
           updateData.notifyUserId = notifyUserId;
         }
 
-        res = await fetch(`/api/context-cards/${existingCard.id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updateData),
-        });
+        res = await axios.patch(`/api/context-cards/${existingCard.id}`, updateData);
       } else {
         // Create new card
         console.log("✨ Creating new card");
@@ -654,48 +625,45 @@ export default function ContextCardModal({
           formData.append("notifyUserId", notifyUserId);
         }
 
-        res = await fetch("/api/context-cards", {
-          method: "POST",
-          body: formData,
+        res = await axios.post("/api/context-cards", formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         });
       }
 
-      if (res.ok) {
-        const responseData = await res.json();
-        console.log("📊 Response data:", responseData);
+      const responseData = res.data;
+      console.log("📊 Response data:", responseData);
 
-        setOpen(false);
-        onSuccess?.();
-        toast.success(existingCard ? "Card updated" : "Card created", {
-          description: existingCard
-            ? "Your changes have been saved successfully."
-            : "A new context card has been created.",
-          duration: 4000,
-          position: "top-right",
-        });
-        // Reset form only if creating new card
-        if (!existingCard) {
-          setTitle("");
-          setContent("");
-          setType("TASK");
-          setVisibility("PRIVATE");
-          setWhy("");
-          setIssues("");
-          setMention("");
-          setAttachments([]);
-          setExistingAttachments([]);
-          setStatus("ACTIVE");
-        }
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Failed to save context card:", errorData);
-        toast.error("Failed to save context card", {
-          description: "Something went wrong while saving. Please try again.",
-          duration: 4000,
-          position: "top-right",
-        });
+      setOpen(false);
+      onSuccess?.();
+      toast.success(existingCard ? "Card updated" : "Card created", {
+        description: existingCard
+          ? "Your changes have been saved successfully."
+          : "A new context card has been created.",
+        duration: 4000,
+        position: "top-right",
+      });
+      // Reset form only if creating new card
+      if (!existingCard) {
+        setTitle("");
+        setContent("");
+        setType("TASK");
+        setVisibility("PRIVATE");
+        setWhy("");
+        setIssues("");
+        setMention("");
+        setAttachments([]);
+        setExistingAttachments([]);
+        setStatus("ACTIVE");
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Failed to save context card:", error);
+      toast.error("Failed to save context card", {
+        description: error.response?.data?.error || "Something went wrong while saving. Please try again.",
+        duration: 4000,
+        position: "top-right",
+      });
       console.error("Error saving context card:", error);
     } finally {
       setIsLoading(false);
@@ -814,39 +782,27 @@ export default function ContextCardModal({
                     )
                       return;
                     try {
-                      const res = await fetch(
+                      const res = await axios.patch(
                         `/api/context-cards/${existingCard.id}/archive`,
                         {
-                          method: "PATCH",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({
-                            isArchived: !existingCard.isArchived,
-                          }),
+                          isArchived: !existingCard.isArchived,
                         }
                       );
-                      if (res.ok) {
-                        setOpen(false);
-                        onSuccess?.();
-                        toast.success(`Card ${action}d`, {
+                      
+                      setOpen(false);
+                      onSuccess?.();
+                      toast.success(`Card ${action}d`, {
                           description: `The context card has been ${action}d.`,
                           duration: 4000,
                           position: "top-right",
                         });
-                      } else {
-                        const errorData = await res.json();
-                        console.error(`Failed to ${action} card:`, errorData);
-                        toast.error(`Failed to ${action} card`, {
-                          description:
-                            errorData.error ||
-                            `Unable to ${action} the card. Please try again later.`,
-                          duration: 4000,
-                          position: "top-right",
-                        });
-                      }
-                    } catch (err) {
+                    } catch (err: any) {
                       console.error(`Error ${action}ing card:`, err);
+                      toast.error(`Failed to ${action} card`, {
+                        description: err.response?.data?.error || `Unable to ${action} the card. Please try again later.`,
+                        duration: 4000,
+                        position: "top-right",
+                      });
                     }
                   }}
                   className={`${
@@ -865,31 +821,24 @@ export default function ContextCardModal({
                     if (!confirm("Are you sure you want to delete this card?"))
                       return;
                     try {
-                      const res = await fetch(
-                        `/api/context-cards/${existingCard.id}`,
-                        {
-                          method: "DELETE",
-                        }
+                      const res = await axios.delete(
+                        `/api/context-cards/${existingCard.id}`
                       );
-                      if (res.ok) {
-                        setOpen(false);
-                        onSuccess?.();
-                        toast.success("Card deleted", {
-                          description: "The context card has been removed.",
-                          duration: 4000,
-                          position: "top-right",
-                        });
-                      } else {
-                        console.error("Failed to delete card");
-                        toast.error("Failed to delete card", {
-                          description:
-                            "Unable to remove the card. Please try again later.",
-                          duration: 4000,
-                          position: "top-right",
-                        });
-                      }
-                    } catch (err) {
+                      
+                      setOpen(false);
+                      onSuccess?.();
+                      toast.success("Card deleted", {
+                        description: "The context card has been removed.",
+                        duration: 4000,
+                        position: "top-right",
+                      });
+                    } catch (err: any) {
                       console.error("Error deleting card:", err);
+                      toast.error("Failed to delete card", {
+                        description: err.response?.data?.error || "Unable to remove the card. Please try again later.",
+                        duration: 4000,
+                        position: "top-right",
+                      });
                     }
                   }}
                   className="text-red-600 hover:text-red-800 border-red-300 hover:bg-red-50"

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import ProjectModal from "./ProjectModal";
 import { ChevronLeft, ChevronRight, Archive, UserCircle, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import axios from "axios";
 
 export default function ProjectSidebar({ 
   onSelect, 
@@ -30,10 +31,9 @@ export default function ProjectSidebar({
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch("/api/projects?includeArchived=false");
-      const data = await res.json();
+      const res = await axios.get("/api/projects?includeArchived=false");
       // Make sure we're only showing active projects in the sidebar
-      const activeProjects = data.projects?.filter((project: any) => !project.isArchived) || [];
+      const activeProjects = res.data.projects?.filter((project: any) => !project.isArchived) || [];
       setProjects(activeProjects);
     } catch (error) {
       console.error("Error fetching projects:", error);
