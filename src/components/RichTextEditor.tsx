@@ -19,15 +19,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
-
-interface RichTextEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  className?: string;
-  minHeight?: number;
-  initialPreview?: boolean;
-}
+import { RichTextEditorProps } from "@/interfaces/RichTextEditorProps";
 
 export default function RichTextEditor({
   value,

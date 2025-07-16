@@ -8,29 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import type * as Ably from 'ably';
-
-interface ActivityFeedProps {
-  projectId?: string;
-  slug?: string;
-  teamSlug?: string;
-}
-
-interface Activity {
-  id: string;
-  type: string;
-  description: string;
-  createdAt: string;
-  user?: {
-    id: string;
-    name: string;
-    image?: string;
-  };
-  project?: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-}
+import { ActivityFeedProps } from "@/interfaces/ActivityFeedProps";
+import { Activity } from "@/interfaces/Activity";
 
 export default function ActivityFeed({ projectId, slug, teamSlug }: ActivityFeedProps) {
   const { data: session } = useSession();

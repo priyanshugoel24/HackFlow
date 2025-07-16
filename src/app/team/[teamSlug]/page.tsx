@@ -21,59 +21,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Calendar, Settings, UserPlus, BarChart3, Target, Archive, ArchiveRestore } from 'lucide-react';
-import { ContextCardWithRelations } from '@/types';
-
-interface Team {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  hackathonDeadline?: string;
-  hackathonModeEnabled: boolean;
-  projects: Project[];
-  members: TeamMember[];
-  userRole?: string;
-  _count: {
-    members: number;
-    projects: number;
-  };
-}
-
-interface Project {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  link?: string;
-  createdAt: string;
-  lastActivityAt: string;
-  tags: string[];
-  isArchived: boolean;
-  _count: {
-    contextCards: number;
-  };
-  stats?: {
-    totalTasks: number;
-    completedTasks: number;
-    progress: number;
-  };
-}
-
-interface TeamMember {
-  id: string;
-  role: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string;
-  };
-}
+import { ContextCardWithRelations } from '@/interfaces/ContextCardWithRelations';
+import { TeamPageTeam } from '@/interfaces/TeamPageTeam';
+import { TeamPageProject } from '@/interfaces/TeamPageProject';
+import { TeamPageMember } from '@/interfaces/TeamPageMember';
 
 export default function TeamPage() {
   const { teamSlug } = useParams();
   const router = useRouter();
-  const [team, setTeam] = useState<Team | null>(null);
+  const [team, setTeam] = useState<TeamPageTeam | null>(null);
   const [loading, setLoading] = useState(true);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -116,7 +72,7 @@ export default function TeamPage() {
     return;
   };
 
-  const handleProjectClick = (project: Project) => {
+  const handleProjectClick = (project: TeamPageProject) => {
     router.push(`/team/${teamSlug}/project/${project.slug}`);
   };
 

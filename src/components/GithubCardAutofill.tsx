@@ -6,10 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GithubIcon } from "lucide-react";
 import axios from "axios";
-
-interface GitHubCardAutoFillProps {
-  onAutoFill: (title: string, content: string) => void;
-}
+import { GitHubCardAutoFillProps } from "@/interfaces/GitHubCardAutoFillProps";
 
 export function GitHubCardAutoFill({ onAutoFill }: GitHubCardAutoFillProps) {
   const [url, setUrl] = useState("");

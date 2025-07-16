@@ -5,24 +5,7 @@ import { FileText, Folder, User, Tag, Search, Loader2, X, Sparkles } from "lucid
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import axios from "axios";
-
-type SearchResult = {
-  type: "card" | "project" | "member" | "tag" | "team";
-  id: string;
-  originalId?: string;
-  title?: string;
-  name?: string;
-  email?: string;
-  tag?: string;
-  projectId?: string;
-  projectSlug?: string;
-  slug?: string;
-  projectName?: string;
-  teamName?: string;
-  teamSlug?: string;
-  description?: string;
-  projectCount?: number;
-};
+import { SearchResult } from "@/interfaces/SearchResult";
 
 export default function SearchBar() {
   const [query, setQuery] = useState("");

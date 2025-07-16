@@ -7,18 +7,12 @@ import AssignedCards from '@/components/AssignedCards';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BackButton from '@/components/ui/BackButton';
 import axios from 'axios';
-
-interface Team {
-  id: string;
-  name: string;
-  slug: string;
-  members: any[];
-}
+import { AssignedCardsTeam } from '@/interfaces/AssignedCardsTeam';
 
 export default function TeamAssignedCardsPage() {
   const params = useParams();
   const teamSlug = params.teamSlug as string;
-  const [team, setTeam] = useState<Team | null>(null);
+  const [team, setTeam] = useState<AssignedCardsTeam | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

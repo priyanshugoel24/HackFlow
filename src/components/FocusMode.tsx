@@ -6,16 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Target, CheckCircle2, Play, Pause, Timer, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { ContextCardWithRelations } from "@/types";
+import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
 import axios from "axios";
-
-interface FocusModeProps {
-  cards: ContextCardWithRelations[];
-  open: boolean;
-  onClose: () => void;
-  workDuration?: number; // in minutes, default 25
-  breakDuration?: number; // in minutes, default 5
-}
+import { FocusModeProps } from "@/interfaces/FocusModeProps";
 
 export default function FocusMode({ 
   cards, 

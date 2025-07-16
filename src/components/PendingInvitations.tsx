@@ -7,58 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Check, X, Mail, User, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
-
-interface ProjectInvitation {
-  id: string;
-  userId: string;
-  projectId: string;
-  role: string;
-  status: string;
-  joinedAt: string;
-  project: {
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    link?: string;
-    tags: string[];
-    createdAt: string;
-    lastActivityAt: string;
-  };
-  addedBy: {
-    id: string;
-    name?: string;
-    email: string;
-    image?: string;
-  } | null;
-}
-
-interface TeamInvitation {
-  id: string;
-  userId: string;
-  teamId: string;
-  role: string;
-  status: string;
-  joinedAt: string;
-  team: {
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    createdAt: string;
-    lastActivityAt: string;
-  };
-  addedBy: {
-    id: string;
-    name?: string;
-    email: string;
-    image?: string;
-  } | null;
-}
-
-// Legacy interface for backwards compatibility
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface Invitation extends ProjectInvitation {}
+import { ProjectInvitation } from "@/interfaces/ProjectInvitation";
+import { TeamInvitation } from "@/interfaces/TeamInvitation";
+import { Invitation } from "@/interfaces/Invitation";
 
 export default function PendingInvitations({ onInvitationAccepted }: { onInvitationAccepted?: () => void }) {
   const [projectInvitations, setProjectInvitations] = useState<ProjectInvitation[]>([]);

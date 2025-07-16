@@ -4,8 +4,7 @@ import { useSession } from "next-auth/react";
 import { getAblyClient, CHANNELS, type AblyStatusData } from "@/lib/ably";
 import type Ably from "ably";
 import axios from "axios";
-
-export type UserStatus = "Available" | "Busy" | "Focused" | "Away";
+import { UserStatus } from "@/interfaces/UserStatus";
 
 export function useAblyStatus() {
   const { data: session } = useSession();

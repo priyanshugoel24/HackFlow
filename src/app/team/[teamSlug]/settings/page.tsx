@@ -15,33 +15,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Settings, Users, Plus, Mail, Crown, Shield, User } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
-
-interface Team {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  members: TeamMember[];
-  userRole: string;
-  currentUserId: string;
-}
-
-interface TeamMember {
-  id: string;
-  role: 'OWNER' | 'MEMBER';
-  status: string;
-  joinedAt: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string;
-  };
-}
+import { TeamSettingsTeam } from '@/interfaces/TeamSettingsTeam';
+import { TeamSettingsMember } from '@/interfaces/TeamSettingsMember';
 
 export default function TeamSettingsPage() {
   const { teamSlug } = useParams();
-  const [team, setTeam] = useState<Team | null>(null);
+  const [team, setTeam] = useState<TeamSettingsTeam | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);

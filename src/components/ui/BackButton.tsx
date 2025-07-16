@@ -4,13 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface BackButtonProps {
-  label?: string;
-  className?: string;
-  variant?: "default" | "outline" | "ghost" | "secondary" | "destructive" | "link";
-  size?: "default" | "sm" | "lg" | "icon";
-}
+import { BackButtonProps } from "@/interfaces/BackButtonProps";
 
 export default function BackButton({ 
   label = "Back", 

@@ -5,13 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import axios from "axios";
-
-interface SmartComposeModalProps {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  projectSlug: string;
-  onSuccess?: () => void;
-}
+import { SmartComposeModalProps } from "@/interfaces/SmartComposeModalProps";
 
 export default function SmartComposeModal({
   open,

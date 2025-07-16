@@ -1,4 +1,4 @@
-interface ExistingCard {
+export interface ExistingCard {
   id: string;
   title: string;
   content: string;

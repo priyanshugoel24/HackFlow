@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import ContextCardModal from "./ContextCardModal";
-import { ContextCardWithRelations } from "../types";
+import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 

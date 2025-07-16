@@ -21,59 +21,19 @@ import {
   StopCircle,
   Settings
 } from 'lucide-react';
-import { ContextCardWithRelations } from '@/types';
+import { ContextCardWithRelations } from '@/interfaces/ContextCardWithRelations';
+import { TeamHackathon } from '@/interfaces/TeamHackathon';
+import { HackathonProject } from '@/interfaces/HackathonProject';
+import { HackathonTeamMember } from '@/interfaces/HackathonTeamMember';
+import { HackathonUpdate } from '@/interfaces/HackathonUpdate';
 import { toast } from 'sonner';
-
-interface Team {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  hackathonModeEnabled: boolean;
-  hackathonDeadline?: string;
-  userRole?: string;
-  members: TeamMember[];
-  projects: Project[];
-}
-
-interface Project {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  _count: {
-    contextCards: number;
-  };
-}
-
-interface TeamMember {
-  id: string;
-  role: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string;
-  };
-}
-
-interface HackathonUpdate {
-  id: string;
-  userId: string;
-  content: string;
-  createdAt: string;
-  user: {
-    name: string;
-    image?: string;
-  };
-}
 
 export default function TeamHackathonRoom() {
   const { teamSlug } = useParams();
   const router = useRouter();
   const { data: session } = useSession();
   
-  const [team, setTeam] = useState<Team | null>(null);
+  const [team, setTeam] = useState<TeamHackathon | null>(null);
   const [cards, setCards] = useState<ContextCardWithRelations[]>([]);
   const [updates, setUpdates] = useState<HackathonUpdate[]>([]);
   const [loading, setLoading] = useState(true);

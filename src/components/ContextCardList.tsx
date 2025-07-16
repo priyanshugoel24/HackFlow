@@ -22,7 +22,8 @@ import {
 import ContextCardModal from "./ContextCardModal";
 import SmartComposeModal from "./SmartComposeModal";
 import { useProjectRealtime } from "@/lib/ably/useProjectRealtime";
-import { ContextCardWithRelations, ProjectWithRelations } from "@/types";
+import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
+import { ProjectWithRelations } from "@/interfaces/ProjectWithRelations";
 import { 
   DropdownMenu,
   DropdownMenuContent,

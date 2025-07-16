@@ -5,7 +5,8 @@ import { getAblyClient, CHANNELS, type AblyPresenceData } from "@/lib/ably";
 import type Ably from 'ably';
 import axios from "axios";
 import { usePresenceStore } from '@/lib/store';
-import type { PresenceUser, UserStatus } from '@/lib/store';
+import { PresenceUser } from '@/interfaces/PresenceUser';
+import { UserStatus } from '@/interfaces/UserStatus';
 
 export function useAblyPresence() {
   const { data: session, status: sessionStatus } = useSession();

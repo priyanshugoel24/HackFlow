@@ -2,12 +2,7 @@
 import { useEffect, useState } from "react";
 import { getAblyClient } from "../ably";
 import type * as Ably from 'ably';
-
-interface EditingUser {
-  id: string;
-  name: string;
-  image?: string;
-}
+import { EditingUser } from "@/interfaces/EditingUser";
 
 export function useCardPresence(cardId: string, user: EditingUser) {
   const [editors, setEditors] = useState<EditingUser[]>([]);

@@ -9,17 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 import { getAblyClient } from "@/lib/ably";
 import axios from "axios";
 import type * as Ably from 'ably';
-
-interface Comment {
-  id: string;
-  content: string;
-  createdAt: string;
-  author: {
-    id: string;
-    name: string;
-    image?: string;
-  };
-}
+import { Comment } from "@/interfaces/Comment";
 
 export default function CommentThread({ cardId }: { cardId: string }) {
   const { data: session } = useSession();

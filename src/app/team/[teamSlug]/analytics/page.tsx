@@ -37,45 +37,7 @@ import {
   Timer,
   ArrowLeft
 } from 'lucide-react';
-
-interface TeamAnalytics {
-  // Overview stats
-  totalProjects: number;
-  completedProjects: number;
-  activeProjects: number;
-  totalTasks: number;
-  completedTasks: number;
-  activeTasks: number;
-  totalCards: number;
-  activeMembers: number;
-  taskCompletionRate: number;
-  avgTimeToComplete: number;
-  
-  // Chart data
-  projectProgress: {
-    id: string;
-    name: string;
-    slug: string;
-    totalTasks: number;
-    completedTasks: number;
-    progress: number;
-  }[];
-  weeklyVelocity: {
-    week: string;
-    completed: number;
-  }[];
-  cardTypeDistribution: {
-    type: string;
-    count: number;
-    percentage: number;
-  }[];
-  topContributors: {
-    userId: string;
-    userName: string;
-    cardsCreated: number;
-    cardsCompleted: number;
-  }[];
-}
+import { TeamAnalytics } from '@/interfaces/TeamAnalytics';
 
 const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 

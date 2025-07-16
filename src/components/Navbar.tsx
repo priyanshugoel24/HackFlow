@@ -7,7 +7,7 @@ import { useAblyPresence } from "@/lib/ably/useAblyPresence";
 import { useParams } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import SearchBar from "./SearchBar";
-import type { UserStatus } from "@/lib/store";
+import { UserStatus } from "@/interfaces/UserStatus";
 
 export default function Navbar() {
   const { data: session } = useSession();

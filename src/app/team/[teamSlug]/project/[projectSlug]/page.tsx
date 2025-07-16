@@ -24,33 +24,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import axios from "axios";
-
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  isArchived: boolean;
-  members?: Array<{
-    id: string;
-    userId: string;
-    role: string;
-    status: string;
-  }>;
-  lastActivityAt: string;
-  tags?: string[];
-  link?: string;
-  stats?: {
-    totalTasks: number;
-    completedTasks: number;
-    progress: number;
-  };
-}
-
-interface Team {
-  id: string;
-  name: string;
-  slug: string;
-}
+import { ProjectPageProject } from '@/interfaces/ProjectPageProject';
+import { ProjectPageTeam } from '@/interfaces/ProjectPageTeam';
 
 export default function TeamProjectPage() {
   const { data: session, status } = useSession();
@@ -59,8 +34,8 @@ export default function TeamProjectPage() {
   const teamSlug = params?.teamSlug as string;
   const projectSlug = params?.projectSlug as string;
 
-  const [project, setProject] = useState<Project | null>(null);
-  const [team, setTeam] = useState<Team | null>(null);
+  const [project, setProject] = useState<ProjectPageProject | null>(null);
+  const [team, setTeam] = useState<ProjectPageTeam | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

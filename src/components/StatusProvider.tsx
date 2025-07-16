@@ -2,15 +2,10 @@
 import React, { createContext, useContext, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { usePresenceStore } from "@/lib/store";
-import type { PresenceUser, UserStatus } from "@/lib/store";
+import { PresenceUser } from "@/interfaces/PresenceUser";
+import { UserStatus } from "@/interfaces/UserStatus";
+import { StatusContextType } from "@/interfaces/StatusContextType";
 import { useAblyPresence } from "@/lib/ably/useAblyPresence";
-
-interface StatusContextType {
-  status: UserStatus;
-  updateStatus: (status: UserStatus) => void;
-  onlineUsers: PresenceUser[];
-  isConnected: boolean;
-}
 
 const StatusContext = createContext<StatusContextType | undefined>(undefined);
 

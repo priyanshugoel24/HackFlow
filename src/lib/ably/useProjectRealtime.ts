@@ -3,36 +3,8 @@ import { useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { getAblyClient } from "@/lib/ably";
 import type Ably from 'ably';
-
-interface CardUpdate {
-  id: string;
-  title: string;
-  content: string;
-  type: string;
-  status: string;
-  updatedAt: string;
-  userId: string;
-  projectId: string;
-  user: {
-    id: string;
-    name: string;
-    image: string;
-  };
-}
-
-interface ActivityUpdate {
-  id: string;
-  type: string;
-  description: string;
-  createdAt: string;
-  userId: string;
-  projectId: string;
-  user: {
-    id: string;
-    name: string;
-    image: string;
-  };
-}
+import { CardUpdate } from "@/interfaces/CardUpdate";
+import { ActivityUpdate } from "@/interfaces/ActivityUpdate";
 
 export function useProjectRealtime(
   projectId: string | null,
