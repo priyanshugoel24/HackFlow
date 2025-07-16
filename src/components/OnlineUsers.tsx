@@ -1,13 +1,17 @@
 "use client";
 import React from "react";
-import { useAblyPresence, PresenceUser } from "@/lib/ably/useAblyPresence";
+import { usePresenceStore } from "@/lib/store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession } from "next-auth/react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAblyPresence } from "@/lib/ably/useAblyPresence";
 
 export default function OnlineUsers() {
   const { data: session } = useSession();
-  const { onlineUsers, isConnected, currentStatus } = useAblyPresence();
+  const { onlineUsers, isConnected, currentStatus } = usePresenceStore();
+  
+  // Initialize Ably presence. This hook now only manages the connection.
+  useAblyPresence();
 
   const allUsers = React.useMemo(() => {
     const currentUserInList = onlineUsers.find((u) => u.id === session?.user?.email);
@@ -19,14 +23,14 @@ export default function OnlineUsers() {
         u.id === session?.user?.email ? { ...u, status: currentStatus } : u
       );
     } else if (session?.user?.email) {
-      const currentUserData: PresenceUser = {
+      const currentUserData = {
         id: session.user.email,
         name: session.user.name || "You",
         image: session.user.image || undefined,
         status: currentStatus,
         lastSeen: new Date().toISOString(),
       };
-      users = [currentUserData, ...onlineUsers];
+      users = [currentUserData, ...users];
     }
 
     return users;

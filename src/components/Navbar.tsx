@@ -2,16 +2,18 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
-import { useStatus, type UserStatus } from "@/components/StatusProvider";
+import { usePresenceStore } from "@/lib/store";
 import { useAblyPresence } from "@/lib/ably/useAblyPresence";
 import { useParams } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import SearchBar from "./SearchBar";
+import type { UserStatus } from "@/lib/store";
 
 export default function Navbar() {
   const { data: session } = useSession();
-  const { status: userStatus, updateStatus: updateUserStatus } = useStatus();
-  const { isConnected } = useAblyPresence();
+  const { isConnected, currentStatus, updateUserStatus: updateStoreStatus } = usePresenceStore();
+  const { updateStatus } = useAblyPresence();
+  
   const [statusLoading, setStatusLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [error, setError] = useState<string>("");
@@ -24,18 +26,24 @@ export default function Navbar() {
     { value: "Focused", label: "Focused", color: "bg-red-500" },
   ];
 
-  const updateStatus = async (newState: UserStatus) => {
+  const handleStatusUpdate = async (newState: UserStatus) => {
+    if (!session?.user?.email) return;
+    
     setStatusLoading(true);
     setError("");
     
+    const oldStatus = currentStatus;
+    // Optimistically update the Zustand store
+    updateStoreStatus(session.user.email, newState);
+
     try {
-      // Update the status immediately for instant UI feedback
-      await updateUserStatus(newState);
+      await updateStatus(newState);
       setDropdownOpen(false);
-      console.log("✅ Status updated instantly:", newState);
     } catch (err) {
       setError("Failed to update status");
       console.error("❌ Error updating status:", err);
+      // Revert status in store if Ably update fails
+      updateStoreStatus(session.user.email, oldStatus);
     } finally {
       setStatusLoading(false);
     }
@@ -60,8 +68,7 @@ export default function Navbar() {
     return null;
   }
 
-  const currentStatus = userStatus || "Available";
-  const currentStatusConfig =
+  const statusConfig =
     statusOptions.find((option) => option.value === currentStatus) ||
     statusOptions[0];
 
@@ -105,7 +112,7 @@ export default function Navbar() {
               {session.user?.name || session.user?.email?.split("@")[0]}
             </span>
             <div
-              className={`w-2 h-2 rounded-full ${currentStatusConfig.color}`}
+              className={`w-2 h-2 rounded-full ${statusConfig.color}`}
             ></div>
             <svg
               className={`w-4 h-4 transition-transform ${
@@ -130,7 +137,7 @@ export default function Navbar() {
               {statusOptions.map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => updateStatus(option.value)}
+                  onClick={() => handleStatusUpdate(option.value)}
                   className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
                     currentStatus === option.value
                       ? "bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300"

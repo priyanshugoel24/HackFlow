@@ -1,29 +1,49 @@
 "use client";
-import React, { createContext, useContext } from "react";
-import { useAblyPresence, type UserStatus } from "@/lib/ably/useAblyPresence";
-
-// Re-export the UserStatus type for convenience
-export type { UserStatus };
+import React, { createContext, useContext, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { usePresenceStore } from "@/lib/store";
+import type { PresenceUser, UserStatus } from "@/lib/store";
+import { useAblyPresence } from "@/lib/ably/useAblyPresence";
 
 interface StatusContextType {
   status: UserStatus;
-  updateStatus: (status: UserStatus) => Promise<void>;
+  updateStatus: (status: UserStatus) => void;
+  onlineUsers: PresenceUser[];
   isConnected: boolean;
 }
 
 const StatusContext = createContext<StatusContextType | undefined>(undefined);
 
 export function StatusProvider({ children }: { children: React.ReactNode }) {
-  const { currentStatus, updateStatus, isConnected } = useAblyPresence();
+  // Initialize the Ably presence hook, which handles the connection
+  useAblyPresence();
+  const { data: session } = useSession();
+
+  const {
+    currentStatus,
+    onlineUsers,
+    isConnected,
+    updateUserStatus,
+    setCurrentStatus,
+  } = usePresenceStore();
+
+  const updateStatus = useCallback((newStatus: UserStatus) => {
+    const userEmail = session?.user?.email;
+    if (userEmail) {
+      updateUserStatus(userEmail, newStatus);
+    }
+    setCurrentStatus(newStatus);
+  }, [session, updateUserStatus, setCurrentStatus]);
+
+  const contextValue = {
+    status: currentStatus,
+    updateStatus,
+    onlineUsers,
+    isConnected,
+  };
 
   return (
-    <StatusContext.Provider
-      value={{
-        status: currentStatus,
-        updateStatus,
-        isConnected,
-      }}
-    >
+    <StatusContext.Provider value={contextValue}>
       {children}
     </StatusContext.Provider>
   );
