@@ -1,347 +1,123 @@
-"use client";
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { Loader2 } from "lucide-react";
+import ProjectSettingsPageClient from '@/components/ProjectSettingsPageClient';
+import { prisma } from '@/lib/prisma';
+import { Session } from 'next-auth';
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { Loader2, Save } from "lucide-react";
-import { getAblyClient } from "@/lib/ably";
-import { useSession } from "next-auth/react";
-import axios from "axios";
+interface ProjectSettingsPageProps {
+  params: Promise<{
+    teamSlug: string;
+    projectSlug: string;
+  }>;
+}
 
-export default function ProjectSettingsPage() {
-  // Team Project Settings Page - Route: /team/[teamSlug]/project/[projectSlug]/settings
-  const { data: session } = useSession();
-  const { projectSlug } = useParams();
-  const router = useRouter();
-  const [project, setProject] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+// Server-side data fetching
+async function fetchProject(projectSlug: string): Promise<any> {
+  try {
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session?.user?.email) {
+      return null;
+    }
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [link, setLink] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState("");
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: session.user.email },
+      update: {
+        name: session.user.name,
+        image: session.user.image,
+      },
+      create: {
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
+      },
+    });
 
-  useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        const res = await axios.get(`/api/projects/${projectSlug}`);
-        const data = res.data;
-        setProject(data.project);
-        setName(data.project.name || "");
-        setDescription(data.project.description || "");
-        setLink(data.project.link || "");
-        setTags(data.project.tags || []);
+    const project = await prisma.project.findUnique({
+      where: { slug: projectSlug },
+      include: {
+        team: {
+          include: {
+            members: {
+              include: {
+                user: true,
+              },
+              where: { status: 'ACTIVE' },
+            },
+          },
+        },
+        createdBy: true,
+        members: {
+          include: {
+            user: true,
+          },
+        },
+        contextCards: {
+          include: {
+            user: true,
+            assignedTo: true,
+          },
+          where: { isArchived: false },
+        },
+      },
+    });
 
-        const ably = getAblyClient();
-        const channel = ably.channels.get(`project:${data.project.id}`);
+    if (!project || !project.team) {
+      return null;
+    }
 
-        const handleProjectUpdate = (msg: any) => {
-          const updated = msg.data;
-          setProject((prev: any) => ({
-            ...prev,
-            ...updated,
-          }));
-          setName(updated.name || "");
-          setDescription(updated.description || "");
-          setLink(updated.link || "");
-          setTags(updated.tags || []);
-        };
+    // Check if user is a member of the project's team
+    const userMembership = project.team.members.find(
+      (member) => member.user.id === user.id
+    );
 
-        channel.subscribe("project:updated", handleProjectUpdate);
+    if (!userMembership) {
+      return null;
+    }
 
-        channel.subscribe("member:removed", (msg: any) => {
-          setProject((prev: any) => ({
-            ...prev,
-            members: prev.members.filter((m: any) => m.user.id !== msg.data.userId),
-          }));
-        });
-
-        channel.subscribe("member:added", (msg: any) => {
-          setProject((prev: any) => ({
-            ...prev,
-            members: [...prev.members, msg.data],
-          }));
-        });
-
-        channel.subscribe("member:accepted", (msg: any) => {
-          setProject((prev: any) => ({
-            ...prev,
-            members: prev.members.map((m: any) => 
-              m.user.id === msg.data.userId 
-                ? { ...m, status: "ACTIVE", joinedAt: msg.data.joinedAt }
-                : m
-            ),
-          }));
-        });
-
-        channel.subscribe("member:declined", (msg: any) => {
-          setProject((prev: any) => ({
-            ...prev,
-            members: prev.members.filter((m: any) => m.user.id !== msg.data.userId),
-          }));
-        });
-
-        return () => {
-          channel.unsubscribe("project:updated", handleProjectUpdate);
-          channel.unsubscribe("member:removed");
-          channel.unsubscribe("member:added");
-          channel.unsubscribe("member:accepted");
-          channel.unsubscribe("member:declined");
-          ably.channels.release(`project:${data.project.id}`);
-        };
-      } catch (error: any) {
-        toast.error(error.response?.data?.error || "Failed to fetch project");
-      } finally {
-        setLoading(false);
-      }
+    return {
+      ...project,
+      createdAt: project.createdAt.toISOString(),
+      lastActivityAt: project.lastActivityAt.toISOString(),
+      contextCards: project.contextCards.map(card => ({
+        ...card,
+        createdAt: card.createdAt.toISOString(),
+        updatedAt: card.updatedAt.toISOString(),
+      })),
     };
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    return null;
+  }
+}
 
-    if (projectSlug) fetchProject();
-  }, [projectSlug]);
+export default async function ProjectSettingsPage({ params }: ProjectSettingsPageProps) {
+  const session = await getServerSession(authOptions);
+  
+  if (!session) {
+    redirect('/');
+  }
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await axios.patch(`/api/projects/${projectSlug}`, {
-        name,
-        description,
-        link,
-        tags
-      });
-      toast.success("Project updated successfully");
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Error updating project");
-    } finally {
-      setSaving(false);
-    }
-  };
+  const { projectSlug } = await params;
+  const project = await fetchProject(projectSlug);
 
-  const handleAddTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag("");
-    }
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag));
-  };
-
-  if (loading) {
+  if (!project) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="animate-spin h-8 w-8 text-muted-foreground" />
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Project not found</h2>
+          <p className="text-muted-foreground">The project you're looking for doesn't exist or you don't have access to it.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="bg-background min-h-screen py-16 px-6 sm:px-8 md:px-12">
-        <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-zinc-800">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="mb-6 flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white transition"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Project
-          </Button>
-          <h1 className="text-4xl font-bold mb-10 text-zinc-800 dark:text-zinc-100 tracking-tight">Project Settings</h1>
-
-        <section className="border-b border-gray-200 dark:border-zinc-700 pb-8 mb-10">
-          <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6">Project Info</h2>
-          <div className="space-y-6">
-            <div>
-              <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2 block">Project Name</label>
-              <Input 
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
-                className="rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500" 
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2 block">Description</label>
-              <Textarea 
-                value={description} 
-                onChange={(e) => setDescription(e.target.value)} 
-                className="rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500" 
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2 block">Link</label>
-              <Input 
-                value={link} 
-                onChange={(e) => setLink(e.target.value)} 
-                className="rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500" 
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="border-b border-gray-200 dark:border-zinc-700 pb-8 mb-10">
-          <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6">Tags</h2>
-          <div className="flex items-center gap-3 mb-5">
-            <Input
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              placeholder="Add tag"
-              className="flex-1 rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400 dark:placeholder:text-gray-500"
-            />
-            <Button 
-              variant="outline" 
-              onClick={handleAddTag} 
-              className="transition-all focus:ring-2 focus:ring-indigo-500 px-4 py-2"
-            >
-              Add
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <Badge
-                key={tag}
-                variant="secondary"
-                className="cursor-pointer hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors rounded-lg px-3 py-1 select-none"
-                onClick={() => handleRemoveTag(tag)}
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        </section>
-
-        {project?.members && (
-          <section className="pb-8">
-            <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6 border-b border-gray-200 dark:border-zinc-700 pb-3">Team Members</h2>
-            <ul className="space-y-4">
-              {project.members.map((member: any) => (
-                <li
-                  key={member.user.id}
-                  className="flex items-center justify-between border border-gray-200 dark:border-zinc-700 bg-muted px-5 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition gap-5 hover:ring-1 hover:ring-indigo-500"
-                >
-                  <div className="flex items-center gap-5">
-                    <img
-                      src={member.user.image || "/fallback-avatar.png"}
-                      alt={member.user.name}
-                      className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-300 dark:ring-zinc-600"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{member.user.name || member.user.email}</p>
-                      <p className="text-xs text-muted-foreground dark:text-gray-400">{member.role}</p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:bg-red-100 dark:hover:bg-red-900 text-xs px-2 py-1 rounded-md"
-                    onClick={async () => {
-                      // Confirm before removing
-                      if (!confirm("Are you sure you want to remove this member?")) return;
-                      // Prevent removing the project creator
-                      if (member.user.id === project.createdById) {
-                        toast.error("You cannot remove the project creator.");
-                        return;
-                      }
-                      try {
-                        await axios.delete(`/api/projects/${projectSlug}/members/${member.user.id}`);
-                        toast.success("Member removed");
-                        setProject((prev: any) => ({
-                          ...prev,
-                          members: prev.members.filter((m: any) => m.user.id !== member.user.id),
-                        }));
-                        const ably = getAblyClient();
-                        const channel = ably.channels.get(`project:${project.id}`);
-                        channel.publish("member:removed", { userId: member.user.id });
-                      } catch (error: any) {
-                        toast.error(error.response?.data?.error || "Error removing member");
-                      }
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        <section className="pt-8 border-t border-gray-200 dark:border-zinc-700">
-          <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-6">Project Status</h2>
-          <div className="mb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-md font-medium text-zinc-900 dark:text-zinc-100">
-                  {project?.isArchived ? "Archived Project" : "Active Project"}
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {project?.isArchived 
-                    ? "This project is currently archived. Unarchive to make it active again." 
-                    : "Archive this project to hide it from active views."}
-                </p>
-              </div>
-              {/* Only show if user is project creator or manager */}
-              {(project?.createdById === (session?.user as any)?.id || 
-                project?.members?.some((m: any) => 
-                  m.userId === (session?.user as any)?.id && m.role === "MANAGER" && m.status === "ACTIVE"
-                )) && (
-                <Button
-                  variant="outline"
-                  className={`transition-all focus:ring-2 ${
-                    project?.isArchived 
-                      ? "text-green-600 hover:text-green-800 focus:ring-green-500" 
-                      : "text-orange-600 hover:text-orange-800 focus:ring-orange-500"
-                  }`}
-                  onClick={async () => {
-                    const action = project?.isArchived ? "unarchive" : "archive";
-                    if (!confirm(`Are you sure you want to ${action} this project?`)) {
-                      return;
-                    }
-
-                    try {
-                      await axios.patch(`/api/projects/${project.id}/archive`, {
-                        isArchived: !project.isArchived,
-                      });
-                      setProject({
-                        ...project,
-                        isArchived: !project.isArchived,
-                      });
-                      toast.success(`Project ${action}d`, {
-                        description: `The project has been ${action}d successfully.`,
-                      });
-                    } catch (error: any) {
-                      console.error(`Error ${action}ing project:`, error);
-                      toast.error(`Error ${action}ing project`, {
-                        description: error.response?.data?.error || "An unexpected error occurred. Please try again.",
-                      });
-                    }
-                  }}
-                >
-                  {project?.isArchived ? "Unarchive Project" : "Archive Project"}
-                </Button>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <div className="pt-8 flex justify-end">
-          <Button onClick={handleSave} disabled={saving} className="transition-all focus:ring-2 focus:ring-indigo-500">
-            {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            {!saving && <Save className="h-4 w-4 mr-2" />}
-            Save Changes
-          </Button>
-        </div>
-        </div>
-      </div>
-    </div>
+    <ProjectSettingsPageClient 
+      project={project}
+      projectSlug={projectSlug}
+    />
   );
 }

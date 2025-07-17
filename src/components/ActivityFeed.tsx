@@ -12,15 +12,21 @@ import { ActivityFeedProps } from "@/interfaces/ActivityFeedProps";
 import { Activity } from "@/interfaces/Activity";
 import { channelsConfig } from '@/config/channels';
 
-export default function ActivityFeed({ projectId, slug, teamSlug }: ActivityFeedProps) {
+export default function ActivityFeed({ projectId, slug, teamSlug, initialActivities }: ActivityFeedProps) {
   const { data: session } = useSession();
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState<Activity[]>(initialActivities || []);
+  const [loading, setLoading] = useState(!initialActivities);
   const [actualProjectId, setActualProjectId] = useState<string | null>(null);
 
   const identifier = projectId || slug;
 
   useEffect(() => {
+    // If we have initial activities, don't fetch them again
+    if (initialActivities && initialActivities.length > 0) {
+      setLoading(false);
+      return;
+    }
+
     if (!identifier && !teamSlug) return;
 
     const fetchActivities = async () => {
@@ -55,7 +61,7 @@ export default function ActivityFeed({ projectId, slug, teamSlug }: ActivityFeed
     };
 
     fetchActivities();
-  }, [identifier, projectId, slug, teamSlug]);
+  }, [identifier, projectId, slug, teamSlug, initialActivities]);
 
   useEffect(() => {
     if (!actualProjectId || !session?.user) return;

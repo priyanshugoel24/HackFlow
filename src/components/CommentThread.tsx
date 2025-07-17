@@ -67,7 +67,10 @@ export default function CommentThread({ cardId }: { cardId: string }) {
     setNewComment("");
     fetchComments();
 
-    const ably = getAblyClient();
+    const user = session?.user as { id: string } | undefined;
+    if (!user?.id) return;
+
+    const ably = getAblyClient(user.id);
     const channel = ably.channels.get(channelsConfig.CARD_COMMENTS(cardId));
 
     const handleNewComment = (msg: Ably.Message) => {
@@ -91,18 +94,17 @@ export default function CommentThread({ cardId }: { cardId: string }) {
       });
     };
 
+    // Subscribe to the channel (this will auto-attach if needed)
     channel.subscribe("comment:created", handleNewComment);
 
     return () => {
+      // Only unsubscribe from our specific event handler
       channel.unsubscribe("comment:created", handleNewComment);
-      channel.once("attached", () => {
-        channel.detach();
-        channel.once("detached", () => {
-          ably.channels.release(channelsConfig.CARD_COMMENTS(cardId));
-        });
-      });
+      
+      // Don't try to detach or release channels - let Ably handle the lifecycle
+      // This prevents race conditions between attach/detach operations
     };
-  }, [cardId]);
+  }, [cardId, session?.user]);
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return;

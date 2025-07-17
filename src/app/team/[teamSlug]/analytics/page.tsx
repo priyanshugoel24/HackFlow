@@ -1,29 +1,15 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
 import BackButton from '@/components/ui/BackButton';
-import axios from 'axios';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
+import AnalyticsCharts from '@/components/AnalyticsCharts';
+import WeeklyVelocityChart from '@/components/charts/WeeklyVelocityChart';
+import CardTypeDistributionChart from '@/components/charts/CardTypeDistributionChart';
+import TopContributorsChart from '@/components/charts/TopContributorsChart';
 import { 
   Target, 
   CheckCircle, 
@@ -35,42 +21,174 @@ import {
   Calendar,
   Award,
   Timer,
-  ArrowLeft
 } from 'lucide-react';
 import { TeamAnalytics } from '@/interfaces/TeamAnalytics';
 import { analyticsConfig } from '@/config/analytics';
+import { prisma } from '@/lib/prisma';
+import { Session } from 'next-auth';
 
-export default function TeamAnalyticsPage() {
-  const { teamSlug } = useParams();
-  const router = useRouter();
-  const [analytics, setAnalytics] = useState<TeamAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
+interface TeamAnalyticsPageProps {
+  params: Promise<{ teamSlug: string }>;
+}
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [teamSlug]);
-
-  const fetchAnalytics = async () => {
-    try {
-      const response = await axios.get(`/api/teams/${teamSlug}/analytics`);
-      setAnalytics(response.data);
-    } catch (error) {
-      console.error('Error fetching team analytics:', error);
-    } finally {
-      setLoading(false);
+// Server-side data fetching
+async function fetchTeamAnalytics(teamSlug: string): Promise<TeamAnalytics | null> {
+  try {
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session?.user?.email) {
+      return null;
     }
-  };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </div>
+    // First, ensure the user exists in the database and get the actual user
+    const user = await prisma.user.upsert({
+      where: { email: session.user.email },
+      update: {
+        name: session.user.name,
+        image: session.user.image,
+      },
+      create: {
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
+      },
+    });
+
+    const team = await prisma.team.findUnique({
+      where: { slug: teamSlug },
+      include: {
+        members: {
+          include: {
+            user: true,
+          },
+          where: { status: 'ACTIVE' },
+        },
+        projects: {
+          include: {
+            contextCards: {
+              include: {
+                user: true,
+              },
+            },
+          },
+          where: { isArchived: false },
+        },
+      },
+    });
+
+    if (!team) {
+      return null;
+    }
+
+    // Check if user is a member of this team
+    const userMembership = team.members.find(
+      (member) => member.user.id === user.id
     );
+
+    if (!userMembership) {
+      return null;
+    }
+
+    // Calculate analytics
+    const totalProjects = team.projects.length;
+    const completedProjects = team.projects.filter(p => 
+      p.contextCards.length > 0 && p.contextCards.every(c => c.status === 'CLOSED')
+    ).length;
+    const activeProjects = totalProjects - completedProjects;
+
+    const allCards = team.projects.flatMap(p => p.contextCards);
+    const totalCards = allCards.length;
+    const totalTasks = allCards.filter(c => c.type === 'TASK').length;
+    const completedTasks = allCards.filter(c => c.type === 'TASK' && c.status === 'CLOSED').length;
+    const activeTasks = totalTasks - completedTasks;
+    const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    const activeMembers = team.members.length;
+
+    // Calculate average time to complete (simplified)
+    const avgTimeToComplete = 2.5; // Placeholder number
+
+    // Project progress
+    const projectProgress = team.projects.map(project => {
+      const projectTasks = project.contextCards.filter(c => c.type === 'TASK');
+      const projectCompletedTasks = projectTasks.filter(c => c.status === 'CLOSED').length;
+      const progress = projectTasks.length > 0 ? Math.round((projectCompletedTasks / projectTasks.length) * 100) : 0;
+      
+      return {
+        id: project.id,
+        name: project.name,
+        slug: project.slug,
+        progress,
+        completedTasks: projectCompletedTasks,
+        totalTasks: projectTasks.length,
+      };
+    });
+
+    // Weekly velocity (simplified - returning empty for now)
+    const weeklyVelocity = Array.from({ length: 8 }, (_, i) => ({
+      week: `Week ${i + 1}`,
+      completed: 0,
+      created: 0,
+    }));
+
+    // Card type distribution
+    const cardTypes = allCards.reduce((acc, card) => {
+      acc[card.type] = (acc[card.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const cardTypeDistribution = Object.entries(cardTypes).map(([type, count]) => ({
+      type,
+      count,
+      percentage: totalCards > 0 ? Math.round((count / totalCards) * 100) : 0,
+    }));
+
+    // Top contributors
+    const contributors = allCards.reduce((acc, card) => {
+      const userId = card.user.id;
+      const userName = card.user.name || card.user.email || 'Unknown';
+      if (!acc[userId]) {
+        acc[userId] = { userId, userName, cardsCreated: 0, cardsCompleted: 0 };
+      }
+      acc[userId].cardsCreated += 1;
+      if (card.status === 'CLOSED') {
+        acc[userId].cardsCompleted += 1;
+      }
+      return acc;
+    }, {} as Record<string, { userId: string; userName: string; cardsCreated: number; cardsCompleted: number; }>);
+
+    const topContributors = Object.values(contributors)
+      .sort((a, b) => b.cardsCreated - a.cardsCreated)
+      .slice(0, 5);
+
+    return {
+      totalProjects,
+      completedProjects,
+      activeProjects,
+      totalCards,
+      totalTasks,
+      completedTasks,
+      activeTasks,
+      taskCompletionRate,
+      activeMembers,
+      avgTimeToComplete,
+      projectProgress,
+      weeklyVelocity,
+      cardTypeDistribution,
+      topContributors,
+    } as TeamAnalytics;
+  } catch (error) {
+    console.error('Error fetching team analytics:', error);
+    return null;
   }
+}
+
+export default async function TeamAnalyticsPage({ 
+  params 
+}: TeamAnalyticsPageProps) {
+  const { teamSlug } = await params;
+  
+  // Fetch data server-side
+  const analytics = await fetchTeamAnalytics(teamSlug);
 
   if (!analytics) {
     return (
@@ -156,6 +274,9 @@ export default function TeamAnalyticsPage() {
           </Card>
         </div>
 
+        {/* Analytics Charts */}
+        <AnalyticsCharts analytics={analytics} />
+
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Project Progress */}
@@ -201,37 +322,7 @@ export default function TeamAnalyticsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={analytics.weeklyVelocity}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis 
-                    dataKey="week" 
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px'
-                    }}
-                    labelFormatter={(label) => `Week of ${label}`}
-                    formatter={(value) => [`${value} tasks`, 'Completed']}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="completed" 
-                    stroke="#3b82f6" 
-                    strokeWidth={3}
-                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <WeeklyVelocityChart data={analytics.weeklyVelocity} />
               {analytics.weeklyVelocity.every(week => week.completed === 0) && (
                 <div className="text-center text-muted-foreground mt-4">
                   <p className="text-sm">No tasks completed in the last 8 weeks</p>
@@ -254,31 +345,7 @@ export default function TeamAnalyticsPage() {
               {analytics.cardTypeDistribution.length > 0 ? (
                 <div className="flex flex-col lg:flex-row items-center">
                   <div className="w-full lg:w-1/2 h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={analytics.cardTypeDistribution}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="count"
-                          label={({ type, percentage }) => `${type}: ${percentage}%`}
-                        >
-                          {analytics.cardTypeDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={analyticsConfig.chartColors[index % analyticsConfig.chartColors.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '6px'
-                          }}
-                          formatter={(value, name) => [`${value} cards`, name]}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <CardTypeDistributionChart data={analytics.cardTypeDistribution} />
                   </div>
                   <div className="w-full lg:w-1/2 space-y-3">
                     {analytics.cardTypeDistribution.map((item, index) => (
@@ -319,51 +386,7 @@ export default function TeamAnalyticsPage() {
             <CardContent>
               {analytics.topContributors.length > 0 ? (
                 <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={analytics.topContributors.slice(0, 6)} 
-                      layout="horizontal"
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis 
-                        type="number"
-                        tick={{ fontSize: 12 }}
-                        className="text-muted-foreground"
-                      />
-                      <YAxis 
-                        type="category"
-                        dataKey="userName"
-                        tick={{ fontSize: 12 }}
-                        className="text-muted-foreground"
-                        width={100}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '6px'
-                        }}
-                        formatter={(value, name) => [
-                          value,
-                          name === 'cardsCreated' ? 'Cards Created' : 'Cards Completed'
-                        ]}
-                      />
-                      <Legend />
-                      <Bar 
-                        dataKey="cardsCreated" 
-                        fill="#3b82f6" 
-                        name="Created"
-                        radius={[0, 2, 2, 0]}
-                      />
-                      <Bar 
-                        dataKey="cardsCompleted" 
-                        fill="#10b981" 
-                        name="Completed"
-                        radius={[0, 2, 2, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <TopContributorsChart data={analytics.topContributors} />
                 </div>
               ) : (
                 <div className="text-center py-8">

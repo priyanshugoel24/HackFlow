@@ -4,20 +4,24 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req });
-    if (!token?.sub) {
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET
+    });
+    
+    if (!token?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // First, ensure the user exists in the database and get the actual user
     const user = await prisma.user.upsert({
-      where: { email: token.email! },
+      where: { email: token.email },
       update: {
         name: token.name,
         image: token.picture,
       },
       create: {
-        email: token.email!,
+        email: token.email,
         name: token.name,
         image: token.picture,
       },
@@ -56,20 +60,24 @@ export async function GET(req: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getToken({ req: request });
-    if (!token?.sub) {
+    const token = await getToken({ 
+      req: request, 
+      secret: process.env.NEXTAUTH_SECRET
+    });
+    
+    if (!token?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // First, ensure the user exists in the database and get the actual user
     const user = await prisma.user.upsert({
-      where: { email: token.email! },
+      where: { email: token.email },
       update: {
         name: token.name,
         image: token.picture,
       },
       create: {
-        email: token.email!,
+        email: token.email,
         name: token.name,
         image: token.picture,
       },
