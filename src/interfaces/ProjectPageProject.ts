@@ -1,3 +1,5 @@
+import { Activity } from './Activity';
+
 export interface ProjectPageProject {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ export interface ProjectPageProject {
   lastActivityAt: string;
   tags?: string[];
   link?: string;
+  activities?: Activity[];
   stats?: {
     totalTasks: number;
     completedTasks: number;

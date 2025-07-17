@@ -101,8 +101,26 @@ export default function CommentThread({ cardId }: { cardId: string }) {
       // Only unsubscribe from our specific event handler
       channel.unsubscribe("comment:created", handleNewComment);
       
-      // Don't try to detach or release channels - let Ably handle the lifecycle
-      // This prevents race conditions between attach/detach operations
+      // Improved cleanup to prevent race conditions
+      const cleanupChannel = async () => {
+        try {
+          // Check if channel is in a state where it can be safely detached
+          if (channel.state === 'attached') {
+            // Wait a small amount to allow any pending operations to complete
+            await new Promise(resolve => setTimeout(resolve, 10));
+            
+            // Only detach if still attached after the wait
+            if (channel.state === 'attached') {
+              await channel.detach();
+            }
+          }
+        } catch (error) {
+          // Silently handle any detach errors to prevent console spam
+          console.debug('Channel cleanup completed with minor issues:', error instanceof Error ? error.message : 'Unknown error');
+        }
+      };
+      
+      cleanupChannel();
     };
   }, [cardId, session?.user]);
 

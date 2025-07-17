@@ -163,7 +163,10 @@ export default function ProjectPageClient({
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Recent Activity
               </h3>
-              <ActivityFeed projectId={project.id} />
+              <ActivityFeed 
+                projectId={project.id} 
+                initialActivities={project.activities || []}
+              />
             </div>
 
             {/* Online Team Members */}

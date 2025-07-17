@@ -69,6 +69,18 @@ async function fetchProjectData(teamSlug: string, projectSlug: string): Promise<
             user: true,
           },
         },
+        activities: {
+          include: {
+            user: {
+              select: { id: true, name: true, image: true },
+            },
+            project: {
+              select: { id: true, name: true, slug: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        },
       },
     });
 
@@ -94,6 +106,10 @@ async function fetchProjectData(teamSlug: string, projectSlug: string): Promise<
           ...card,
           createdAt: card.createdAt.toISOString(),
           updatedAt: card.updatedAt.toISOString(),
+        })),
+        activities: project.activities.map(activity => ({
+          ...activity,
+          createdAt: activity.createdAt.toISOString(),
         })),
       } as unknown as ProjectPageProject,
       team: {
