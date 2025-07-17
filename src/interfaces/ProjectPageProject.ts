@@ -1,4 +1,5 @@
 import { Activity } from './Activity';
+import { ContextCardWithRelations } from './ContextCardWithRelations';
 
 export interface ProjectPageProject {
   id: string;
@@ -15,6 +16,7 @@ export interface ProjectPageProject {
   tags?: string[];
   link?: string;
   activities?: Activity[];
+  contextCards?: ContextCardWithRelations[];
   stats?: {
     totalTasks: number;
     completedTasks: number;

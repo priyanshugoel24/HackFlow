@@ -152,7 +152,11 @@ export default function ProjectPageClient({
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Context Cards */}
           <div className="lg:col-span-3">
-            <ContextCardList projectSlug={projectSlug} />
+            <ContextCardList 
+              projectSlug={projectSlug} 
+              initialCards={project.contextCards || []}
+              project={project as any}
+            />
           </div>
 
           {/* Sidebar */}

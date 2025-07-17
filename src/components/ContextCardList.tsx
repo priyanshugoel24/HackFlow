@@ -32,35 +32,47 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export default function ContextCardList({ projectSlug }: { projectSlug: string }) {
-  const [cards, setCards] = useState<ContextCardWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
+interface ContextCardListProps {
+  projectSlug: string;
+  initialCards?: ContextCardWithRelations[];
+  project?: ProjectWithRelations;
+}
+
+export default function ContextCardList({ 
+  projectSlug, 
+  initialCards = [], 
+  project: initialProject 
+}: ContextCardListProps) {
+  const [cards, setCards] = useState<ContextCardWithRelations[]>(initialCards);
+  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<ContextCardWithRelations | null>(null);
-  const [project, setProject] = useState<ProjectWithRelations | null>(null);
+  const [project, setProject] = useState<ProjectWithRelations | null>(initialProject || null);
   const [showArchived, setShowArchived] = useState(false);
-  const [allCards, setAllCards] = useState<ContextCardWithRelations[]>([]);
+  const [allCards, setAllCards] = useState<ContextCardWithRelations[]>(initialCards);
   const [smartComposeOpen, setSmartComposeOpen] = useState(false);
   const [cardTypeFilter, setCardTypeFilter] = useState<'ALL' | 'TASK' | 'INSIGHT' | 'DECISION'>('ALL');
 
-  const fetchCards = async () => {
-    if (!projectSlug) return;
-    
-    try {
-      const res = await axios.get(`/api/projects/${projectSlug}?includeArchived=true`);
-      const data = res.data;
-      setAllCards(data.project?.contextCards || []);
-      // Filter cards based on showArchived state
-      const filteredCards = data.project?.contextCards?.filter((card: any) => 
-        showArchived ? true : !card.isArchived
-      ) || [];
-      setCards(filteredCards);
-      setProject(data.project);
-    } catch (error) {
-      console.error("Error fetching cards:", error);
-    } finally {
-      setLoading(false);
+  // Update cards when initialCards prop changes
+  useEffect(() => {
+    setAllCards(initialCards);
+    const filteredCards = initialCards.filter((card: any) => 
+      showArchived ? true : !card.isArchived
+    );
+    setCards(filteredCards);
+  }, [initialCards, showArchived]);
+
+  // Update project when initialProject prop changes
+  useEffect(() => {
+    if (initialProject) {
+      setProject(initialProject);
     }
+  }, [initialProject]);
+
+  const refreshCards = () => {
+    // For real-time updates, we can trigger a page refresh
+    // In a production app, you might want to implement a more sophisticated solution
+    window.location.reload();
   };
 
   // Real-time updates using Ably
@@ -68,11 +80,11 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
     project?.id || null,
     (newCard) => {
       console.log("📨 Real-time card created:", newCard);
-      fetchCards(); // Refresh to get the latest data with proper typing
+      refreshCards(); // Refresh to get the latest data with proper typing
     },
     (updatedCard) => {
       console.log("📝 Real-time card updated:", updatedCard);
-      fetchCards(); // Refresh to get the latest data with proper typing
+      refreshCards(); // Refresh to get the latest data with proper typing
     },
     (deletedCardId) => {
       console.log("🗑️ Real-time card deleted:", deletedCardId);
@@ -86,7 +98,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
   );
 
   useEffect(() => {
-    fetchCards();
+    // No need to fetch cards since we get them as props
   }, [projectSlug]);
 
   // Update displayed cards when showArchived changes
@@ -100,7 +112,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
   }, [showArchived, allCards]);
 
   const handleCardCreated = () => {
-    fetchCards(); // Refresh the cards after creating a new one
+    refreshCards(); // Refresh the cards after creating a new one
   };
 
   if (loading) {
@@ -381,7 +393,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
         setOpen={setSmartComposeOpen}
         projectSlug={projectSlug}
         onSuccess={() => {
-          fetchCards(); // Refresh cards after creating via Smart Compose
+          refreshCards(); // Refresh cards after creating via Smart Compose
         }}
       />
       {/* Render modal for editing/viewing a card */}
@@ -403,7 +415,7 @@ export default function ContextCardList({ projectSlug }: { projectSlug: string }
           } as any : undefined}
           onSuccess={() => {
             setSelectedCard(null);
-            fetchCards();
+            refreshCards();
           }}
         />
       )}
