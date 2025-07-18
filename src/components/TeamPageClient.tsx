@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
@@ -67,6 +67,32 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
     }
   }, [team]);
 
+  // Prefetch important project and team routes when team loads
+  useEffect(() => {
+    if (team && teamSlug) {
+      // Prefetch key team routes
+      router.prefetch(`/team/${teamSlug}/analytics`);
+      router.prefetch(`/team/${teamSlug}/settings`);
+      router.prefetch(`/team/${teamSlug}/assigned-cards`);
+      
+      // Prefetch project pages for active projects only (limit to most important ones)
+      if (team.projects) {
+        team.projects
+          .filter(project => !project.isArchived)
+          .slice(0, 3) // Limit to first 3 active projects to avoid over-prefetching
+          .forEach(project => {
+            router.prefetch(`/team/${teamSlug}/project/${project.slug}`);
+            router.prefetch(`/team/${teamSlug}/project/${project.slug}/analytics`);
+          });
+      }
+
+      // Prefetch hackathon room if hackathon mode is enabled
+      if (team.hackathonModeEnabled) {
+        router.prefetch(`/team/${teamSlug}/hackathon`);
+      }
+    }
+  }, [team, teamSlug, router]);
+
   const fetchTeam = async () => {
     try {
       const response = await axios.get(`/api/teams/${teamSlug}`);
@@ -88,6 +114,13 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
   const handleProjectClick = (project: TeamPageProject) => {
     router.push(`/team/${teamSlug}/project/${project.slug}`);
   };
+
+  // Handle project card hover - prefetch project routes
+  const handleProjectHover = useCallback((project: TeamPageProject) => {
+    router.prefetch(`/team/${teamSlug}/project/${project.slug}`);
+    router.prefetch(`/team/${teamSlug}/project/${project.slug}/analytics`);
+    router.prefetch(`/team/${teamSlug}/project/${project.slug}/settings`);
+  }, [teamSlug, router]);
 
   const handleToggleFocusCard = (card: ContextCardWithRelations) => {
     setSelectedCards(prev => {
@@ -200,6 +233,7 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
                   variant="outline"
                   size="sm"
                   onClick={() => router.push(`/team/${teamSlug}/analytics`)}
+                  onMouseEnter={() => router.prefetch(`/team/${teamSlug}/analytics`)}
                 >
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Analytics
@@ -351,6 +385,7 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
                         className={`cursor-pointer hover:shadow-lg transition-shadow ${
                           project.isArchived ? 'opacity-60 bg-muted/50' : ''
                         }`}
+                        onMouseEnter={() => handleProjectHover(project)}
                       >
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">

@@ -41,6 +41,20 @@ export default function SearchBar() {
     }
   }, [router]);
 
+  // Handle search result hover - prefetch relevant routes
+  const handleResultHover = useCallback((item: SearchResult) => {
+    if (item.type === "project") {
+      router.prefetch(`/projects/${item.slug}`);
+      router.prefetch(`/projects/${item.slug}/analytics`);
+    } else if (item.type === "team") {
+      router.prefetch(`/team/${item.slug}`);
+      router.prefetch(`/team/${item.slug}/analytics`);
+      router.prefetch(`/team/${item.slug}/settings`);
+    } else if (item.type === "card" && item.projectSlug) {
+      router.prefetch(`/projects/${item.projectSlug}`);
+    }
+  }, [router]);
+
   const handleSubmit = useCallback(async () => {
     if (!query.trim() || isLoading) return;
     
@@ -304,6 +318,7 @@ export default function SearchBar() {
                       <button
                         key={item.id}
                         onClick={() => handleSelect(item)}
+                        onMouseEnter={() => handleResultHover(item)}
                         className={cn(
                           "w-full flex items-center gap-3 px-2 py-2 text-left rounded-md transition-colors",
                           selectedIndex === results.indexOf(item)
@@ -338,6 +353,7 @@ export default function SearchBar() {
                       <button
                         key={item.id}
                         onClick={() => handleSelect(item)}
+                        onMouseEnter={() => handleResultHover(item)}
                         className={cn(
                           "w-full flex items-center gap-3 px-2 py-2 text-left rounded-md transition-colors",
                           selectedIndex === results.indexOf(item)
@@ -372,6 +388,7 @@ export default function SearchBar() {
                       <button
                         key={item.id}
                         onClick={() => handleSelect(item)}
+                        onMouseEnter={() => handleResultHover(item)}
                         className={cn(
                           "w-full flex items-center gap-3 px-2 py-2 text-left rounded-md transition-colors",
                           selectedIndex === results.indexOf(item)

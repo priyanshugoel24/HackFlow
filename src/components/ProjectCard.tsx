@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -21,6 +21,15 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const router = useRouter();
+
+  // Handle project hover - prefetch related routes
+  const handleProjectHover = useCallback((projectSlug: string) => {
+    router.prefetch(`/projects/${projectSlug}`);
+    // Also prefetch potential team-based project routes if this is accessed from a team context
+    // This covers cases where projects might be viewed through teams
+    router.prefetch(`/projects/${projectSlug}/analytics`);
+    router.prefetch(`/projects/${projectSlug}/settings`);
+  }, [router]);
 
   const fetchProjects = async () => {
     try {
@@ -126,6 +135,7 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
               project.isArchived && "opacity-60"
             )}
             onClick={() => handleProjectClick(project.slug)}
+            onMouseEnter={() => handleProjectHover(project.slug)}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center space-x-2 flex-1">

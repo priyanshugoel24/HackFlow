@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +41,31 @@ export default function TeamsDisplay({ initialTeams }: TeamsDisplayProps) {
       setLoading(false);
     }
   };
+
+  // Prefetch team routes when teams are available
+  useEffect(() => {
+    teams.forEach((team) => {
+      if (team.slug) {
+        // Prefetch main team page for all teams
+        router.prefetch(`/team/${team.slug}`);
+        
+        // Prefetch important sub-pages for teams with projects
+        if (team._count?.projects && team._count.projects > 0) {
+          router.prefetch(`/team/${team.slug}/analytics`);
+          router.prefetch(`/team/${team.slug}/settings`);
+        }
+      }
+    });
+  }, [teams, router]);
+
+  // Handle team card hover - prefetch related routes immediately
+  const handleTeamHover = useCallback((teamSlug: string) => {
+    // Prefetch main routes that are likely to be visited
+    router.prefetch(`/team/${teamSlug}`);
+    router.prefetch(`/team/${teamSlug}/analytics`);
+    router.prefetch(`/team/${teamSlug}/settings`);
+    router.prefetch(`/team/${teamSlug}/assigned-cards`);
+  }, [router]);
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -121,7 +146,11 @@ export default function TeamsDisplay({ initialTeams }: TeamsDisplayProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {teams.map((team) => (
-            <Card key={team.id} className="hover:shadow-md transition-shadow cursor-pointer">
+            <Card 
+              key={team.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onMouseEnter={() => handleTeamHover(team.slug)}
+            >
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span className="truncate">{team.name}</span>

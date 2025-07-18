@@ -38,6 +38,13 @@ export default function ProjectPageClient({
 }: ProjectPageClientProps) {
   const router = useRouter();
 
+  // Prefetch related routes when component mounts
+  useEffect(() => {
+    router.prefetch(`/team/${teamSlug}/project/${projectSlug}/analytics`);
+    router.prefetch(`/team/${teamSlug}/project/${projectSlug}/settings`);
+    router.prefetch(`/team/${teamSlug}`); // Back to team page
+  }, [teamSlug, projectSlug, router]);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -55,6 +62,7 @@ export default function ProjectPageClient({
           <Link 
             href={`/team/${teamSlug}`}
             className="hover:text-gray-900 dark:hover:text-white transition"
+            onMouseEnter={() => router.prefetch(`/team/${teamSlug}`)}
           >
             {team.name}
           </Link>
@@ -132,14 +140,20 @@ export default function ProjectPageClient({
 
             <div className="flex space-x-2 ml-6">
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/team/${teamSlug}/project/${projectSlug}/analytics`}>
+                <Link 
+                  href={`/team/${teamSlug}/project/${projectSlug}/analytics`}
+                  onMouseEnter={() => router.prefetch(`/team/${teamSlug}/project/${projectSlug}/analytics`)}
+                >
                   <BarChart3 className="h-4 w-4 mr-1" />
                   Analytics
                 </Link>
               </Button>
 
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/team/${teamSlug}/project/${projectSlug}/settings`}>
+                <Link 
+                  href={`/team/${teamSlug}/project/${projectSlug}/settings`}
+                  onMouseEnter={() => router.prefetch(`/team/${teamSlug}/project/${projectSlug}/settings`)}
+                >
                   <Settings className="h-4 w-4 mr-1" />
                   Settings
                 </Link>
