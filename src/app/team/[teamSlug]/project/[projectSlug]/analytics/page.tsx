@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import Navbar from '@/components/Navbar';
 import BackButton from '@/components/ui/BackButton';
@@ -14,8 +13,6 @@ import {
   Target, 
   CheckCircle, 
   Users, 
-  Clock,
-  BarChart3,
   TrendingUp,
   Activity,
   Calendar,

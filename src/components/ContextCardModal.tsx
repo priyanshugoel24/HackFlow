@@ -19,7 +19,7 @@ import {
   Trash2,
   Archive,
 } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { useCardPresence } from "@/lib/ably/useCardPresence";
@@ -37,15 +37,7 @@ import Project from "@/interfaces/Project";
 import { GitHubCardAutoFill } from "./GithubCardAutofill";
 import axios from "axios";
 
-export default function ContextCardModal({
-  open,
-  setOpen,
-  projectSlug,
-  project,
-  existingCard,
-  onSuccess,
-  teamSlug,
-}: {
+interface ContextCardModalProps {
   open: boolean;
   setOpen: (val: boolean) => void;
   projectSlug: string;
@@ -53,7 +45,17 @@ export default function ContextCardModal({
   existingCard?: ExistingCard & { createdById?: string };
   onSuccess?: () => void;
   teamSlug?: string;
-}) {
+}
+
+const ContextCardModal = memo(function ContextCardModal({
+  open,
+  setOpen,
+  projectSlug,
+  project,
+  existingCard,
+  onSuccess,
+  teamSlug,
+}: ContextCardModalProps) {
   const { data: session } = useSession();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -105,14 +107,52 @@ export default function ContextCardModal({
     };
   }, [session?.user]);
 
+  // Memoize expensive computations
+  const computedValues = useMemo(() => {
+    const hasAnyChanges = (() => {
+      if (!originalValues || !existingCard) return true;
+
+      const currentValues = {
+        title: title.trim(),
+        content: content.trim(),
+        type,
+        visibility,
+        why: (why || "").trim(),
+        issues: (issues || "").trim(),
+        mention: (mention || "").trim(),
+        existingAttachments,
+        status,
+      };
+
+      const arraysEqual = (a: string[], b: string[]) => {
+        if (a.length !== b.length) return false;
+        const sortedA = [...a].sort();
+        const sortedB = [...b].sort();
+        return JSON.stringify(sortedA) === JSON.stringify(sortedB);
+      };
+
+      return (
+        currentValues.title !== originalValues.title.trim() ||
+        currentValues.content !== originalValues.content.trim() ||
+        currentValues.type !== originalValues.type ||
+        currentValues.visibility !== originalValues.visibility ||
+        currentValues.why !== (originalValues.why || "").trim() ||
+        currentValues.issues !== (originalValues.issues || "").trim() ||
+        currentValues.mention !== (originalValues.mention || "").trim() ||
+        currentValues.status !== originalValues.status ||
+        !arraysEqual(currentValues.existingAttachments, originalValues.existingAttachments) ||
+        attachments.length > 0
+      );
+    })();
+
+    const isValid = title.trim().length > 0 && content.trim().length > 0;
+
+    return { hasAnyChanges, isValid };
+  }, [title, content, type, visibility, why, issues, mention, status, existingAttachments, attachments, originalValues, existingCard]);
+
   // Check if the current user has permission to archive/unarchive this card
   const canArchive = useMemo(() => {
     if (!existingCard || !session?.user || !project) {
-      console.log('❌ canArchive: Missing data', { 
-        hasExistingCard: !!existingCard, 
-        hasUser: !!session?.user, 
-        hasProject: !!project 
-      });
       return false;
     }
 
@@ -150,30 +190,8 @@ export default function ContextCardModal({
     const projectData = project as any;
     const isProjectCreatorByEmail = user.email && projectData.createdBy?.email === user.email;
 
-    const canArchive = isCardCreator || isProjectCreator || isManager || isManagerByEmail || isProjectCreatorByEmail;
-
-    console.log('🔍 canArchive check:', {
-      userId: user.id,
-      userEmail: user.email,
-      cardUserId: existingCard.userId,
-      projectCreatedById: project.createdById,
-      projectCreatorEmail: projectData.createdBy?.email,
-      isCardCreator,
-      isProjectCreator,
-      isProjectCreatorByEmail,
-      isManager,
-      isManagerByEmail,
-      canArchive,
-      projectMembers: project.members ? project.members.map((m: any) => ({ 
-        userId: m.userId, 
-        email: m.user?.email, 
-        role: m.role, 
-        status: m.status 
-      })) : []
-    });
-
-    return canArchive;
-  }, [existingCard, session?.user, project]);
+    return isCardCreator || isProjectCreator || isManager || isManagerByEmail || isProjectCreatorByEmail;
+  }, [existingCard?.userId, session?.user, project?.createdById, project?.members]);
 
   // Use card presence hook to track who's editing
   const { editors } = useCardPresence(
@@ -289,8 +307,39 @@ export default function ContextCardModal({
     }
   }, [project, teamSlug]);
 
+  // Memoize filtered members computation
+  const allMembers = useMemo(() => {
+    let members: Array<{ userId: string; name?: string; email?: string; image?: string }> = [];
+
+    // Get project members if available
+    if (project?.members) {
+      const projectMembers = project.members
+        .filter((m) => m.status === "ACTIVE")
+        .map((member) => {
+          const user = (member as { user?: { name?: string; email?: string; image?: string } }).user || {};
+          return {
+            userId: member.userId,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          };
+        });
+      members = [...members, ...projectMembers];
+    }
+
+    // Add team members if available and not already included
+    if (teamMembers.length > 0) {
+      const uniqueTeamMembers = teamMembers.filter(
+        (teamMember) => !members.some((member) => member.userId === teamMember.userId)
+      );
+      members = [...members, ...uniqueTeamMembers];
+    }
+
+    return members;
+  }, [project?.members, teamMembers]);
+
   // Filter members based on search input (from both project and team)
-  const filterMembers = (input: string) => {
+  const filterMembers = useCallback((input: string) => {
     setMention(input);
 
     if (!input.trim()) {
@@ -299,38 +348,6 @@ export default function ContextCardModal({
     }
 
     const searchTerm = input.toLowerCase().trim();
-    let allMembers: Array<{ userId: string; name?: string; email?: string; image?: string }> = [];
-
-    // Get project members if available
-    if (project && project.members) {
-      const projectMembers = project.members
-        .filter((m) => m.status === "ACTIVE")
-        .map((member) => {
-          const user =
-            (
-              member as {
-                user?: { name?: string; email?: string; image?: string };
-              }
-            ).user || {};
-          return {
-            userId: member.userId,
-            name: user.name,
-            email: user.email,
-            image: user.image,
-          };
-        });
-      allMembers = [...allMembers, ...projectMembers];
-    }
-
-    // Add team members if available and not already included
-    if (teamMembers.length > 0) {
-      const uniqueTeamMembers = teamMembers.filter(
-        (teamMember) => !allMembers.some((member) => member.userId === teamMember.userId)
-      );
-      allMembers = [...allMembers, ...uniqueTeamMembers];
-    }
-
-    // Filter members based on search term
     const filteredMembers = allMembers.filter(
       (member) =>
         (member.name && member.name.toLowerCase().includes(searchTerm)) ||
@@ -339,10 +356,10 @@ export default function ContextCardModal({
 
     setFilteredMembers(filteredMembers);
     setShowMemberDropdown(filteredMembers.length > 0);
-  };
+  }, [allMembers]);
 
   // Handle selecting a member from the dropdown
-  const handleSelectMember = (member: {
+  const handleSelectMember = useCallback((member: {
     userId: string;
     name?: string;
     email?: string;
@@ -351,7 +368,7 @@ export default function ContextCardModal({
     const displayName = member.name || member.email || `User ${member.userId.slice(-4)}`;
     setMention(displayName);
     setShowMemberDropdown(false);
-  };
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -365,71 +382,15 @@ export default function ContextCardModal({
     };
   }, []);
 
-  // Helper function to check if arrays are equal
-  const arraysEqual = (a: string[], b: string[]) => {
-    if (a.length !== b.length) return false;
-    // Sort both arrays before comparing to handle order differences
-    const sortedA = [...a].sort();
-    const sortedB = [...b].sort();
-    return JSON.stringify(sortedA) === JSON.stringify(sortedB);
-  };
-
   // Check if any values have changed from original
-  const hasChanges = () => {
-    if (!originalValues || !existingCard) return true; // For new cards or when original values aren't set
-
-    const currentValues = {
-      title,
-      content,
-      type,
-      visibility,
-      why,
-      issues,
-      mention,
-      existingAttachments,
-      status,
-    };
-
-    // Check each field for changes
-    const changes = {
-      title: currentValues.title.trim() !== originalValues.title.trim(),
-      content: currentValues.content.trim() !== originalValues.content.trim(),
-      type: currentValues.type !== originalValues.type,
-      visibility: currentValues.visibility !== originalValues.visibility,
-      why:
-        (currentValues.why || "").trim() !== (originalValues.why || "").trim(),
-      issues:
-        (currentValues.issues || "").trim() !==
-        (originalValues.issues || "").trim(),
-      mention:
-        (currentValues.mention || "").trim() !==
-        (originalValues.mention || "").trim(),
-      status: currentValues.status !== originalValues.status,
-      existingAttachments: !arraysEqual(
-        currentValues.existingAttachments,
-        originalValues.existingAttachments
-      ),
-      newAttachments: attachments.length > 0,
-    };
-
-    const hasAnyChanges = Object.values(changes).some(Boolean);
-
-    if (hasAnyChanges) {
-      const changedFields = Object.entries(changes)
-        .filter(([, changed]) => changed)
-        .map(([field]) => field);
-      console.log("📝 Changes detected in fields:", changedFields);
-    } else {
-      console.log("📝 No changes detected");
-    }
-
-    return hasAnyChanges;
-  };
+  const hasChanges = useCallback(() => {
+    return computedValues.hasAnyChanges;
+  }, [computedValues.hasAnyChanges]);
 
   // Validate the form before submission
-  const isFormValid = () => {
-    return title.trim().length > 0 && content.trim().length > 0;
-  };
+  const isFormValid = useCallback(() => {
+    return computedValues.isValid;
+  }, [computedValues.isValid]);
 
   // Upload file via API route to avoid exposing service key and for SSR security
   const uploadFileToSupabase = async (file: File) => {
@@ -455,7 +416,7 @@ export default function ContextCardModal({
     }
   };
 
-  const handleSummarize = async () => {
+  const handleSummarize = useCallback(async () => {
     if (!existingCard?.id) return;
     setIsSummarizing(true);
     try {
@@ -482,9 +443,9 @@ export default function ContextCardModal({
     } finally {
       setIsSummarizing(false);
     }
-  };
+  }, [existingCard?.id, projectSlug]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!title.trim() || !content.trim()) return;
 
     // Client-side validation and sanitization
@@ -601,13 +562,17 @@ export default function ContextCardModal({
           (sanitizedData.issues || "") !== (originalValues?.issues || "").trim()
         )
           updateData.issues = sanitizedData.issues;
-        if (
-          (sanitizedData.mention || "") !==
-          (originalValues?.mention || "").trim()
-        )
-          updateData.slackLinks = sanitizedData.mention
-            ? [sanitizedData.mention]
-            : [];
+        if (mention.trim() !== (originalValues?.mention || "").trim())
+          updateData.slackLinks = mention.trim() ? [mention.trim()] : [];
+        
+        // Helper function for array comparison
+        const arraysEqual = (a: string[], b: string[]) => {
+          if (a.length !== b.length) return false;
+          const sortedA = [...a].sort();
+          const sortedB = [...b].sort();
+          return JSON.stringify(sortedA) === JSON.stringify(sortedB);
+        };
+        
         if (
           !arraysEqual(uploadedUrls, originalValues?.existingAttachments || [])
         ) {
@@ -698,9 +663,9 @@ export default function ContextCardModal({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [title, content, type, visibility, status, why, issues, mention, attachments, existingAttachments, projectSlug, existingCard, originalValues, onSuccess]);
 
-  const getTypeIcon = (cardType: string) => {
+  const getTypeIcon = useCallback((cardType: string) => {
     switch (cardType) {
       case "INSIGHT":
         return <Lightbulb className="h-4 w-4" />;
@@ -710,11 +675,11 @@ export default function ContextCardModal({
       default:
         return <FileText className="h-4 w-4" />;
     }
-  };
+  }, []);
 
-  const removeExistingAttachment = (url: string) => {
+  const removeExistingAttachment = useCallback((url: string) => {
     setExistingAttachments(existingAttachments.filter((att) => att !== url));
-  };
+  }, [existingAttachments]);
 
   return (
     <Dialog
@@ -1253,4 +1218,6 @@ export default function ContextCardModal({
       </DialogContent>
     </Dialog>
   );
-}
+});
+
+export default ContextCardModal;

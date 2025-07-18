@@ -1,4 +1,5 @@
 'use client';
+import { useMemo, memo } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -17,11 +18,110 @@ import {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
+// Memoized individual chart components
+const CardTypeChart = memo(function CardTypeChart({ data }: { data: any[] }) {
+  if (!data.length) return null;
+  
+  return (
+    <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-md">
+      <h3 className="text-lg font-semibold mb-4">Card Type Distribution</h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+            outerRadius={100}
+            fill="#8884d8"
+            dataKey="value"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+});
+
+const TaskStatusChart = memo(function TaskStatusChart({ data }: { data: any[] }) {
+  if (!data.length) return null;
+
+  return (
+    <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-md">
+      <h3 className="text-lg font-semibold mb-4">Task Status Overview</h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="value" fill="#8884d8" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+});
+
+const VisibilityChart = memo(function VisibilityChart({ data }: { data: any[] }) {
+  if (!data.length) return null;
+
+  return (
+    <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-md">
+      <h3 className="text-lg font-semibold mb-4">Card Visibility Distribution</h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+            outerRadius={100}
+            fill="#8884d8"
+            dataKey="value"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+});
+
+const VelocityChart = memo(function VelocityChart({ data }: { data: any[] }) {
+  if (!data.length) return null;
+
+  return (
+    <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-md">
+      <h3 className="text-lg font-semibold mb-4">Weekly Velocity</h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="week" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Line type="monotone" dataKey="completed" stroke="#8884d8" activeDot={{ r: 8 }} />
+          <Line type="monotone" dataKey="created" stroke="#82ca9d" />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+});
+
 interface AnalyticsChartsProps {
   analytics: any;
 }
 
-export default function AnalyticsCharts({ analytics }: AnalyticsChartsProps) {
+const AnalyticsCharts = memo(function AnalyticsCharts({ analytics }: AnalyticsChartsProps) {
   // Early return if analytics is null or undefined
   if (!analytics) {
     return (
@@ -201,4 +301,6 @@ export default function AnalyticsCharts({ analytics }: AnalyticsChartsProps) {
       </div>
     </div>
   );
-}
+});
+
+export default AnalyticsCharts;
