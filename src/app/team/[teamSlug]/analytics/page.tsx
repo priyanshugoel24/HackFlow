@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import Navbar from '@/components/Navbar';
 import BackButton from '@/components/ui/BackButton';
+import { Metadata } from 'next';
 
 // Lazy load chart components
 const AnalyticsCharts = dynamic(() => import('@/components/AnalyticsCharts'), {
@@ -43,6 +44,73 @@ import { Session } from 'next-auth';
 
 interface TeamAnalyticsPageProps {
   params: Promise<{ teamSlug: string }>;
+}
+
+export async function generateMetadata({ params }: TeamAnalyticsPageProps): Promise<Metadata> {
+  const { teamSlug } = await params;
+  
+  try {
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session?.user?.email) {
+      return {
+        title: 'Team Analytics',
+        description: 'View team analytics and performance metrics.',
+      };
+    }
+
+    // Get team data for metadata
+    const team = await prisma.team.findUnique({
+      where: { slug: teamSlug },
+      select: {
+        name: true,
+        description: true,
+        _count: {
+          select: {
+            members: true,
+            projects: true,
+          },
+        },
+      },
+    });
+
+    if (!team) {
+      return {
+        title: 'Team Analytics',
+        description: 'Team analytics not found.',
+      };
+    }
+
+    const title = `${team.name} Analytics - Team Performance`;
+    const description = `Analyze ${team.name} team performance with detailed analytics, project progress tracking, task completion rates, and productivity insights across ${team._count.projects} projects.`;
+
+    return {
+      title,
+      description,
+      keywords: ['team analytics', 'performance metrics', 'project analytics', 'team productivity', team.name],
+      openGraph: {
+        title: `${team.name} Analytics - Team Performance | Context Board`,
+        description,
+        type: 'website',
+        locale: 'en_US',
+        siteName: 'Context Board',
+      },
+      twitter: {
+        card: 'summary',
+        title: `${team.name} Analytics - Team Performance | Context Board`,
+        description,
+      },
+      robots: {
+        index: true,
+        follow: true,
+      },
+    };
+  } catch (error) {
+    console.error('Error generating metadata for team analytics page:', error);
+    return {
+      title: 'Team Analytics',
+      description: 'View team analytics and performance metrics.',
+    };
+  }
 }
 
 // Server-side data fetching

@@ -17,8 +17,44 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Context Board",
-  description: "Your personal context management dashboard",
+  title: {
+    template: '%s | Context Board',
+    default: 'Context Board - Your Personal Context Management Dashboard',
+  },
+  description: "Your personal context management dashboard for organizing projects, teams, and tasks in one collaborative workspace.",
+  keywords: ['project management', 'team collaboration', 'task tracking', 'context board', 'productivity'],
+  authors: [{ name: 'Context Board Team' }],
+  creator: 'Context Board',
+  metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'Context Board',
+    title: 'Context Board - Your Personal Context Management Dashboard',
+    description: 'Your personal context management dashboard for organizing projects, teams, and tasks in one collaborative workspace.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    creator: '@contextboard',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // Add Google Search Console verification if needed
+    // google: 'your-google-verification-code',
+  },
 };
 
 export default function RootLayout({

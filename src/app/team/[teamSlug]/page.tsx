@@ -6,9 +6,77 @@ import TeamPageClient from '@/components/TeamPageClient';
 import { TeamPageTeam } from '@/interfaces/TeamPageTeam';
 import { Session } from 'next-auth';
 import { prisma } from '@/lib/prisma';
+import { Metadata } from 'next';
 
 interface TeamPageProps {
   params: Promise<{ teamSlug: string }>;
+}
+
+export async function generateMetadata({ params }: TeamPageProps): Promise<Metadata> {
+  const { teamSlug } = await params;
+  
+  try {
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session?.user?.email) {
+      return {
+        title: 'Team Dashboard',
+        description: 'Access your team dashboard to collaborate on projects and tasks.',
+      };
+    }
+
+    // Get team data for metadata
+    const team = await prisma.team.findUnique({
+      where: { slug: teamSlug },
+      select: {
+        name: true,
+        description: true,
+        _count: {
+          select: {
+            members: true,
+            projects: true,
+          },
+        },
+      },
+    });
+
+    if (!team) {
+      return {
+        title: 'Team Not Found',
+        description: 'The requested team could not be found.',
+      };
+    }
+
+    const title = `${team.name} - Team Dashboard`;
+    const description = team.description || `Collaborate with ${team._count.members} members across ${team._count.projects} projects in ${team.name} team dashboard.`;
+
+    return {
+      title,
+      description,
+      keywords: ['team collaboration', 'project management', 'team dashboard', team.name],
+      openGraph: {
+        title: `${team.name} - Team Dashboard | Context Board`,
+        description,
+        type: 'website',
+        locale: 'en_US',
+        siteName: 'Context Board',
+      },
+      twitter: {
+        card: 'summary',
+        title: `${team.name} - Team Dashboard | Context Board`,
+        description,
+      },
+      robots: {
+        index: true,
+        follow: true,
+      },
+    };
+  } catch (error) {
+    console.error('Error generating metadata for team page:', error);
+    return {
+      title: 'Team Dashboard',
+      description: 'Access your team dashboard to collaborate on projects and tasks.',
+    };
+  }
 }
 
 // Server-side data fetching

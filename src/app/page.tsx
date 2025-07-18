@@ -7,6 +7,43 @@ import TeamsDisplay from '@/components/TeamsDisplay';
 import { TeamWithRelations } from '@/interfaces/TeamWithRelations';
 import { Session } from 'next-auth';
 import { prisma } from '@/lib/prisma';
+import { Metadata } from 'next';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await getServerSession(authOptions) as Session | null;
+  const userName = session?.user?.name || 'User';
+  
+  return {
+    title: 'Your Personal Context Management Dashboard',
+    description: 'Organize your projects, teams, and tasks in one collaborative workspace. Create context cards, track progress, and manage your workflow efficiently.',
+    keywords: ['project management', 'team collaboration', 'task tracking', 'context board', 'productivity'],
+    authors: [{ name: 'Context Board Team' }],
+    creator: 'Context Board',
+    openGraph: {
+      title: 'Context Board - Your Personal Context Management Dashboard',
+      description: 'Organize your projects, teams, and tasks in one collaborative workspace. Create context cards, track progress, and manage your workflow efficiently.',
+      type: 'website',
+      locale: 'en_US',
+      siteName: 'Context Board',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Context Board - Your Personal Context Management Dashboard',
+      description: 'Organize your projects, teams, and tasks in one collaborative workspace.',
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
+  };
+}
 
 // Server-side data fetching using Prisma directly
 async function fetchTeams(session: Session): Promise<TeamWithRelations[]> {

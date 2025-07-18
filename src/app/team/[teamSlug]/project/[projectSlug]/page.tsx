@@ -10,12 +10,96 @@ import { ProjectPageProject } from '@/interfaces/ProjectPageProject';
 import { ProjectPageTeam } from '@/interfaces/ProjectPageTeam';
 import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
+import { Metadata } from 'next';
 
 interface ProjectPageProps {
   params: Promise<{
     teamSlug: string;
     projectSlug: string;
   }>;
+}
+
+export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
+  const { teamSlug, projectSlug } = await params;
+  
+  try {
+    const session = await getServerSession(authOptions) as Session | null;
+    if (!session?.user?.email) {
+      return {
+        title: 'Project Dashboard',
+        description: 'Access your project dashboard to manage tasks and collaborate.',
+      };
+    }
+
+    // Get project and team data for metadata
+    const project = await prisma.project.findUnique({
+      where: { slug: projectSlug },
+      select: {
+        name: true,
+        description: true,
+        tags: true,
+        _count: {
+          select: {
+            contextCards: true,
+            members: true,
+          },
+        },
+        team: {
+          select: {
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      return {
+        title: 'Project Not Found',
+        description: 'The requested project could not be found.',
+      };
+    }
+
+    const title = `${project.name} - Project Dashboard | ${project.team?.name}`;
+    const description = project.description || `Manage ${project.name} project with ${project._count.contextCards} context cards and ${project._count.members} team members. Collaborate efficiently on tasks and track progress.`;
+
+    const keywords = [
+      'project management',
+      'task tracking',
+      'team collaboration',
+      project.name,
+      project.team?.name || '',
+      ...(project.tags || []),
+    ].filter(Boolean);
+
+    return {
+      title,
+      description,
+      keywords,
+      openGraph: {
+        title: `${project.name} - Project Dashboard | ${project.team?.name} | Context Board`,
+        description,
+        type: 'website',
+        locale: 'en_US',
+        siteName: 'Context Board',
+      },
+      twitter: {
+        card: 'summary',
+        title: `${project.name} - Project Dashboard | ${project.team?.name} | Context Board`,
+        description,
+      },
+      robots: {
+        index: true,
+        follow: true,
+      },
+    };
+  } catch (error) {
+    console.error('Error generating metadata for project page:', error);
+    return {
+      title: 'Project Dashboard',
+      description: 'Access your project dashboard to manage tasks and collaborate.',
+    };
+  }
 }
 
 // Server-side data fetching
