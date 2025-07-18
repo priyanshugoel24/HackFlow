@@ -9,6 +9,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import SearchBar from "./SearchBar";
 import { UserStatus } from "@/interfaces/UserStatus";
 import ErrorBoundary from './ErrorBoundary';
+import Image from 'next/image';
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -120,10 +121,12 @@ export default function Navbar() {
             className="flex items-center gap-2 px-3 py-1.5 rounded-full border hover:shadow-sm transition bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white flex-shrink-0"
             disabled={statusLoading}
           >
-            <img
-              src={session.user?.image || "/default-avatar.png"}
+            <Image
+              src={session.user?.image || "/default-avatar.svg"}
               alt="User Avatar"
-              className="w-8 h-8 rounded-full object-cover"
+              width={32}
+              height={32}
+              className="rounded-full object-cover"
             />
             <span>
               {session.user?.name || session.user?.email?.split("@")[0]}

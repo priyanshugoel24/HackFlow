@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import OnlineUsers from '@/components/OnlineUsers';
@@ -512,11 +513,14 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
               <div className="space-y-3">
                 {team.members.slice(0, 5).map((member) => (
                   <div key={member.id} className="flex items-center gap-3">
-                    <img
-                      src={member.user.image || '/default-avatar.png'}
-                      alt={member.user.name || member.user.email || 'User'}
-                      className="h-8 w-8 rounded-full"
-                    />
+                    <div className="relative h-8 w-8">
+                      <Image
+                        src={member.user.image || '/default-avatar.svg'}
+                        alt={member.user.name || member.user.email || 'User'}
+                        fill
+                        className="rounded-full object-cover"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">
                         {member.user.name || member.user.email?.split('@')[0] || 'User'}

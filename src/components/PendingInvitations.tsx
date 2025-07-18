@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -183,10 +184,12 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0">
                 {invitation.addedBy?.image ? (
-                  <img
+                  <Image
                     src={invitation.addedBy.image}
                     alt="avatar"
-                    className="w-8 h-8 rounded-full object-cover"
+                    width={32}
+                    height={32}
+                    className="rounded-full object-cover"
                   />
                 ) : (
                   <div className="w-8 h-8 bg-blue-300 text-white rounded-full flex items-center justify-center text-sm">
@@ -264,10 +267,12 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0">
                 {invitation.addedBy?.image ? (
-                  <img
+                  <Image
                     src={invitation.addedBy.image}
                     alt="avatar"
-                    className="w-8 h-8 rounded-full object-cover"
+                    width={32}
+                    height={32}
+                    className="rounded-full object-cover"
                   />
                 ) : (
                   <div className="w-8 h-8 bg-orange-300 text-white rounded-full flex items-center justify-center text-sm">

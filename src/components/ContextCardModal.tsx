@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { useCardPresence } from "@/lib/ably/useCardPresence";
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import {
   sanitizeText,
   validateInput,
@@ -744,11 +745,14 @@ const ContextCardModal = memo(function ContextCardModal({
                         title={`${editor.name} is editing`}
                       >
                         {editor.image ? (
-                          <img
-                            src={editor.image}
-                            alt={editor.name}
-                            className="w-full h-full object-cover"
-                          />
+                          <div className="relative w-full h-full">
+                            <Image
+                              src={editor.image}
+                              alt={editor.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
                         ) : (
                           <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                             {editor.name.charAt(0).toUpperCase()}
@@ -1030,11 +1034,14 @@ const ContextCardModal = memo(function ContextCardModal({
                       }}
                     >
                       {member.image ? (
-                        <img
-                          src={member.image}
-                          alt={member.name || member.email || "User"}
-                          className="w-6 h-6 rounded-full"
-                        />
+                        <div className="relative w-6 h-6">
+                          <Image
+                            src={member.image}
+                            alt={member.name || member.email || "User"}
+                            fill
+                            className="rounded-full object-cover"
+                          />
+                        </div>
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-600 dark:text-gray-400">
                           {member.name ? member.name[0].toUpperCase() : 

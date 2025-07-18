@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import BackButton from '@/components/ui/BackButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -255,10 +256,12 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
                 {team.members.map((member) => (
                   <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={member.user.image || '/default-avatar.png'}
+                      <Image
+                        src={member.user.image || '/default-avatar.svg'}
                         alt={member.user.name || member.user.email || 'User'}
-                        className="h-10 w-10 rounded-full"
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover"
                       />
                       <div>
                         <div className="flex items-center gap-2">

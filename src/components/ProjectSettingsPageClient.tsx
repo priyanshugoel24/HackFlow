@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -231,10 +232,12 @@ export default function ProjectSettingsPageClient({
                   className="flex items-center justify-between border border-gray-200 dark:border-zinc-700 bg-muted px-5 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition gap-5 hover:ring-1 hover:ring-indigo-500"
                 >
                   <div className="flex items-center gap-5">
-                    <img
-                      src={member.user.image || "/fallback-avatar.png"}
-                      alt={member.user.name}
-                      className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-300 dark:ring-zinc-600"
+                    <Image
+                      src={member.user.image || "/default-avatar.svg"}
+                      alt={member.user.name || 'User'}
+                      width={40}
+                      height={40}
+                      className="rounded-full object-cover ring-2 ring-gray-300 dark:ring-zinc-600"
                     />
                     <div>
                       <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{member.user.name || member.user.email}</p>
