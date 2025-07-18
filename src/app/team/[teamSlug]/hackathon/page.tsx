@@ -1,12 +1,24 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
+import dynamic from 'next/dynamic';
 import { authOptions } from '@/lib/auth';
-import HackathonPageClient from '@/components/HackathonPageClient';
 import { TeamHackathon } from '@/interfaces/TeamHackathon';
 import { ContextCardWithRelations } from '@/interfaces/ContextCardWithRelations';
 import { HackathonUpdate } from '@/interfaces/HackathonUpdate';
 import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
+
+// Lazy load HackathonPageClient for better performance
+const HackathonPageClient = dynamic(() => import('@/components/HackathonPageClient'), {
+  loading: () => (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-muted-foreground">Loading hackathon room...</p>
+      </div>
+    </div>
+  )
+});
 
 interface HackathonPageProps {
   params: Promise<{

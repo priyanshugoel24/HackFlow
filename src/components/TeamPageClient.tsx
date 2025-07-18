@@ -1,16 +1,31 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import OnlineUsers from '@/components/OnlineUsers';
-import ProjectModal from '@/components/ProjectModal';
-import TeamStandupDigest from '@/components/TeamStandupDigest';
-import InviteMemberModal from '@/components/InviteMemberModal';
-import AssignedCards from '@/components/AssignedCards';
-import FocusMode from '@/components/FocusMode';
 import ActivityFeed from '@/components/ActivityFeed';
+import AssignedCards from '@/components/AssignedCards';
 import BackButton from '@/components/ui/BackButton';
+
+// Lazy load heavy modal components
+const ProjectModal = dynamic(() => import('@/components/ProjectModal'), {
+  loading: () => <div>Loading...</div>
+});
+
+const TeamStandupDigest = dynamic(() => import('@/components/TeamStandupDigest'), {
+  loading: () => <div>Loading digest...</div>
+});
+
+const InviteMemberModal = dynamic(() => import('@/components/InviteMemberModal'), {
+  loading: () => <div>Loading...</div>
+});
+
+const FocusMode = dynamic(() => import('@/components/FocusMode'), {
+  ssr: false,
+  loading: () => <div>Loading Focus Mode...</div>
+});
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

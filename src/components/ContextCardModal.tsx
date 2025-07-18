@@ -23,8 +23,7 @@ import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { useCardPresence } from "@/lib/ably/useCardPresence";
-import CommentThread from "./CommentThread";
-import RichTextEditor from "./RichTextEditor";
+import dynamic from 'next/dynamic';
 import {
   sanitizeText,
   validateInput,
@@ -36,6 +35,21 @@ import ExistingCard from "@/interfaces/ExistingCard";
 import Project from "@/interfaces/Project";
 import { GitHubCardAutoFill } from "./GithubCardAutofill";
 import axios from "axios";
+
+// Lazy load heavy components
+const CommentThread = dynamic(() => import('./CommentThread'), {
+  loading: () => <div className="animate-pulse bg-gray-100 h-20 rounded" />
+});
+
+// Lazy load RichTextEditor since it's a heavy component
+const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-3 text-gray-500 dark:text-gray-400 animate-pulse">
+      Loading editor...
+    </div>
+  )
+});
 
 interface ContextCardModalProps {
   open: boolean;

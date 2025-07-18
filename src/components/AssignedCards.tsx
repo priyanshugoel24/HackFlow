@@ -1,10 +1,16 @@
 "use client";
 import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
-import ContextCardModal from "./ContextCardModal";
+import dynamic from 'next/dynamic';
 import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
 import { useSession } from "next-auth/react";
 import { paginationConfig } from '@/config/pagination';
 import axios from "axios";
+
+// Lazy load ContextCardModal
+const ContextCardModal = dynamic(() => import('./ContextCardModal'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 h-96 rounded-lg" />
+});
 
 // Memoized card component to prevent unnecessary re-renders
 const AssignedCard = memo(function AssignedCard({
@@ -218,7 +224,10 @@ const AssignedCards = memo(function AssignedCards({
       {selectedCard && (
         <ContextCardModal
           open={modalOpen}
-          setOpen={setModalOpen}
+          setOpen={(val) => {
+            setModalOpen(val);
+            if (!val) setSelectedCard(null);
+          }}
           projectSlug={selectedCard.project?.slug || ""}
           project={selectedCard.project as any}
           existingCard={{
@@ -229,6 +238,12 @@ const AssignedCards = memo(function AssignedCards({
             attachments: selectedCard.attachments ?? undefined,
             status: selectedCard.status ?? "ACTIVE",
             summary: selectedCard.summary ?? undefined,
+          }}
+          onSuccess={() => {
+            setModalOpen(false);
+            setSelectedCard(null);
+            // Refresh cards if needed
+            fetchCards(0);
           }}
         />
       )}

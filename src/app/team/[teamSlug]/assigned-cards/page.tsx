@@ -1,11 +1,20 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
+import dynamic from 'next/dynamic';
 import { authOptions } from '@/lib/auth';
 import { Card, CardContent } from '@/components/ui/card';
-import AssignedCardsPageClient from '@/components/AssignedCardsPageClient';
 import { AssignedCardsTeam } from '@/interfaces/AssignedCardsTeam';
 import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
+
+// Lazy load AssignedCardsPageClient
+const AssignedCardsPageClient = dynamic(() => import('@/components/AssignedCardsPageClient'), {
+  loading: () => (
+    <div className="container mx-auto p-6">
+      <div className="h-64 bg-gray-100 animate-pulse rounded-lg"></div>
+    </div>
+  )
+});
 
 interface AssignedCardsPageProps {
   params: Promise<{

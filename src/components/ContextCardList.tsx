@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo, useCallback, memo } from "react";
+import dynamic from 'next/dynamic';
 import { FixedSizeList as List } from 'react-window';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,8 +25,16 @@ import {
   Users,
   Timer
 } from "lucide-react";
-import ContextCardModal from "./ContextCardModal";
-import SmartComposeModal from "./SmartComposeModal";
+
+// Lazy load heavy modal components
+const ContextCardModal = dynamic(() => import('./ContextCardModal'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 h-96 rounded-lg" />
+});
+
+const SmartComposeModal = dynamic(() => import('./SmartComposeModal'), {
+  loading: () => <div>Loading AI composer...</div>
+});
 import { useProjectRealtime } from "@/lib/ably/useProjectRealtime";
 import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
 import { ProjectWithRelations } from "@/interfaces/ProjectWithRelations";
@@ -407,9 +416,25 @@ const ContextCardList = memo(function ContextCardList({
   }, []);
 
   // Memoize refresh function
-  const refreshCards = useCallback(() => {
-    window.location.reload();
-  }, []);
+  const refreshCards = useCallback(async () => {
+    if (!project?.id) return;
+    
+    setLoading(true);
+    try {
+      const response = await axios.get(`/api/context-cards?projectId=${project.id}&limit=100`);
+      const updatedCards = response.data;
+      setAllCards(updatedCards);
+      setCards(updatedCards.filter((card: any) => 
+        showArchived ? true : !card.isArchived
+      ));
+    } catch (error) {
+      console.error('Error refreshing cards:', error);
+      // Fallback to page reload only if API call fails
+      window.location.reload();
+    } finally {
+      setLoading(false);
+    }
+  }, [project?.id, showArchived]);
 
   const handleCardCreated = useCallback(() => {
     refreshCards();
@@ -607,7 +632,11 @@ const ContextCardList = memo(function ContextCardList({
         <ContextCardModal 
           open={!!selectedCard}
           setOpen={(val) => {
-            if (!val) setSelectedCard(null);
+            if (!val) {
+              setSelectedCard(null);
+              // Ensure add card modal doesn't appear after closing existing card modal
+              setModalOpen(false);
+            }
           }}
           projectSlug={projectSlug}
           project={project as any || undefined}
@@ -621,6 +650,7 @@ const ContextCardList = memo(function ContextCardList({
           } as any : undefined}
           onSuccess={() => {
             setSelectedCard(null);
+            setModalOpen(false); // Ensure add card modal doesn't appear
             refreshCards();
           }}
         />

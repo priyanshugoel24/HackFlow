@@ -1,15 +1,29 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
+import dynamic from 'next/dynamic';
 import { authOptions } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import Navbar from '@/components/Navbar';
 import BackButton from '@/components/ui/BackButton';
-import AnalyticsCharts from '@/components/AnalyticsCharts';
-import WeeklyVelocityChart from '@/components/charts/WeeklyVelocityChart';
-import CardTypeDistributionChart from '@/components/charts/CardTypeDistributionChart';
-import TopContributorsChart from '@/components/charts/TopContributorsChart';
+
+// Lazy load chart components
+const AnalyticsCharts = dynamic(() => import('@/components/AnalyticsCharts'), {
+  loading: () => <div className="h-64 bg-gray-100 animate-pulse rounded" />
+});
+
+const WeeklyVelocityChart = dynamic(() => import('@/components/charts/WeeklyVelocityChart'), {
+  loading: () => <div className="h-48 bg-gray-100 animate-pulse rounded" />
+});
+
+const CardTypeDistributionChart = dynamic(() => import('@/components/charts/CardTypeDistributionChart'), {
+  loading: () => <div className="h-48 bg-gray-100 animate-pulse rounded" />
+});
+
+const TopContributorsChart = dynamic(() => import('@/components/charts/TopContributorsChart'), {
+  loading: () => <div className="h-48 bg-gray-100 animate-pulse rounded" />
+});
 import { 
   Target, 
   CheckCircle, 
