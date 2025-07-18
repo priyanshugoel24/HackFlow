@@ -38,6 +38,8 @@ import { ContextCardWithRelations } from '@/interfaces/ContextCardWithRelations'
 import { TeamPageTeam } from '@/interfaces/TeamPageTeam';
 import { TeamPageProject } from '@/interfaces/TeamPageProject';
 import { TeamPageMember } from '@/interfaces/TeamPageMember';
+import ErrorBoundary from './ErrorBoundary';
+import { Suspense } from 'react';
 
 interface TeamPageClientProps {
   initialTeam: TeamPageTeam;
@@ -211,9 +213,28 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container mx-auto px-6 py-8">
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        console.error('Team Page Error:', error, errorInfo);
+      }}
+      fallback={
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-foreground mb-2">Something went wrong</h1>
+              <p className="text-muted-foreground mb-4">We're having trouble loading the team page.</p>
+              <Button onClick={() => window.location.reload()}>
+                Refresh Page
+              </Button>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
           <BackButton />
@@ -556,6 +577,7 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
         open={showFocusMode}
         onClose={handleFocusModeClose}
       />
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

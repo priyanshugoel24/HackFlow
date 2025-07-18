@@ -5,6 +5,10 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import PresenceManager from "@/components/PresenceManager";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { Suspense } from "react";
+import { PageLoadingSpinner } from "@/components/LoadingSpinner";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { PresenceErrorFallback } from "@/components/PresenceErrorFallback";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,9 +73,17 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <Providers>
-            <PresenceManager />
-            {children}
-            <Toaster richColors position="top-right" />
+            <Suspense fallback={<PageLoadingSpinner text="Loading application..." />}>
+              <ErrorBoundary
+                fallback={<PresenceErrorFallback />}
+              >
+                <PresenceManager />
+              </ErrorBoundary>
+              {children}
+              <Suspense fallback={null}>
+                <Toaster richColors position="top-right" />
+              </Suspense>
+            </Suspense>
           </Providers>
         </ThemeProvider>
       </body>

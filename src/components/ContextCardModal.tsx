@@ -35,10 +35,12 @@ import ExistingCard from "@/interfaces/ExistingCard";
 import Project from "@/interfaces/Project";
 import { GitHubCardAutoFill } from "./GithubCardAutofill";
 import axios from "axios";
+import ErrorBoundary from "./ErrorBoundary";
+import { ComponentLoadingSpinner } from "./LoadingSpinner";
 
 // Lazy load heavy components
 const CommentThread = dynamic(() => import('./CommentThread'), {
-  loading: () => <div className="animate-pulse bg-gray-100 h-20 rounded" />
+  loading: () => <ComponentLoadingSpinner text="Loading comments..." />
 });
 
 // Lazy load RichTextEditor since it's a heavy component
@@ -1224,9 +1226,17 @@ const ContextCardModal = memo(function ContextCardModal({
           )}
 
           {existingCard && (
-            <div className="pt-6 border-t border-gray-200 dark:border-gray-600 mt-8">
-              <CommentThread cardId={existingCard.id} />
-            </div>
+            <ErrorBoundary fallback={
+              <div className="pt-6 border-t border-gray-200 dark:border-gray-600 mt-8">
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Failed to load comments. Please refresh to try again.
+                </p>
+              </div>
+            }>
+              <div className="pt-6 border-t border-gray-200 dark:border-gray-600 mt-8">
+                <CommentThread cardId={existingCard.id} />
+              </div>
+            </ErrorBoundary>
           )}
         </motion.div>
       </DialogContent>

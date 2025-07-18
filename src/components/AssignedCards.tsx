@@ -5,6 +5,7 @@ import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations"
 import { useSession } from "next-auth/react";
 import { paginationConfig } from '@/config/pagination';
 import axios from "axios";
+import ErrorBoundary from './ErrorBoundary';
 
 // Lazy load ContextCardModal
 const ContextCardModal = dynamic(() => import('./ContextCardModal'), {
@@ -222,30 +223,49 @@ const AssignedCards = memo(function AssignedCards({
         )}
       </div>
       {selectedCard && (
-        <ContextCardModal
-          open={modalOpen}
-          setOpen={(val) => {
-            setModalOpen(val);
-            if (!val) setSelectedCard(null);
-          }}
-          projectSlug={selectedCard.project?.slug || ""}
-          project={selectedCard.project as any}
-          existingCard={{
-            ...selectedCard,
-            why: selectedCard.why ?? undefined,
-            issues: selectedCard.issues ?? undefined,
-            slackLinks: selectedCard.slackLinks ?? undefined,
-            attachments: selectedCard.attachments ?? undefined,
-            status: selectedCard.status ?? "ACTIVE",
-            summary: selectedCard.summary ?? undefined,
-          }}
-          onSuccess={() => {
-            setModalOpen(false);
-            setSelectedCard(null);
-            // Refresh cards if needed
-            fetchCards(0);
-          }}
-        />
+        <ErrorBoundary
+          fallback={
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Unable to load assigned card</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  There was an error loading the card details.
+                </p>
+                <button 
+                  onClick={() => setSelectedCard(null)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          }
+        >
+          <ContextCardModal
+            open={modalOpen}
+            setOpen={(val) => {
+              setModalOpen(val);
+              if (!val) setSelectedCard(null);
+            }}
+            projectSlug={selectedCard.project?.slug || ""}
+            project={selectedCard.project as any}
+            existingCard={{
+              ...selectedCard,
+              why: selectedCard.why ?? undefined,
+              issues: selectedCard.issues ?? undefined,
+              slackLinks: selectedCard.slackLinks ?? undefined,
+              attachments: selectedCard.attachments ?? undefined,
+              status: selectedCard.status ?? "ACTIVE",
+              summary: selectedCard.summary ?? undefined,
+            }}
+            onSuccess={() => {
+              setModalOpen(false);
+              setSelectedCard(null);
+              // Refresh cards if needed
+              fetchCards(0);
+            }}
+          />
+        </ErrorBoundary>
       )}
     </div>
   );

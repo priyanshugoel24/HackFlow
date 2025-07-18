@@ -6,22 +6,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Navbar from '@/components/Navbar';
 import BackButton from '@/components/ui/BackButton';
+import { Suspense } from 'react';
+import { ComponentLoadingSpinner } from '@/components/LoadingSpinner';
 
 // Lazy load chart components
 const AnalyticsCharts = dynamic(() => import('@/components/AnalyticsCharts'), {
-  loading: () => <div className="h-64 bg-gray-100 animate-pulse rounded" />
+  loading: () => <ComponentLoadingSpinner text="Loading analytics..." />
 });
 
 const WeeklyVelocityChart = dynamic(() => import('@/components/charts/WeeklyVelocityChart'), {
-  loading: () => <div className="h-48 bg-gray-100 animate-pulse rounded" />
+  loading: () => <ComponentLoadingSpinner text="Loading velocity chart..." />
 });
 
 const CardTypeDistributionChart = dynamic(() => import('@/components/charts/CardTypeDistributionChart'), {
-  loading: () => <div className="h-48 bg-gray-100 animate-pulse rounded" />
+  loading: () => <ComponentLoadingSpinner text="Loading distribution chart..." />
 });
 
 const TopContributorsChart = dynamic(() => import('@/components/charts/TopContributorsChart'), {
-  loading: () => <div className="h-48 bg-gray-100 animate-pulse rounded" />
+  loading: () => <ComponentLoadingSpinner text="Loading contributors chart..." />
 });
 import { 
   Target, 
@@ -338,7 +340,9 @@ export default async function ProjectAnalyticsPage({ params }: AnalyticsPageProp
         </div>
 
         {/* Analytics Charts */}
-        <AnalyticsCharts analytics={analytics} />
+        <Suspense fallback={<ComponentLoadingSpinner text="Loading project analytics overview..." />}>
+          <AnalyticsCharts analytics={analytics} />
+        </Suspense>
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -351,7 +355,9 @@ export default async function ProjectAnalyticsPage({ params }: AnalyticsPageProp
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <WeeklyVelocityChart data={analytics.weeklyVelocity} />
+              <Suspense fallback={<ComponentLoadingSpinner text="Loading velocity data..." />}>
+                <WeeklyVelocityChart data={analytics.weeklyVelocity} />
+              </Suspense>
             </CardContent>
           </Card>
 
@@ -367,11 +373,13 @@ export default async function ProjectAnalyticsPage({ params }: AnalyticsPageProp
               {Object.keys(analytics.cardTypeDistribution).length > 0 ? (
                 <div className="flex flex-col lg:flex-row items-center">
                   <div className="w-full lg:w-1/2 h-64">
-                    <CardTypeDistributionChart data={Object.entries(analytics.cardTypeDistribution).map(([type, count]) => ({
-                      type,
-                      count,
-                      percentage: analytics.totalCards > 0 ? Math.round((count / analytics.totalCards) * 100) : 0,
-                    }))} />
+                    <Suspense fallback={<ComponentLoadingSpinner text="Loading card distribution..." />}>
+                      <CardTypeDistributionChart data={Object.entries(analytics.cardTypeDistribution).map(([type, count]) => ({
+                        type,
+                        count,
+                        percentage: analytics.totalCards > 0 ? Math.round((count / analytics.totalCards) * 100) : 0,
+                      }))} />
+                    </Suspense>
                   </div>
                   <div className="w-full lg:w-1/2 space-y-3">
                     {Object.entries(analytics.cardTypeDistribution).map(([type, count], index) => (
@@ -414,7 +422,9 @@ export default async function ProjectAnalyticsPage({ params }: AnalyticsPageProp
           <CardContent>
             {analytics.topContributors.length > 0 ? (
               <div className="h-64">
-                <TopContributorsChart data={analytics.topContributors} />
+                <Suspense fallback={<ComponentLoadingSpinner text="Loading contributors data..." />}>
+                  <TopContributorsChart data={analytics.topContributors} />
+                </Suspense>
               </div>
             ) : (
               <div className="text-center py-8">

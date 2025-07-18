@@ -8,6 +8,7 @@ import { useParams } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import SearchBar from "./SearchBar";
 import { UserStatus } from "@/interfaces/UserStatus";
+import ErrorBoundary from './ErrorBoundary';
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -90,7 +91,23 @@ export default function Navbar() {
         </div>
 
         <div className="w-full ml-48">
-          <SearchBar />
+          <ErrorBoundary
+            fallback={
+              <div className="max-w-md mx-auto">
+                <div className="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded-lg border">
+                  <span className="text-sm text-muted-foreground">Search unavailable</span>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
+            }
+          >
+            <SearchBar />
+          </ErrorBoundary>
         </div>
 
         <div className="flex items-center gap-5 mr-16" ref={dropdownRef}>

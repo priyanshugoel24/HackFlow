@@ -12,6 +12,7 @@ import type * as Ably from 'ably';
 import { Comment } from "@/interfaces/Comment";
 import { paginationConfig } from '@/config/pagination';
 import { channelsConfig } from '@/config/channels';
+import ErrorBoundary from './ErrorBoundary';
 
 export default function CommentThread({ cardId }: { cardId: string }) {
   const { data: session } = useSession();
@@ -143,7 +144,23 @@ export default function CommentThread({ cardId }: { cardId: string }) {
   };
 
   return (
-    <div className="space-y-4 mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+    <ErrorBoundary
+      fallback={
+        <div className="space-y-4 mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+          <h4 className="text-sm font-semibold text-gray-800 dark:text-white">💬 Comments</h4>
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground">Unable to load comments</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="text-xs text-blue-600 hover:text-blue-700 mt-2"
+            >
+              Refresh to try again
+            </button>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4 mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
       <h4 className="text-sm font-semibold text-gray-800 dark:text-white">💬 Comments</h4>
 
       {/* New Comment Input */}
@@ -202,7 +219,8 @@ export default function CommentThread({ cardId }: { cardId: string }) {
             </Button>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

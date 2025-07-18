@@ -10,6 +10,7 @@ import axios from "axios";
 import { ProjectInvitation } from "@/interfaces/ProjectInvitation";
 import { TeamInvitation } from "@/interfaces/TeamInvitation";
 import { Invitation } from "@/interfaces/Invitation";
+import ErrorBoundary from './ErrorBoundary';
 
 export default function PendingInvitations({ onInvitationAccepted }: { onInvitationAccepted?: () => void }) {
   const [projectInvitations, setProjectInvitations] = useState<ProjectInvitation[]>([]);
@@ -148,7 +149,26 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
   }
 
   return (
-    <div className="space-y-4">
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        console.error('Pending Invitations Error:', error, errorInfo);
+      }}
+      fallback={
+        <div className="text-center py-8">
+          <h3 className="text-lg font-semibold mb-2">Unable to load invitations</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            There was an error loading your pending invitations.
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Refresh
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
         Pending Invitations ({totalInvitations})
       </h2>
@@ -329,6 +349,7 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
           </CardContent>
         </Card>
       ))}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

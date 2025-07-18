@@ -45,6 +45,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ErrorBoundary from './ErrorBoundary';
+import { Suspense } from 'react';
 
 // Memoized individual card component to prevent unnecessary re-renders
 const ContextCard = memo(function ContextCard({
@@ -612,48 +614,90 @@ const ContextCardList = memo(function ContextCardList({
       </div>
       {/* Always render modal if modalOpen is true and no card is selected */}
       {modalOpen && !selectedCard && (
-        <ContextCardModal 
-          open={modalOpen} 
-          setOpen={setModalOpen} 
-          projectSlug={projectSlug}
-          project={project as any}
-          onSuccess={handleCardCreated}
-        />
+        <ErrorBoundary
+          fallback={
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Unable to load card editor</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  There was an error loading the card creation form.
+                </p>
+                <Button onClick={() => setModalOpen(false)}>Close</Button>
+              </div>
+            </div>
+          }
+        >
+          <ContextCardModal 
+            open={modalOpen} 
+            setOpen={setModalOpen} 
+            projectSlug={projectSlug}
+            project={project as any}
+            onSuccess={handleCardCreated}
+          />
+        </ErrorBoundary>
       )}
       {/* Smart Compose Modal */}
-      <SmartComposeModal
-        open={smartComposeOpen}
-        setOpen={setSmartComposeOpen}
-        projectSlug={projectSlug}
-        onSuccess={handleCardCreated}
-      />
+      <ErrorBoundary
+        fallback={
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold mb-2">AI Composer Unavailable</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                The AI composer is currently unavailable. Please try again later.
+              </p>
+              <Button onClick={() => setSmartComposeOpen(false)}>Close</Button>
+            </div>
+          </div>
+        }
+      >
+        <SmartComposeModal
+          open={smartComposeOpen}
+          setOpen={setSmartComposeOpen}
+          projectSlug={projectSlug}
+          onSuccess={handleCardCreated}
+        />
+      </ErrorBoundary>
       {/* Render modal for editing/viewing a card */}
       {selectedCard && (
-        <ContextCardModal 
-          open={!!selectedCard}
-          setOpen={(val) => {
-            if (!val) {
+        <ErrorBoundary
+          fallback={
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-2">Unable to load card</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  There was an error loading the card details.
+                </p>
+                <Button onClick={() => setSelectedCard(null)}>Close</Button>
+              </div>
+            </div>
+          }
+        >
+          <ContextCardModal 
+            open={!!selectedCard}
+            setOpen={(val) => {
+              if (!val) {
+                setSelectedCard(null);
+                // Ensure add card modal doesn't appear after closing existing card modal
+                setModalOpen(false);
+              }
+            }}
+            projectSlug={projectSlug}
+            project={project as any || undefined}
+            existingCard={selectedCard ? {
+              ...selectedCard,
+              why: selectedCard.why || undefined,
+              issues: selectedCard.issues || undefined,
+              slackLinks: selectedCard.slackLinks || undefined,
+              attachments: selectedCard.attachments || undefined,
+              status: selectedCard.status || "ACTIVE"
+            } as any : undefined}
+            onSuccess={() => {
               setSelectedCard(null);
-              // Ensure add card modal doesn't appear after closing existing card modal
-              setModalOpen(false);
-            }
-          }}
-          projectSlug={projectSlug}
-          project={project as any || undefined}
-          existingCard={selectedCard ? {
-            ...selectedCard,
-            why: selectedCard.why || undefined,
-            issues: selectedCard.issues || undefined,
-            slackLinks: selectedCard.slackLinks || undefined,
-            attachments: selectedCard.attachments || undefined,
-            status: selectedCard.status || "ACTIVE"
-          } as any : undefined}
-          onSuccess={() => {
-            setSelectedCard(null);
-            setModalOpen(false); // Ensure add card modal doesn't appear
-            refreshCards();
-          }}
-        />
+              setModalOpen(false); // Ensure add card modal doesn't appear
+              refreshCards();
+            }}
+          />
+        </ErrorBoundary>
       )}
     </>
   );

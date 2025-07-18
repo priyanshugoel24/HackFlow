@@ -25,6 +25,9 @@ import { ContextCardWithRelations } from '@/interfaces/ContextCardWithRelations'
 import { TeamHackathon } from '@/interfaces/TeamHackathon';
 import { HackathonUpdate } from '@/interfaces/HackathonUpdate';
 import { toast } from 'sonner';
+import ErrorBoundary from './ErrorBoundary';
+import { PageLoadingSpinner } from './LoadingSpinner';
+import { Suspense } from 'react';
 
 interface HackathonPageClientProps {
   initialTeam: TeamHackathon | null;
@@ -247,6 +250,27 @@ export default function HackathonPageClient({
   const progressPercentage = totalCards > 0 ? (completedCards / totalCards) * 100 : 0;
 
   return (
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        console.error('Hackathon Page Error:', error, errorInfo);
+      }}
+      fallback={
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <div className="container mx-auto px-4 py-8">
+            <div className="text-center py-12">
+              <h1 className="text-2xl font-bold mb-4">Hackathon Room Unavailable</h1>
+              <p className="text-muted-foreground mb-6">
+                We're having trouble loading the hackathon room. Please try refreshing the page.
+              </p>
+              <Button onClick={() => window.location.reload()}>
+                Refresh Page
+              </Button>
+            </div>
+          </div>
+        </div>
+      }
+    >
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
@@ -519,5 +543,6 @@ export default function HackathonPageClient({
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
