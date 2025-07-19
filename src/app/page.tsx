@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import Navbar from '@/components/Navbar';
 import LoginPage from '@/components/LoginPage';
 import TeamsDisplay from '@/components/TeamsDisplay';
 import { TeamWithRelations } from '@/interfaces/TeamWithRelations';
 import { Session } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { Metadata } from 'next';
+import Navbar from '@/components/Navbar';
 
 export async function generateMetadata(): Promise<Metadata> {
   const session = await getServerSession(authOptions) as Session | null;
@@ -130,7 +130,7 @@ export default async function Home() {
   const teams = await fetchTeams(session);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-100 dark:from-zinc-900 dark:to-zinc-800" suppressHydrationWarning>
       <Navbar />
       <TeamsDisplay initialTeams={teams} />
     </div>

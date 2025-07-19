@@ -20,7 +20,7 @@ export const authOptions: any = {
     strategy: "jwt", // ✅ use JWT instead of DB sessions
   },
   jwt: {
-    maxAge: 60 * 60 * 24 * 7, // Optional: JWT valid for 7 days
+    maxAge: 60 * 60 * 24, // 1 day
   },
   callbacks: {
     async jwt({ token, user, profile }: any) {

@@ -12,15 +12,20 @@ import ErrorBoundary from './ErrorBoundary';
 import Image from 'next/image';
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { isConnected, currentStatus, updateUserStatus: updateStoreStatus } = usePresenceStore();
   const { updateStatus } = useAblyPresence();
   
   const [statusLoading, setStatusLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [error, setError] = useState<string>("");
+  const [isClient, setIsClient] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { slug } = useParams<{ slug: string }>(); // Get current project slug
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const statusOptions: Array<{ value: UserStatus; label: string; color: string }> = [
     { value: "Available", label: "Available", color: "bg-green-500" },
@@ -66,16 +71,45 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (!session) {
-    return null;
-  }
-
   const statusConfig =
     statusOptions.find((option) => option.value === currentStatus) ||
     statusOptions[0];
 
+  // Always render the navbar structure to avoid hydration mismatch
+  // Show loading state when session is not available or during initial hydration
+  if (!isClient || status === "loading") {
+    return (
+      <nav className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm">
+        <div className="px-6 h-20 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-4 min-w-[200px]">
+            <div className="text-lg font-semibold text-gray-800 dark:text-white tracking-tight">
+              📋 Context Board
+            </div>
+          </div>
+          <div className="w-full ml-48">
+            <div className="max-w-md mx-auto">
+              <div className="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded-lg border">
+                <span className="text-sm text-muted-foreground">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-5 mr-16">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white flex-shrink-0 animate-pulse">
+              <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+              <div className="w-20 h-4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
+
   return (
-    <nav className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm">
+    <nav className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm" suppressHydrationWarning>
       <div className="px-6 h-20 flex items-center justify-between gap-3">
         <div className="flex items-center gap-4 min-w-[200px]">
           <Link
