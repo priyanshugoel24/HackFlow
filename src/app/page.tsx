@@ -79,11 +79,6 @@ async function fetchTeams(session: Session): Promise<TeamWithRelations[]> {
                 projects: {
                   include: {
                     createdBy: true,
-                    members: {
-                      include: {
-                        user: true,
-                      },
-                    },
                   },
                   where: { isArchived: false },
                 },

@@ -106,7 +106,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Invalid card ID" }, { status: 400 });
     }
 
-    // Database query to fetch card details with project membership validation
+    // Database query to fetch card details with team membership validation
     const card = await prisma.contextCard.findFirst({
       where: { 
         id: id,
@@ -121,13 +121,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           select: {
             id: true,
             createdById: true,
-            members: {
-              where: {
-                userId: session.user.id,
-                status: "ACTIVE"
-              },
+            team: {
               select: {
-                id: true
+                members: {
+                  where: {
+                    userId: session.user.id,
+                    status: "ACTIVE"
+                  },
+                  select: {
+                    id: true
+                  }
+                }
               }
             }
           }
@@ -139,8 +143,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Card not found" }, { status: 404 });
     }
 
-    // Check if user has access to the project (either as creator or member)
-    const hasProjectAccess = card.project.createdById === session.user.id || card.project.members.length > 0;
+    // Check if user has access to the project (either as creator or team member)
+    const hasProjectAccess = card.project.createdById === session.user.id || (card.project.team?.members.length || 0) > 0;
     
     if (!hasProjectAccess) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });

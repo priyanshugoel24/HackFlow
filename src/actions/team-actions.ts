@@ -77,15 +77,6 @@ export async function archiveProject(projectId: string, isArchived: boolean) {
         OR: [
           { createdById: user.id },
           {
-            members: {
-              some: {
-                userId: user.id,
-                role: "MANAGER",
-                status: "ACTIVE"
-              }
-            }
-          },
-          {
             team: {
               members: {
                 some: {

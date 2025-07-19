@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function getGlobalSearchData() {
   try {
-    const [cards, projects, members, teams] = await Promise.all([
+    const [cards, projects, teams] = await Promise.all([
       prisma.contextCard.findMany({
         where: {
           isArchived: false, // Only show non-archived cards
@@ -41,27 +41,6 @@ export async function getGlobalSearchData() {
               slug: true,
             }
           }
-        },
-      }),
-      prisma.projectMember.findMany({
-        where: {
-          status: "ACTIVE",
-        },
-        include: {
-          user: { select: { id: true, name: true, email: true } },
-          project: { 
-            select: { 
-              id: true, 
-              slug: true, 
-              name: true,
-              team: {
-                select: {
-                  name: true,
-                  slug: true,
-                }
-              }
-            } 
-          },
         },
       }),
       prisma.team.findMany({
@@ -129,20 +108,7 @@ export async function getGlobalSearchData() {
       }))
     );
 
-    const memberData = members.map((member) => ({
-      type: "member" as const,
-      id: `member-${member.userId}-${member.projectId}`,
-      originalId: member.userId,
-      name: member.user.name || member.user.email?.split('@')[0] || "User",
-      email: member.user.email || "",
-      projectId: member.projectId,
-      projectSlug: member.project.slug,
-      projectName: member.project.name,
-      teamName: member.project.team?.name || "",
-      teamSlug: member.project.team?.slug || "",
-    }));
-
-    return [...cardData, ...projectData, ...teamData, ...tagData, ...memberData];
+    return [...cardData, ...projectData, ...teamData, ...tagData];
   } catch (error) {
     console.error("Error fetching search data:", error);
     return [];

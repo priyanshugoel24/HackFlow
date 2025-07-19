@@ -1,4 +1,4 @@
-import { User, Project, ContextCard, Comment, Activity, ProjectMember, Team, TeamMember } from "@prisma/client";
+import { User, Project, ContextCard, Comment, Activity, Team, TeamMember } from "@prisma/client";
 
 export interface ContextCardWithRelations extends ContextCard {
   user: User;

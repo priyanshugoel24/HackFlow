@@ -26,100 +26,51 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const [pendingProjectInvitations, pendingTeamInvitations] = await Promise.all([
-      // Fetch project invitations
-      prisma.projectMember.findMany({
-        where: {
-          OR: [
-            {
-              userId: user.id,
-              status: "INVITED",
+    const pendingTeamInvitations = await prisma.teamMember.findMany({
+      where: {
+        OR: [
+          {
+            userId: user.id,
+            status: "INVITED",
+          },
+          {
+            user: {
+              email: token.email,
             },
-            {
-              user: {
-                email: token.email,
-              },
-              status: "INVITED",
-            },
-          ],
-          project: {
-            isArchived: false,
+            status: "INVITED",
+          },
+        ],
+        team: {
+          isArchived: false,
+        },
+      },
+      include: {
+        team: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            createdAt: true,
+            lastActivityAt: true,
           },
         },
-        include: {
-          project: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              description: true,
-              link: true,
-              tags: true,
-              createdAt: true,
-              lastActivityAt: true,
-            },
-          },
-          addedBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true,
-            },
+        addedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
           },
         },
-        orderBy: { joinedAt: "desc" },
-      }),
-      // Fetch team invitations
-      prisma.teamMember.findMany({
-        where: {
-          OR: [
-            {
-              userId: user.id,
-              status: "INVITED",
-            },
-            {
-              user: {
-                email: token.email,
-              },
-              status: "INVITED",
-            },
-          ],
-          team: {
-            isArchived: false,
-          },
-        },
-        include: {
-          team: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              description: true,
-              createdAt: true,
-              lastActivityAt: true,
-            },
-          },
-          addedBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true,
-            },
-          },
-        },
-        orderBy: { joinedAt: "desc" },
-      }),
-    ]);
+      },
+      orderBy: { joinedAt: "desc" },
+    });
 
-    console.log(`📨 Found ${pendingProjectInvitations.length} project invitations and ${pendingTeamInvitations.length} team invitations for user ${user.id}`);
+    console.log(`📨 Found ${pendingTeamInvitations.length} team invitations for user ${user.id}`);
 
     return NextResponse.json({ 
-      projectInvitations: pendingProjectInvitations,
-      teamInvitations: pendingTeamInvitations,
-      // Keep backwards compatibility
-      invitations: pendingProjectInvitations 
+      teamInvitations: pendingTeamInvitations
     });
   } catch (error) {
     console.error("Error fetching pending invitations:", error);

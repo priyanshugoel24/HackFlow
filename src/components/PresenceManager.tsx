@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePresenceStore } from "@/lib/store";
 import { useAblyPresence } from "@/lib/ably/useAblyPresence";
 
@@ -10,9 +10,15 @@ export default function PresenceManager() {
   useAblyPresence();
   
   const { onlineUsers, isConnected } = usePresenceStore();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (!session?.user) {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    // Only run presence logic after hydration on client-side
+    if (!isClient || !session?.user) {
       return;
     }
 
@@ -27,7 +33,7 @@ export default function PresenceManager() {
     }
     console.log("🔌 Connection status:", isConnected);
     
-  }, [session, onlineUsers, isConnected]);
+  }, [session, onlineUsers, isConnected, isClient]);
 
   return null;
 }

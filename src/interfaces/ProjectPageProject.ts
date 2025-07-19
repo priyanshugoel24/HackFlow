@@ -6,12 +6,6 @@ export interface ProjectPageProject {
   name: string;
   description?: string;
   isArchived: boolean;
-  members?: Array<{
-    id: string;
-    userId: string;
-    role: string;
-    status: string;
-  }>;
   lastActivityAt: string;
   tags?: string[];
   link?: string;

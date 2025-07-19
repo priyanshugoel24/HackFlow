@@ -61,18 +61,6 @@ export async function GET(
             name: true,
             slug: true,
             createdById: true,
-            members: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    image: true,
-                  },
-                },
-              },
-            },
             createdBy: {
               select: {
                 id: true,

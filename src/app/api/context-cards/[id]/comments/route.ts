@@ -40,10 +40,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       include: {
         project: {
           include: {
-            members: {
-              where: {
-                userId: user.id,
-                status: "ACTIVE"
+            team: {
+              include: {
+                members: {
+                  where: {
+                    userId: user.id,
+                    status: "ACTIVE"
+                  }
+                }
               }
             }
           }
@@ -55,11 +59,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Context card not found" }, { status: 404 });
     }
 
-    // Check if user has access to the project (either as creator or member)
-    const hasAccess = card.project.createdById === user.id || card.project.members.length > 0;
+    // Check if user has access to the project (either as creator or team member)
+    const hasAccess = card.project.createdById === user.id || (card.project.team?.members.length || 0) > 0;
     
     if (!hasAccess) {
-      return NextResponse.json({ error: "Access denied. You must be a member of this project to view comments." }, { status: 403 });
+      return NextResponse.json({ error: "Access denied. You must be a member of this project's team to view comments." }, { status: 403 });
     }
 
     // Fetch comments with author info, paginated
@@ -130,10 +134,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       include: {
         project: {
           include: {
-            members: {
-              where: {
-                userId: user.id,
-                status: "ACTIVE"
+            team: {
+              include: {
+                members: {
+                  where: {
+                    userId: user.id,
+                    status: "ACTIVE"
+                  }
+                }
               }
             }
           }
@@ -145,11 +153,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Context card not found" }, { status: 404 });
     }
 
-    // Check if user has access to the project (either as creator or member)
-    const hasAccess = card.project.createdById === user.id || card.project.members.length > 0;
+    // Check if user has access to the project (either as creator or team member)
+    const hasAccess = card.project.createdById === user.id || (card.project.team?.members.length || 0) > 0;
     
     if (!hasAccess) {
-      return NextResponse.json({ error: "Access denied. You must be a member of this project to comment." }, { status: 403 });
+      return NextResponse.json({ error: "Access denied. You must be a member of this project's team to comment." }, { status: 403 });
     }
 
     // Create comment

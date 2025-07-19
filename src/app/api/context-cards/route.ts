@@ -137,14 +137,6 @@ export async function GET(req: NextRequest) {
           ...(isCUID ? { id: projectId } : { slug: projectId }),
           OR: [
             { createdById: user.id },
-            {
-              members: {
-                some: {
-                  userId: user.id,
-                  status: "ACTIVE"
-                }
-              }
-            },
             // Team-based access: if user is an active team member and project belongs to that team
             {
               team: {
@@ -174,20 +166,12 @@ export async function GET(req: NextRequest) {
         where = { ...where, id: 'non-existent-id' };
       }
     } else {
-      // Default: show all cards from projects where user is a member or creator
+      // Default: show all cards from projects where user is a member or creator through teams
       where = {
         ...where,
         project: {
           OR: [
             { createdById: user.id },
-            {
-              members: {
-                some: {
-                  userId: user.id,
-                  status: "ACTIVE"
-                }
-              }
-            },
             // Team-based access: if user is an active team member and project belongs to that team
             {
               team: {
@@ -318,20 +302,12 @@ export async function POST(req: NextRequest) {
     // CUID format: starts with 'c' followed by 24 alphanumeric characters
     const isCUID = /^c[a-z0-9]{24}$/i.test(projectIdentifier);
 
-    // Verify project access - ALL ACTIVE MEMBERS should be able to create cards
+    // Verify project access - ALL TEAM MEMBERS should be able to create cards
     const project = await prisma.project.findFirst({
       where: {
         ...(isCUID ? { id: projectIdentifier } : { slug: projectIdentifier }),
         OR: [
           { createdById: user.id },
-          {
-            members: {
-              some: {
-                userId: user.id,
-                status: "ACTIVE",
-              },
-            },
-          },
           // Team-based access: if user is an active team member and project belongs to that team
           {
             team: {
@@ -347,11 +323,15 @@ export async function POST(req: NextRequest) {
         isArchived: false,
       },
       include: {
-        members: {
-          where: { status: "ACTIVE" },
+        team: {
           include: {
-            user: {
-              select: { id: true, name: true, email: true }
+            members: {
+              where: { status: "ACTIVE" },
+              include: {
+                user: {
+                  select: { id: true, name: true, email: true }
+                }
+              }
             }
           }
         }
@@ -363,36 +343,6 @@ export async function POST(req: NextRequest) {
       console.error(`   - Project identifier: ${projectIdentifier} (isCUID: ${isCUID})`);
       console.error(`   - User ID: ${user.id}`);
       console.error(`   - User email: ${user.email}`);
-      
-      // Let's also try to find the project without access restrictions to debug
-      const debugProject = await prisma.project.findFirst({
-        where: {
-          ...(isCUID ? { id: projectIdentifier } : { slug: projectIdentifier }),
-          isArchived: false,
-        },
-        include: {
-          members: {
-            include: {
-              user: {
-                select: { id: true, email: true, name: true }
-              }
-            }
-          }
-        }
-      });
-      
-      if (debugProject) {
-        console.error(`   - Project exists: ${debugProject.name} (${debugProject.id})`);
-        console.error(`   - Project creator: ${debugProject.createdById}`);
-        console.error(`   - Project members:`, debugProject.members.map(m => ({
-          userId: m.userId,
-          email: m.user.email,
-          status: m.status,
-          role: m.role
-        })));
-      } else {
-        console.error(`   - Project does not exist with identifier: ${projectIdentifier}`);
-      }
       
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }

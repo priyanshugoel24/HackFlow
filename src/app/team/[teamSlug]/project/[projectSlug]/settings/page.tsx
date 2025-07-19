@@ -14,7 +14,7 @@ interface ProjectSettingsPageProps {
 }
 
 // Server-side data fetching
-async function fetchProject(projectSlug: string): Promise<any> {
+async function fetchProject(teamSlug: string, projectSlug: string): Promise<any> {
   try {
     const session = await getServerSession(authOptions) as Session | null;
     if (!session?.user?.email) {
@@ -35,11 +35,13 @@ async function fetchProject(projectSlug: string): Promise<any> {
       },
     });
 
+    // Get project data
     const project = await prisma.project.findUnique({
       where: { slug: projectSlug },
       include: {
         team: {
-          include: {
+          select: {
+            slug: true,
             members: {
               include: {
                 user: true,
@@ -49,11 +51,6 @@ async function fetchProject(projectSlug: string): Promise<any> {
           },
         },
         createdBy: true,
-        members: {
-          include: {
-            user: true,
-          },
-        },
         contextCards: {
           include: {
             user: true,
@@ -64,7 +61,7 @@ async function fetchProject(projectSlug: string): Promise<any> {
       },
     });
 
-    if (!project || !project.team) {
+    if (!project || !project.team || project.team.slug !== teamSlug) {
       return null;
     }
 
@@ -100,8 +97,8 @@ export default async function ProjectSettingsPage({ params }: ProjectSettingsPag
     redirect('/');
   }
 
-  const { projectSlug } = await params;
-  const project = await fetchProject(projectSlug);
+  const { teamSlug, projectSlug } = await params;
+  const project = await fetchProject(teamSlug, projectSlug);
 
   if (!project) {
     return (

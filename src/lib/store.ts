@@ -3,7 +3,7 @@ import { UserStatus } from '@/interfaces/UserStatus';
 import { PresenceUser } from '@/interfaces/PresenceUser';
 import { PresenceState } from '@/interfaces/PresenceState';
 
-export const usePresenceStore = create<PresenceState>((set) => ({
+export const usePresenceStore = create<PresenceState>((set, get) => ({
   onlineUsers: [],
   isConnected: false,
   currentStatus: 'Available',

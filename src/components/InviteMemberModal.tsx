@@ -12,20 +12,18 @@ import axios from "axios";
 export default function InviteMemberModal({
   open,
   setOpen,
-  projectSlug,
   teamSlug,
   onSuccess,
-  mode = "project"
+  mode = "team"
 }: {
   open: boolean;
   setOpen: (val: boolean) => void;
-  projectSlug?: string;
-  teamSlug?: string;
+  teamSlug: string;
   onSuccess?: () => void;
-  mode?: "project" | "team";
+  mode?: "team";
 }) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<'MEMBER' | 'MANAGER'>('MEMBER');
+  const [role, setRole] = useState<'MEMBER'>('MEMBER');
   const [loading, setLoading] = useState(false);
 
   const handleInvite = async () => {
@@ -37,22 +35,10 @@ export default function InviteMemberModal({
     setLoading(true);
 
     try {
-      let response;
-      
-      if (mode === "team" && teamSlug) {
-        response = await axios.post(`/api/teams/${teamSlug}/members`, {
-          email: email.trim(),
-          role: role, // Teams only have OWNER and MEMBER, no more ADMIN
-        });
-      } else if (mode === "project" && projectSlug) {
-        response = await axios.post(`/api/projects/${projectSlug}/invite`, { 
-          email: email.trim(),
-          role: role === 'MANAGER' ? 'MANAGER' : 'MEMBER' // Projects have MANAGER and MEMBER
-        });
-      } else {
-        toast.error('Invalid configuration');
-        return;
-      }
+      const response = await axios.post(`/api/teams/${teamSlug}/members`, {
+        email: email.trim(),
+        role: role, // Teams only have OWNER and MEMBER
+      });
 
       toast.success(response.data.message || 'Invitation sent successfully');
       setEmail('');
@@ -73,11 +59,8 @@ export default function InviteMemberModal({
     setOpen(false);
   };
 
-  const isTeamMode = mode === "team";
-  const title = isTeamMode ? "Invite Team Member" : "Invite Project Member";
-  const description = isTeamMode 
-    ? "Send an invitation email to add someone to this team. They can accept or decline the invitation."
-    : "Send an invite to someone's email address to add them to this project.";
+  const title = "Invite Team Member";
+  const description = "Send an invitation email to add someone to this team. They can accept or decline the invitation.";
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -106,15 +89,12 @@ export default function InviteMemberModal({
           
           <div className="space-y-2">
             <Label htmlFor="role">Role</Label>
-            <Select value={role} onValueChange={(value: 'MEMBER' | 'MANAGER') => setRole(value)} disabled={loading}>
+            <Select value={role} onValueChange={(value: 'MEMBER') => setRole(value)} disabled={loading}>
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="MEMBER">Member</SelectItem>
-                {!isTeamMode && (
-                  <SelectItem value="MANAGER">Manager</SelectItem>
-                )}
               </SelectContent>
             </Select>
           </div>

@@ -35,7 +35,7 @@ export default function SearchBar() {
     } else if (item.type === "card" && item.projectSlug) {
       router.push(`/projects/${item.projectSlug}?card=${item.originalId || item.id}`);
     } else if (item.type === "member" && item.projectSlug) {
-      router.push(`/projects/${item.projectSlug}#members`);
+      router.push(`/projects/${item.projectSlug}`);
     } else if (item.type === "tag" && item.projectSlug) {
       router.push(`/projects/${item.projectSlug}#tags`);
     }
@@ -220,7 +220,7 @@ export default function SearchBar() {
           placeholder={
             isAIEnabled
               ? "Ask AI anything about your context... (Press Enter to submit)"
-              : "Search projects, cards, members..."
+              : "Search projects and cards..."
           }
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -295,7 +295,7 @@ export default function SearchBar() {
             <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
               {isAIEnabled 
                 ? "Type your question and press Enter or click the submit button to get AI insights..."
-                : "Start typing to search projects, cards, and members..."
+                  : "Start typing to search projects and cards..."
               }
             </div>
           ) : !hasResults && !isAIEnabled ? (

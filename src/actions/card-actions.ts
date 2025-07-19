@@ -40,14 +40,6 @@ export async function archiveContextCard(cardId: string, isArchived: boolean) {
               OR: [
                 { createdById: user.id },
                 {
-                  members: {
-                    some: {
-                      userId: user.id,
-                      status: "ACTIVE"
-                    }
-                  }
-                },
-                {
                   team: {
                     members: {
                       some: {
@@ -140,14 +132,6 @@ export async function updateContextCardStatus(cardId: string, status: string) {
             project: {
               OR: [
                 { createdById: user.id },
-                {
-                  members: {
-                    some: {
-                      userId: user.id,
-                      status: "ACTIVE"
-                    }
-                  }
-                },
                 {
                   team: {
                     members: {

@@ -75,27 +75,8 @@ export async function POST(req: NextRequest) {
         tags: tags || [],
         createdById: user.id,
         teamId: teamId || null, // Assign to team if provided
-        members: {
-          create: {
-            userId: user.id,
-            role: "MANAGER",
-            status: "ACTIVE"
-          }
-        }
       },
       include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true
-              }
-            }
-          }
-        },
         createdBy: {
           select: {
             id: true,
@@ -113,40 +94,6 @@ export async function POST(req: NextRequest) {
         }
       }
     });
-
-    // If project is created within a team, automatically add all active team members
-    if (teamId) {
-      console.log(`🔄 Adding all team members to new project: ${project.name}`);
-      
-      const teamMembers = await prisma.teamMember.findMany({
-        where: {
-          teamId: teamId,
-          status: "ACTIVE",
-          userId: { not: user.id } // Exclude creator as they're already added as MANAGER
-        },
-        select: { userId: true }
-      });
-
-      // Add each team member to the project
-      for (const member of teamMembers) {
-        try {
-          await prisma.projectMember.create({
-            data: {
-              userId: member.userId,
-              projectId: project.id,
-              role: "MEMBER",
-              status: "ACTIVE",
-              addedById: user.id, // Project creator is adding them
-            }
-          });
-        } catch (error) {
-          console.error(`❌ Failed to add team member ${member.userId} to project:`, error);
-          // Continue with other members even if one fails
-        }
-      }
-      
-      console.log(`✅ Added ${teamMembers.length} team members to project`);
-    }
 
     // Log activity
     await logActivity({

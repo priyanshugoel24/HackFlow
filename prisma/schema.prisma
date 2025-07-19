@@ -8,24 +8,22 @@ datasource db {
 }
 
 model User {
-  id               String          @id @default(cuid())
+  id               String        @id @default(cuid())
   name             String?
-  email            String?         @unique
+  email            String?       @unique
   image            String?
   emailVerified    DateTime?
   lastSeenat       DateTime?
   accounts         Account[]
   activities       Activity[]
-  comments         Comment[]       @relation("UserComments")
-  assignedCards    ContextCard[]   @relation("AssignedCards")
-  contextCards     ContextCard[]   @relation("CreatedCards")
-  createdProjects  Project[]       @relation("CreatedProjects")
-  addedMembers     ProjectMember[] @relation("UserAddedMembers")
-  memberships      ProjectMember[]
+  comments         Comment[]     @relation("UserComments")
+  assignedCards    ContextCard[] @relation("AssignedCards")
+  contextCards     ContextCard[] @relation("CreatedCards")
+  createdProjects  Project[]     @relation("CreatedProjects")
   sessions         Session[]
   status           Status?
-  createdTeams     Team[]          @relation("CreatedTeams")
-  addedTeamMembers TeamMember[]    @relation("UserAddedTeamMembers")
+  createdTeams     Team[]        @relation("CreatedTeams")
+  addedTeamMembers TeamMember[]  @relation("UserAddedTeamMembers")
   teamMemberships  TeamMember[]
 }
 
@@ -61,39 +59,23 @@ model TeamMember {
 }
 
 model Project {
-  id             String          @id @default(cuid())
+  id             String        @id @default(cuid())
   name           String
   link           String?
-  createdAt      DateTime        @default(now())
+  createdAt      DateTime      @default(now())
   createdById    String
   description    String?
-  isArchived     Boolean         @default(false)
-  lastActivityAt DateTime        @updatedAt
+  isArchived     Boolean       @default(false)
+  lastActivityAt DateTime      @updatedAt
   tags           String[]
-  slug           String          @unique
+  slug           String        @unique
   teamId         String?
-  activities           Activity[]
-  contextCards         ContextCard[]
-  createdBy            User            @relation("CreatedProjects", fields: [createdById], references: [id], onDelete: Cascade)
-  team                 Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  members              ProjectMember[]
+  activities     Activity[]
+  contextCards   ContextCard[]
+  createdBy      User          @relation("CreatedProjects", fields: [createdById], references: [id], onDelete: Cascade)
+  team           Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
-}
-
-model ProjectMember {
-  id        String       @id @default(cuid())
-  userId    String
-  projectId String
-  role      ProjectRole
-  status    MemberStatus @default(ACTIVE)
-  joinedAt  DateTime     @default(now())
-  addedById String?
-  addedBy   User?        @relation("UserAddedMembers", fields: [addedById], references: [id])
-  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, projectId])
 }
 
 model ContextCard {
@@ -197,11 +179,6 @@ model VerificationToken {
 
 enum TeamRole {
   OWNER
-  MEMBER
-}
-
-enum ProjectRole {
-  MANAGER
   MEMBER
 }
 

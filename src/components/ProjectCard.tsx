@@ -158,10 +158,6 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
               
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400 mt-2">
                 <div className="flex items-center space-x-1">
-                  <Users className="h-3 w-3" />
-                  <span>{project.members?.length || 0} member{project.members?.length !== 1 ? 's' : ''}</span>
-                </div>
-                <div className="flex items-center space-x-1">
                   <Calendar className="h-3 w-3" />
                   <span>{formatDate(project.lastActivityAt)}</span>
                 </div>

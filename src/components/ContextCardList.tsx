@@ -317,13 +317,17 @@ interface ContextCardListProps {
   projectSlug: string;
   initialCards?: ContextCardWithRelations[];
   project?: ProjectWithRelations;
+  teamSlug?: string;
 }
 
 const ContextCardList = memo(function ContextCardList({ 
   projectSlug, 
   initialCards = [], 
-  project: initialProject 
+  project: initialProject,
+  teamSlug 
 }: ContextCardListProps) {
+  // Add hydration flag to prevent hydration mismatches
+  const [isClient, setIsClient] = useState(false);
   const [cards, setCards] = useState<ContextCardWithRelations[]>(initialCards);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -333,6 +337,11 @@ const ContextCardList = memo(function ContextCardList({
   const [allCards, setAllCards] = useState<ContextCardWithRelations[]>(initialCards);
   const [smartComposeOpen, setSmartComposeOpen] = useState(false);
   const [cardTypeFilter, setCardTypeFilter] = useState<'ALL' | 'TASK' | 'INSIGHT' | 'DECISION'>('ALL');
+
+  // Set client flag after hydration
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Memoize utility functions to prevent recreation on every render
   const getTypeIcon = useCallback((type: string) => {
@@ -355,7 +364,21 @@ const ContextCardList = memo(function ContextCardList({
 
   const formatDate = useCallback((dateString: string | Date) => {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleDateString(cardConfig.dateFormat.locale, cardConfig.dateFormat.options);
+    
+    // Use a more stable date format to avoid hydration mismatches
+    // Only show the date part without time to avoid timezone issues
+    const options: Intl.DateTimeFormatOptions = {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    };
+    
+    try {
+      return date.toLocaleDateString('en-US', options);
+    } catch (error) {
+      // Fallback for invalid dates
+      return 'Invalid date';
+    }
   }, []);
 
   // Memoize card sorting function
@@ -396,7 +419,8 @@ const ContextCardList = memo(function ContextCardList({
   }), [displayedCards, handleCardClick, getTypeIcon, getTypeColor, formatDate]);
 
   // Use virtualization for large lists (threshold: 50 cards)
-  const shouldVirtualize = displayedCards.length > 50;
+  // Use stable virtualization threshold to prevent hydration mismatches
+  const shouldVirtualize = isClient && displayedCards.length > 50;
 
   // Memoize modal open handler
   const handleModalOpen = useCallback(() => {
@@ -484,6 +508,16 @@ const ContextCardList = memo(function ContextCardList({
       setCards(filteredCards);
     }
   }, [showArchived, allCards]);
+
+  // Show loading during hydration to prevent mismatches
+  if (!isClient) {
+    return (
+      <div className="text-center text-gray-500 dark:text-gray-400 mt-10">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+        <p className="mt-2">Initializing...</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -632,6 +666,7 @@ const ContextCardList = memo(function ContextCardList({
             setOpen={setModalOpen} 
             projectSlug={projectSlug}
             project={project as any}
+            teamSlug={teamSlug}
             onSuccess={handleCardCreated}
           />
         </ErrorBoundary>
@@ -683,6 +718,7 @@ const ContextCardList = memo(function ContextCardList({
             }}
             projectSlug={projectSlug}
             project={project as any || undefined}
+            teamSlug={teamSlug}
             existingCard={selectedCard ? {
               ...selectedCard,
               why: selectedCard.why || undefined,

@@ -98,12 +98,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       include: {
         project: {
           include: {
-            members: {
-              where: {
-                userId: user.id,
-                status: "ACTIVE"
-              }
-            },
             team: {
               select: {
                 members: {
@@ -124,14 +118,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Card not found" }, { status: 404 });
     }
 
-    // Check if user has access to the project (creator, direct member, or team member)
+    // Check if user has access to the project (creator or team member)
     const isProjectCreator = existing.project.createdById === user.id;
-    const isDirectMember = existing.project.members.length > 0;
     const isTeamMember = (existing.project.team?.members?.length || 0) > 0;
-    const hasProjectAccess = isProjectCreator || isDirectMember || isTeamMember;
+    const hasProjectAccess = isProjectCreator || isTeamMember;
     
     if (!hasProjectAccess) {
-      return NextResponse.json({ error: "Access denied. You must be a member of this project." }, { status: 403 });
+      return NextResponse.json({ error: "Access denied. You must be a member of this project's team." }, { status: 403 });
     }
 
     // Determine if this is a content/structure edit vs a status/meta update
@@ -161,10 +154,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           OR: [
             { createdById: user.id },
             { 
-              members: {
-                some: {
-                  userId: user.id,
-                  status: "ACTIVE"
+              team: {
+                members: {
+                  some: {
+                    userId: user.id,
+                    status: "ACTIVE"
+                  }
                 }
               }
             }
@@ -430,12 +425,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       include: {
         project: {
           include: {
-            members: {
-              where: {
-                userId: user.id,
-                status: "ACTIVE"
-              }
-            },
             team: {
               select: {
                 members: {
@@ -457,23 +446,19 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     // Check if user has access to the project first
     const isProjectCreator = existing.project.createdById === user.id;
-    const isDirectMember = existing.project.members.length > 0;
     const isTeamMember = (existing.project.team?.members?.length || 0) > 0;
-    const hasProjectAccess = isProjectCreator || isDirectMember || isTeamMember;
+    const hasProjectAccess = isProjectCreator || isTeamMember;
     
     if (!hasProjectAccess) {
-      return NextResponse.json({ error: "Access denied. You must be a member of this project." }, { status: 403 });
+      return NextResponse.json({ error: "Access denied. You must be a member of this project's team." }, { status: 403 });
     }
 
-    // Check if user has permission to delete this card (only card creators can delete)
+    // Check if user has permission to delete this card (only card creators and project creators can delete)
     const isCardCreator = existing.userId === user.id;
-    const isManager = existing.project.members.some(member => 
-      member.userId === user.id && member.role === "MANAGER"
-    );
 
-    if (!isCardCreator && !isProjectCreator && !isManager) {
+    if (!isCardCreator && !isProjectCreator) {
       return NextResponse.json({ 
-        error: "Access denied. Only card creators, project creators, and managers can delete cards." 
+        error: "Access denied. Only card creators and project creators can delete cards." 
       }, { status: 403 });
     }
 

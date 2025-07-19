@@ -41,7 +41,6 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
         _count: {
           select: {
             contextCards: true,
-            members: true,
           },
         },
         team: {
@@ -61,7 +60,7 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
     }
 
     const title = `${project.name} - Project Dashboard | ${project.team?.name}`;
-    const description = project.description || `Manage ${project.name} project with ${project._count.contextCards} context cards and ${project._count.members} team members. Collaborate efficiently on tasks and track progress.`;
+    const description = project.description || `Manage ${project.name} project with ${project._count.contextCards} context cards. Collaborate efficiently on tasks and track progress.`;
 
     const keywords = [
       'project management',
@@ -147,11 +146,6 @@ async function fetchProjectData(teamSlug: string, projectSlug: string): Promise<
           },
           where: { isArchived: false },
           orderBy: { createdAt: 'desc' },
-        },
-        members: {
-          include: {
-            user: true,
-          },
         },
         activities: {
           include: {

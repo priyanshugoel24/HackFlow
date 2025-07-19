@@ -169,7 +169,7 @@ const ContextCardModal = memo(function ContextCardModal({
 
   // Check if the current user has permission to archive/unarchive this card
   const canArchive = useMemo(() => {
-    if (!existingCard || !session?.user || !project) {
+    if (!existingCard || !session?.user || !teamMembers.length) {
       return false;
     }
 
@@ -183,32 +183,11 @@ const ContextCardModal = memo(function ContextCardModal({
     // Check if user is card creator (by user ID - this is the main creator field)
     const isCardCreator = existingCard.userId === user.id;
     
-    // Check if user is project creator (by ID)
-    const isProjectCreator = project.createdById === user.id;
-    
-    // Check if user is project manager by user ID
-    const isManager = project.members && project.members.some(
-      (member: any) =>
-        member.userId === user.id &&
-        member.role === "MANAGER" &&
-        member.status === "ACTIVE"
-    );
+    // Check if user is a team member
+    const isTeamMember = teamMembers.some((member) => member.userId === user.id);
 
-    // Additional check: if user email matches any of the member emails 
-    // (to handle cases where user ID might be inconsistent)
-    const isManagerByEmail = user.email && project.members && project.members.some(
-      (member: any) =>
-        member.user?.email === user.email &&
-        member.role === "MANAGER" &&
-        member.status === "ACTIVE"
-    );
-
-    // Check if user is creator by email (for projects where the creator's user ID might be different)
-    const projectData = project as any;
-    const isProjectCreatorByEmail = user.email && projectData.createdBy?.email === user.email;
-
-    return isCardCreator || isProjectCreator || isManager || isManagerByEmail || isProjectCreatorByEmail;
-  }, [existingCard?.userId, session?.user, project?.createdById, project?.members]);
+    return isCardCreator && isTeamMember;
+  }, [existingCard?.userId, session?.user, teamMembers]);
 
   // Use card presence hook to track who's editing
   const { editors } = useCardPresence(
@@ -272,29 +251,8 @@ const ContextCardModal = memo(function ContextCardModal({
     }
   }, [existingCard, open]);
 
-  // Get project members and team members for mention dropdown
+  // Get team members for mention dropdown
   useEffect(() => {
-    // Load project members
-    if (project && project.members) {
-      const members = project.members
-        .filter((m) => m.status === "ACTIVE")
-        .map((member) => {
-          const user =
-            (
-              member as {
-                user?: { name?: string; email?: string; image?: string };
-              }
-            ).user || {};
-          return {
-            userId: member.userId,
-            name: user.name,
-            email: user.email,
-            image: user.image,
-          };
-        });
-      setFilteredMembers(members);
-    }
-
     // Load team members if teamSlug is provided
     if (teamSlug) {
       const fetchTeamMembers = async () => {
@@ -310,11 +268,8 @@ const ContextCardModal = memo(function ContextCardModal({
               image: member.user.image,
             }));
           setTeamMembers(teamMembersList);
-          
-          // If no project members, use team members as filtered members
-          if (!project || !project.members) {
-            setFilteredMembers(teamMembersList);
-          }
+          // Also initialize filteredMembers with all team members
+          setFilteredMembers(teamMembersList);
         } catch (error) {
           console.error('Error fetching team members:', error);
         }
@@ -322,45 +277,22 @@ const ContextCardModal = memo(function ContextCardModal({
       
       fetchTeamMembers();
     }
-  }, [project, teamSlug]);
+  }, [teamSlug]);
 
-  // Memoize filtered members computation
+  // Memoize filtered members computation - only use team members
   const allMembers = useMemo(() => {
-    let members: Array<{ userId: string; name?: string; email?: string; image?: string }> = [];
+    // Only use team members for mentions
+    return teamMembers || [];
+  }, [teamMembers]);
 
-    // Get project members if available
-    if (project?.members) {
-      const projectMembers = project.members
-        .filter((m) => m.status === "ACTIVE")
-        .map((member) => {
-          const user = (member as { user?: { name?: string; email?: string; image?: string } }).user || {};
-          return {
-            userId: member.userId,
-            name: user.name,
-            email: user.email,
-            image: user.image,
-          };
-        });
-      members = [...members, ...projectMembers];
-    }
-
-    // Add team members if available and not already included
-    if (teamMembers.length > 0) {
-      const uniqueTeamMembers = teamMembers.filter(
-        (teamMember) => !members.some((member) => member.userId === teamMember.userId)
-      );
-      members = [...members, ...uniqueTeamMembers];
-    }
-
-    return members;
-  }, [project?.members, teamMembers]);
-
-  // Filter members based on search input (from both project and team)
+  // Filter members based on search input (from team members only)
   const filterMembers = useCallback((input: string) => {
     setMention(input);
 
     if (!input.trim()) {
-      setShowMemberDropdown(false);
+      // Show all team members when input is empty
+      setFilteredMembers(allMembers);
+      setShowMemberDropdown(allMembers.length > 0);
       return;
     }
 
@@ -507,22 +439,8 @@ const ContextCardModal = memo(function ContextCardModal({
       let mentionedMember = null;
       const trimmedMention = mention.trim();
       
-      // First try to find in project members if available
-      if (project?.members) {
-        mentionedMember = project.members.find((m) => {
-          const user =
-            (m as { user?: { name?: string; email?: string; image?: string } })
-              .user || {};
-          // Check if mention matches name or email (case-insensitive)
-          const userName = user.name?.toLowerCase() || '';
-          const userEmail = user.email?.toLowerCase() || '';
-          const mentionLower = trimmedMention.toLowerCase();
-          return userName === mentionLower || userEmail === mentionLower;
-        });
-      }
-      
-      // If not found in project members, try team members
-      if (!mentionedMember && teamMembers.length > 0) {
+      // Find in team members only
+      if (teamMembers.length > 0) {
         const teamMember = teamMembers.find((m) => {
           const memberName = m.name?.toLowerCase() || '';
           const memberEmail = m.email?.toLowerCase() || '';
@@ -1018,7 +936,13 @@ const ContextCardModal = memo(function ContextCardModal({
                 onChange={(e) => filterMembers(e.target.value)}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowMemberDropdown(filteredMembers.length > 0);
+                  // Show all members when clicking on empty field, or show filtered results
+                  if (!mention.trim()) {
+                    setFilteredMembers(allMembers);
+                    setShowMemberDropdown(allMembers.length > 0);
+                  } else {
+                    setShowMemberDropdown(filteredMembers.length > 0);
+                  }
                 }}
               />
 

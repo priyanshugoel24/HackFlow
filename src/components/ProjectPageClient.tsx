@@ -118,13 +118,6 @@ export default function ProjectPageClient({
                   <Calendar className="h-4 w-4" />
                   <span>Updated {formatDate(project.lastActivityAt)}</span>
                 </div>
-                
-                {project.members && (
-                  <div className="flex items-center space-x-1">
-                    <Users className="h-4 w-4" />
-                    <span>{project.members.length} member{project.members.length !== 1 ? 's' : ''}</span>
-                  </div>
-                )}
               </div>
 
               {project.tags && project.tags.length > 0 && (
@@ -170,6 +163,7 @@ export default function ProjectPageClient({
               projectSlug={projectSlug} 
               initialCards={project.contextCards || []}
               project={project as any}
+              teamSlug={teamSlug}
             />
           </div>
 

@@ -69,11 +69,6 @@ async function fetchTeamData(teamSlug: string): Promise<TeamHackathon | null> {
         projects: {
           include: {
             createdBy: true,
-            members: {
-              include: {
-                user: true,
-              },
-            },
           },
           where: { isArchived: false },
         },

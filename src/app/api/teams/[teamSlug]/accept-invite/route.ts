@@ -150,46 +150,7 @@ export async function POST(
       data: { lastActivityAt: new Date() },
     });
 
-    // Automatically add the user as a member to all projects in this team
-    // This gives them access to all team projects without requiring individual invitations
-    const teamProjects = await prisma.project.findMany({
-      where: { 
-        teamId: team.id,
-        isArchived: false 
-      },
-      select: { id: true, name: true }
-    });
-
-    console.log(`🔄 Adding user ${user.id} to ${teamProjects.length} team projects`);
-
-    // Add user to each team project if they're not already a member
-    for (const project of teamProjects) {
-      try {
-        await prisma.projectMember.upsert({
-          where: {
-            userId_projectId: {
-              userId: user.id,
-              projectId: project.id
-            }
-          },
-          update: {
-            status: "ACTIVE",
-            role: "MEMBER"
-          },
-          create: {
-            userId: user.id,
-            projectId: project.id,
-            role: "MEMBER",
-            status: "ACTIVE",
-            addedById: updatedMember.addedById, // Use the same person who invited them to the team
-          }
-        });
-        console.log(`✅ Added user to project: ${project.name}`);
-      } catch (error) {
-        console.error(`❌ Failed to add user to project ${project.name}:`, error);
-        // Continue with other projects even if one fails
-      }
-    }
+    console.log(`✅ Successfully joined team ${team.name} as ${updatedMember.role}`);
 
     return NextResponse.json({ 
       success: true, 

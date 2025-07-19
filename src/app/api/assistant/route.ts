@@ -259,14 +259,6 @@ export async function POST(req: NextRequest) {
         where: {
           OR: [
             { createdById: user.id },
-            { 
-              members: { 
-                some: { 
-                  userId: user.id,
-                  status: "ACTIVE"
-                } 
-              } 
-            },
             // Team-based access: if user is an active team member and project belongs to that team
             {
               team: {
@@ -282,16 +274,8 @@ export async function POST(req: NextRequest) {
           isArchived: false,
         },
         include: {
-          members: {
-            include: {
-              user: {
-                select: { id: true, name: true, email: true, image: true }
-              }
-            },
-            where: { status: "ACTIVE" }
-          },
           createdBy: {
-            select: { id: true, name: true, email: true }
+            select: { id: true, name: true, email: true, image: true }
           },
           team: {
             select: { 
@@ -305,8 +289,7 @@ export async function POST(req: NextRequest) {
           },
           _count: {
             select: {
-              contextCards: { where: { isArchived: false } },
-              members: { where: { status: "ACTIVE" } }
+              contextCards: { where: { isArchived: false } }
             }
           }
         },
@@ -556,7 +539,6 @@ ${team.hackathonDeadline ? `- Hackathon Deadline: ${team.hackathonDeadline.toLoc
       const projectCards = relevantCards.filter(card => card.projectId === project.id);
       const projectActivities = relevantActivities.filter(activity => activity.projectId === project.id);
       const projectComments = comments.filter(comment => comment.card.project.slug === project.slug);
-      const memberCount = project.members.length;
       const cardCount = project._count.contextCards;
       
       const cardsByType = {
@@ -575,19 +557,21 @@ ${team.hackathonDeadline ? `- Hackathon Deadline: ${team.hackathonDeadline.toLoc
       const uniqueCommentators = new Set(projectComments.map(c => c.author.id)).size;
       const cardsWithComments = projectCards.filter(card => card._count.comments > 0).length;
       
-      // Member activity breakdown
-      const memberActivity = project.members.map(member => {
-        const memberCards = projectCards.filter(card => card.userId === member.userId || card.assignedToId === member.userId);
-        const memberActivities = projectActivities.filter(activity => activity.userId === member.userId);
-        const memberComments = projectComments.filter(comment => comment.author.id === member.userId);
-        return `${member.user.name || member.user.email?.split('@')[0]} (${member.role.toLowerCase()}: ${memberCards.length} cards, ${memberActivities.length} activities, ${memberComments.length} comments)`;
-      }).join('; ');
+      // Team member activity breakdown for this project (if project belongs to a team)
+      const teamMemberActivity = project.team ? 
+        allTeamMembers.filter(tm => tm.teamId === project.team?.id)
+          .map(teamMember => {
+            const memberCards = projectCards.filter(card => card.userId === teamMember.userId || card.assignedToId === teamMember.userId);
+            const memberActivities = projectActivities.filter(activity => activity.userId === teamMember.userId);
+            const memberComments = projectComments.filter(comment => comment.author.id === teamMember.userId);
+            return `${teamMember.user.name || teamMember.user.email?.split('@')[0]} (${teamMember.role.toLowerCase()}: ${memberCards.length} cards, ${memberActivities.length} activities, ${memberComments.length} comments)`;
+          }).join('; ') : 'No team members';
 
       return `
 PROJECT: ${project.name} (${project.slug})
 - Team: ${project.team?.name || 'Independent project'}
 - Created by: ${project.createdBy.name || project.createdBy.email}
-- Members (${memberCount}): ${memberActivity}
+- Team Members Activity: ${teamMemberActivity}
 - Cards: ${cardCount} total (${cardsByType.TASK} tasks, ${cardsByType.INSIGHT} insights, ${cardsByType.DECISION} decisions)
 - Status: ${cardsByStatus.ACTIVE} active, ${cardsByStatus.CLOSED} closed
 - Engagement: ${totalCommentsCount} comments from ${uniqueCommentators} people on ${cardsWithComments} cards

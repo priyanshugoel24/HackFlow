@@ -31,19 +31,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // Check if the id is a CUID (database ID) or a slug
     const isCUID = /^c[a-z0-9]{24}$/i.test(id);
     
-    // Ensure the user is a MANAGER or the creator of the project
+    // Ensure the user is the creator of the project (only creators can delete projects)
     const project = await prisma.project.findFirst({
       where: {
         ...(isCUID ? { id } : { slug: id }),
-        OR: [{ createdById: user.id }, {
-          members: {
-            some: {
-              userId: user.id,
-              role: "MANAGER",
-              status: "ACTIVE"
-            }
-          }
-        }]
+        createdById: user.id // Only creator can delete
       }
     });
 
@@ -78,19 +70,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             slug: true,
             description: true,
           },
-        },
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-              },
-            },
-          },
-          where: { status: "ACTIVE" },
         },
       },
     });

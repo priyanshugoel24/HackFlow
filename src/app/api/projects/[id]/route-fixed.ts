@@ -22,10 +22,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         OR: [
           { createdById: token.sub },
           { 
-            members: {
-              some: {
-                userId: token.sub,
-                status: "ACTIVE"
+            team: {
+              members: {
+                some: {
+                  userId: token.sub,
+                  status: "ACTIVE"
+                }
               }
             }
           }
@@ -41,17 +43,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             image: true,
           },
         },
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-              },
-            },
-          },
+        team: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
         },
         contextCards: {
           where: { isArchived: false },
@@ -103,18 +100,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const existingProject = await prisma.project.findFirst({
       where: {
         ...(isCUID ? { id } : { slug: id }),
-        OR: [
-          { createdById: token.sub },
-          { 
-            members: {
-              some: {
-                userId: token.sub,
-                role: "MANAGER",
-                status: "ACTIVE"
-              }
-            }
-          }
-        ],
+        createdById: token.sub, // Only project creator can update
       },
     });
 
@@ -141,16 +127,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             email: true,
           },
         },
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
+        team: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
         },
       },
     });
