@@ -22,13 +22,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | Context Board',
-    default: 'Context Board - Your Personal Context Management Dashboard',
+    template: '%s | HackFlow - Collaborative Workspace Platform',
+    default: 'HackFlow - Your Personal Context Management Dashboard',
   },
   description: "Your personal context management dashboard for organizing projects, teams, and tasks in one collaborative workspace.",
-  keywords: ['project management', 'team collaboration', 'task tracking', 'context board', 'productivity'],
-  authors: [{ name: 'Context Board Team' }],
-  creator: 'Context Board',
+  keywords: ['project management', 'team collaboration', 'task tracking', 'hackflow', 'productivity'],
+  authors: [{ name: 'HackFlow Team' }],
+  creator: 'HackFlow ',
   metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
   alternates: {
     canonical: '/',
@@ -36,13 +36,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    siteName: 'Context Board',
-    title: 'Context Board - Your Personal Context Management Dashboard',
+    siteName: 'HackFlow',
+    title: 'HackFlow - Your Personal Context Management Dashboard',
     description: 'Your personal context management dashboard for organizing projects, teams, and tasks in one collaborative workspace.',
   },
   twitter: {
     card: 'summary_large_image',
-    creator: '@contextboard',
+    creator: '@hackflow',
   },
   robots: {
     index: true,

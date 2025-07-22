@@ -76,7 +76,7 @@ export default function HeroSection() {
           </div>
           <div>
             <h1 className="text-4xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 dark:from-blue-400 dark:via-purple-400 dark:to-indigo-400 bg-clip-text text-transparent leading-tight">
-              ContextBoard
+              HackFlow
             </h1>
           </div>
         </div>

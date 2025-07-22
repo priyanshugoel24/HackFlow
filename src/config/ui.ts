@@ -1,7 +1,7 @@
 export const uiConfig = {
   // Theme settings
   DEFAULT_THEME: 'light' as const,
-  THEME_STORAGE_KEY: 'contextboard-theme',
+  THEME_STORAGE_KEY: 'hackflow-theme',
   
   // Layout settings
   SIDEBAR_WIDTH: 280,

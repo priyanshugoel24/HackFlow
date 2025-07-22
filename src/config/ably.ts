@@ -18,7 +18,7 @@ export const ablyConfig = {
   MESSAGE_HISTORY_LIMIT: 100,
   
   // Client settings
-  CLIENT_ID_PREFIX: 'contextboard-',
+  CLIENT_ID_PREFIX: 'hackflow-',
   AUTO_CONNECT: true,
   ECHO_MESSAGES: false,
 } as const;

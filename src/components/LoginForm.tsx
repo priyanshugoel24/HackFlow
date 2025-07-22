@@ -107,7 +107,7 @@ export default function LoginForm() {
           className="mt-8 text-center"
         >
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            New to ContextBoard?{' '}
+            New to HackFlow?{' '}
             <span className="font-medium text-blue-600 dark:text-blue-400">
               Create your account instantly with OAuth
             </span>

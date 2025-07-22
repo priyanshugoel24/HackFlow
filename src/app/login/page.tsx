@@ -6,13 +6,13 @@ import LoginPage from '@/components/LoginPage';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'Sign In | ContextBoard - Collaborative Workspace Platform',
-    description: 'Sign in to ContextBoard to access your collaborative workspace. Manage projects, track tasks, and collaborate with your team in real-time. Join thousands of teams building together.',
+    title: 'Sign In | HackFlow - Collaborative Workspace Platform',
+    description: 'Sign in to HackFlow to access your collaborative workspace. Manage projects, track tasks, and collaborate with your team in real-time. Join thousands of teams building together.',
     keywords: [
       'login',
       'sign in',
       'authentication',
-      'ContextBoard',
+      'HackFlow',
       'collaborative workspace',
       'project management',
       'team collaboration',
@@ -23,35 +23,35 @@ export async function generateMetadata(): Promise<Metadata> {
       'GitHub',
       'Google'
     ],
-    authors: [{ name: 'ContextBoard Team' }],
-    creator: 'ContextBoard',
-    publisher: 'ContextBoard',
-    applicationName: 'ContextBoard',
+    authors: [{ name: 'HackFlow Team' }],
+    creator: 'HackFlow',
+    publisher: 'HackFlow',
+    applicationName: 'HackFlow',
     referrer: 'origin-when-cross-origin',
     openGraph: {
-      title: 'Sign In to ContextBoard - Your Collaborative Workspace',
+      title: 'Sign In to HackFlow - Your Collaborative Workspace',
       description: 'Access your collaborative workspace to manage projects, track tasks, and collaborate with your team in real-time. Modern workspace for teams that build together.',
       type: 'website',
       locale: 'en_US',
       url: '/login',
-      siteName: 'ContextBoard',
+      siteName: 'HackFlow',
       images: [
         {
           url: '/og-login.jpg', // You can create this image later
           width: 1200,
           height: 630,
-          alt: 'ContextBoard Login - Collaborative Workspace Platform',
+          alt: 'HackFlow Login - Collaborative Workspace Platform',
           type: 'image/jpeg',
         }
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Sign In to ContextBoard - Collaborative Workspace',
+      title: 'Sign In to HackFlow - Collaborative Workspace',
       description: 'Access your workspace to manage projects and collaborate with your team in real-time.',
       images: ['/og-login.jpg'],
-      creator: '@contextboard',
-      site: '@contextboard',
+      creator: '@hackflow',
+      site: '@hackflow',
     },
     robots: {
       index: true,

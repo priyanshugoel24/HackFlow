@@ -1,6 +1,6 @@
 export const supabaseConfig = {
   // Storage configuration
-  BUCKET_NAME: process.env.SUPABASE_BUCKET || 'contextboard-uploads',
+  BUCKET_NAME: process.env.SUPABASE_BUCKET || 'hackflow-uploads',
   
   // File upload settings
   MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
