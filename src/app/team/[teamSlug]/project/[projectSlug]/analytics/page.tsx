@@ -10,10 +10,6 @@ import { Suspense } from 'react';
 import { ComponentLoadingSpinner } from '@/components/LoadingSpinner';
 
 // Lazy load chart components
-const AnalyticsCharts = dynamic(() => import('@/components/AnalyticsCharts'), {
-  loading: () => <ComponentLoadingSpinner text="Loading analytics..." />
-});
-
 const WeeklyVelocityChart = dynamic(() => import('@/components/charts/WeeklyVelocityChart'), {
   loading: () => <ComponentLoadingSpinner text="Loading velocity chart..." />
 });
@@ -248,7 +244,7 @@ export default async function ProjectAnalyticsPage({ params }: AnalyticsPageProp
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground mb-2">Project not found</h1>
-            <p className="text-muted-foreground">The project you're looking for doesn't exist or you don't have access to it.</p>
+            <p className="text-muted-foreground">The project you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
           </div>
         </div>
       </div>
@@ -338,11 +334,6 @@ export default async function ProjectAnalyticsPage({ params }: AnalyticsPageProp
             </CardContent>
           </Card>
         </div>
-
-        {/* Analytics Charts */}
-        <Suspense fallback={<ComponentLoadingSpinner text="Loading project analytics overview..." />}>
-          <AnalyticsCharts analytics={analytics} />
-        </Suspense>
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

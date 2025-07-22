@@ -186,7 +186,7 @@ async function fetchHackathonCards(teamSlug: string): Promise<ContextCardWithRel
 }
 
 // Server-side data fetching for hackathon updates
-async function fetchHackathonUpdates(teamSlug: string): Promise<HackathonUpdate[]> {
+async function fetchHackathonUpdates(): Promise<HackathonUpdate[]> {
   try {
     const session = await getServerSession(authOptions) as Session | null;
     if (!session?.user?.email) {
@@ -216,7 +216,7 @@ export default async function TeamHackathonPage({ params }: HackathonPageProps) 
   
   // Only fetch cards and updates if hackathon mode is enabled
   const cards = team?.hackathonModeEnabled ? await fetchHackathonCards(teamSlug) : [];
-  const updates = team?.hackathonModeEnabled ? await fetchHackathonUpdates(teamSlug) : [];
+  const updates = team?.hackathonModeEnabled ? await fetchHackathonUpdates() : [];
 
   return (
     <HackathonPageClient 

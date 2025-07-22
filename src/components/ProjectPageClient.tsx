@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -11,9 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  ArrowLeft,
-  ExternalLink,
-  Users,
   Calendar,
   Archive,
   Settings,
@@ -22,6 +19,7 @@ import {
 } from "lucide-react";
 import { ProjectPageProject } from '@/interfaces/ProjectPageProject';
 import { ProjectPageTeam } from '@/interfaces/ProjectPageTeam';
+import { ProjectWithRelations } from '@/interfaces/ProjectWithRelations';
 
 interface ProjectPageClientProps {
   project: ProjectPageProject;
@@ -162,7 +160,7 @@ export default function ProjectPageClient({
             <ContextCardList 
               projectSlug={projectSlug} 
               initialCards={project.contextCards || []}
-              project={project as any}
+              project={project as unknown as ProjectWithRelations}
               teamSlug={teamSlug}
             />
           </div>

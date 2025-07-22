@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { Session } from 'next-auth';
 import { logActivity } from '@/lib/logActivity';
+import { TaskStatus } from '@/interfaces/TaskStatus';
 
 export async function archiveContextCard(cardId: string, isArchived: boolean) {
   try {
@@ -100,7 +101,7 @@ export async function archiveContextCard(cardId: string, isArchived: boolean) {
   }
 }
 
-export async function updateContextCardStatus(cardId: string, status: string) {
+export async function updateContextCardStatus(cardId: string, status: TaskStatus) {
   try {
     const session = await getServerSession(authOptions) as Session | null;
     if (!session?.user?.email) {
@@ -167,7 +168,7 @@ export async function updateContextCardStatus(cardId: string, status: string) {
     const updatedCard = await prisma.contextCard.update({
       where: { id: cardId },
       data: { 
-        status: status as any, // Type assertion for TaskStatus enum
+        status: status,
         updatedAt: new Date()
       },
     });

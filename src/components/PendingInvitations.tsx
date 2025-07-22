@@ -37,15 +37,21 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
     setProcessingIds(prev => new Set(prev).add(invitationId));
     
     try {
-      const res = await axios.post(`/api/teams/${teamSlug}/accept-invite`);
+      await axios.post(`/api/teams/${teamSlug}/accept-invite`);
 
       toast.success("Team invitation accepted!");
       // Remove from team invitations list
       setTeamInvitations(prev => prev.filter(inv => inv.id !== invitationId));
       // Notify parent component to refresh
       onInvitationAccepted?.();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to accept team invitation");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to accept team invitation";
+      toast.error(errorMessage);
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
@@ -59,13 +65,19 @@ export default function PendingInvitations({ onInvitationAccepted }: { onInvitat
     setProcessingIds(prev => new Set(prev).add(invitationId));
     
     try {
-      const res = await axios.post(`/api/teams/${teamSlug}/decline-invite`);
+      await axios.post(`/api/teams/${teamSlug}/decline-invite`);
 
       toast.success("Team invitation declined");
       // Remove from team invitations list
       setTeamInvitations(prev => prev.filter(inv => inv.id !== invitationId));
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to decline team invitation");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to decline team invitation";
+      toast.error(errorMessage);
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);

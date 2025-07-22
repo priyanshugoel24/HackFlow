@@ -13,14 +13,12 @@ export default function InviteMemberModal({
   open,
   setOpen,
   teamSlug,
-  onSuccess,
-  mode = "team"
+  onSuccess
 }: {
   open: boolean;
   setOpen: (val: boolean) => void;
   teamSlug: string;
   onSuccess?: () => void;
-  mode?: "team";
 }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<'MEMBER'>('MEMBER');
@@ -45,9 +43,15 @@ export default function InviteMemberModal({
       setRole('MEMBER');
       setOpen(false);
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error inviting member:', error);
-      toast.error(error.response?.data?.error || 'Failed to invite member');
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to invite member";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

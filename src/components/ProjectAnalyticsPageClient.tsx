@@ -1,10 +1,10 @@
 "use client";
-import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, BarChart3, Users, Target, Activity } from 'lucide-react';
+import { BarChart3, Users, Target, Activity } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { ProjectAnalytics } from '@/interfaces/ProjectAnalytics';
 import {
   ResponsiveContainer,
   BarChart,
@@ -16,14 +16,12 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
 } from 'recharts';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 interface ProjectAnalyticsPageClientProps {
-  analytics: any;
+  analytics: ProjectAnalytics;
 }
 
 export default function ProjectAnalyticsPageClient({ analytics }: ProjectAnalyticsPageClientProps) {
@@ -205,7 +203,7 @@ export default function ProjectAnalyticsPageClient({ analytics }: ProjectAnalyti
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {analytics.topContributors.map((contributor: any, index: number) => (
+                {analytics.topContributors.map((contributor, index: number) => (
                   <div key={contributor.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { Users, Brain, Zap, CheckCircle2, MessageSquare, BarChart3 } from 'lucide-react';
+import { Users, Brain, CheckCircle2, MessageSquare } from 'lucide-react';
 
 const features = [
   {
@@ -39,6 +39,7 @@ const itemVariants = {
     opacity: 1,
     transition: {
       duration: 0.8,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ease: [0.25, 0.46, 0.45, 0.94] as any
     }
   }
@@ -51,6 +52,7 @@ const logoVariants = {
     opacity: 1,
     transition: {
       duration: 1,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ease: [0.25, 0.46, 0.45, 0.94] as any
     }
   }

@@ -49,14 +49,8 @@ async function fetchTeam(teamSlug: string): Promise<AssignedCardsTeam | null> {
       include: {
         members: {
           include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-              },
-            },
+            user: true,
+            team: true,
           },
           where: { status: 'ACTIVE' },
         },
@@ -88,7 +82,7 @@ async function fetchTeam(teamSlug: string): Promise<AssignedCardsTeam | null> {
       ...team,
       userRole: userMembership.role,
       currentUserId: user.id,
-    } as AssignedCardsTeam;
+    } as unknown as AssignedCardsTeam;
   } catch (error) {
     console.error('Error fetching team:', error);
     return null;

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
@@ -52,9 +52,15 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
       });
       setTeam(response.data);
       toast.success('Team updated successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating team:', error);
-      toast.error(error.response?.data?.error || 'Failed to update team');
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : 'Failed to update team';
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -76,9 +82,15 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
       setInviteRole('MEMBER');
       setShowInviteModal(false);
       fetchTeam(); // Refresh team data
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error inviting member:', error);
-      toast.error(error.response?.data?.error || 'Failed to invite member');
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : 'Failed to invite member';
+      toast.error(errorMessage);
     }
   };
 
@@ -91,9 +103,15 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
       await axios.delete(`/api/teams/${teamSlug}/members/${userId}`);
       toast.success('Member removed successfully');
       fetchTeam(); // Refresh team data
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error removing member:', error);
-      toast.error(error.response?.data?.error || 'Failed to remove member');
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : 'Failed to remove member';
+      toast.error(errorMessage);
     }
   };
 
@@ -130,7 +148,7 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
-            <p className="text-muted-foreground">You don't have permission to manage this team.</p>
+            <p className="text-muted-foreground">You don&apos;t have permission to manage this team.</p>
           </div>
         </div>
       </div>

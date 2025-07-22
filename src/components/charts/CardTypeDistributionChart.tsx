@@ -39,11 +39,11 @@ export default function CardTypeDistributionChart({ data }: CardTypeDistribution
             border: '1px solid hsl(var(--border))',
             borderRadius: '6px'
           }}
-          formatter={(value: any, name: any, props: any) => {
+          formatter={((value: unknown, name: unknown, props: { payload?: { percentage?: number } }) => {
             const count = Number(value) || 0;
             const percentage = props?.payload?.percentage || 0;
             return [`${count} cards (${percentage}%)`, String(name)];
-          }}
+          })}
         />
       </PieChart>
     </ResponsiveContainer>

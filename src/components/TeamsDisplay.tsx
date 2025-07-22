@@ -25,15 +25,20 @@ export default function TeamsDisplay({ initialTeams }: TeamsDisplayProps) {
       setError(null);
       const response = await axios.get('/api/teams');
       setTeams(response.data || []);
-    } catch (error: any) {
-      if (error.response?.status === 401) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null
+        ? error.response as { status?: number; data?: { error?: string } }
+        : null;
+
+      if (errorMessage?.status === 401) {
         console.error('Unauthorized - please log in again');
         setError('Please log in again to access your teams');
-      } else if (error.response?.status === 404) {
+      } else if (errorMessage?.status === 404) {
         console.warn('User not found, treating as no teams available');
         setTeams([]);
       } else {
-        console.error(`Failed to fetch teams: ${error.response?.status}`);
+        console.error(`Failed to fetch teams: ${errorMessage?.status || 'unknown'}`);
         setError('Unable to load teams. Please try again.');
       }
       setTeams([]);

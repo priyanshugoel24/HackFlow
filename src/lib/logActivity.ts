@@ -1,5 +1,6 @@
 // lib/logActivity.ts
 import { prisma } from "./prisma";
+import { ActivityMetadata, ActivityType } from "@/interfaces/ActivityTypes";
 
 export async function logActivity({
   type,
@@ -8,11 +9,11 @@ export async function logActivity({
   projectId,
   metadata = {},
 }: {
-  type: "CARD_CREATED" | "COMMENT_CREATED" | "CARD_EDITED" | "CARD_UPDATED" | "PROJECT_CREATED" | "MEMBER_JOINED" | "MEMBER_REMOVED" | string;
+  type: ActivityType;
   description: string;
   userId?: string | null;
   projectId: string;
-  metadata?: any;
+  metadata?: ActivityMetadata;
 }) {
   try {
     await prisma.activity.create({

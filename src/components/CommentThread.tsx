@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +22,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchComments = async (cursor?: string) => {
+  const fetchComments = useCallback(async (cursor?: string) => {
     setIsLoading(true);
     try {
       const res = await axios.get(`/api/context-cards/${cardId}/comments?limit=${paginationConfig.commentLimit}${cursor ? `&cursor=${cursor}` : ""}`);
@@ -58,7 +58,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [cardId]);
 
   useEffect(() => {
     if (!cardId) return;
@@ -123,14 +123,14 @@ export default function CommentThread({ cardId }: { cardId: string }) {
       
       cleanupChannel();
     };
-  }, [cardId, session?.user]);
+  }, [cardId, session?.user, fetchComments]);
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
     setIsSubmitting(true);
 
     try {
-      const res = await axios.post(`/api/context-cards/${cardId}/comments`, {
+      await axios.post(`/api/context-cards/${cardId}/comments`, {
         content: newComment
       });
 

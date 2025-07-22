@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import axios from 'axios';
@@ -31,16 +31,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Calendar, Settings, UserPlus, BarChart3, Target, Archive, ArchiveRestore } from 'lucide-react';
 import { ContextCardWithRelations } from '@/interfaces/ContextCardWithRelations';
 import { TeamPageTeam } from '@/interfaces/TeamPageTeam';
 import { TeamPageProject } from '@/interfaces/TeamPageProject';
-import { TeamPageMember } from '@/interfaces/TeamPageMember';
 import ErrorBoundary from './ErrorBoundary';
-import { Suspense } from 'react';
 
 interface TeamPageClientProps {
   initialTeam: TeamPageTeam;
@@ -54,7 +52,6 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showHackathonModal, setShowHackathonModal] = useState(false);
-  const [projectStats, setProjectStats] = useState<Record<string, { completed: number; total: number }>>({});
   
   // Focus Mode state
   const [selectedCards, setSelectedCards] = useState<ContextCardWithRelations[]>([]);
@@ -165,9 +162,15 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
       fetchTeam(); // Refresh team data
       // Navigate to hackathon room
       router.push(`/team/${teamSlug}/hackathon`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error starting hackathon:', error);
-      alert(error.response?.data?.error || 'Failed to start hackathon');
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : 'Failed to start hackathon';
+      alert(errorMessage);
     }
   };
 
@@ -179,9 +182,15 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
 
       // Refresh team data to update the project list
       fetchTeam();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error archiving/unarchiving project:', error);
-      alert(error.response?.data?.error || 'Failed to update project');
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : 'Failed to update project';
+      alert(errorMessage);
     }
   };
 
@@ -203,7 +212,7 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground mb-2">Team not found</h1>
-            <p className="text-muted-foreground">The team you're looking for doesn't exist or you don't have access to it.</p>
+            <p className="text-muted-foreground">The team you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
             <Button onClick={() => router.push('/')} className="mt-4">
               Go Home
             </Button>
@@ -224,7 +233,7 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
           <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
             <div className="text-center">
               <h1 className="text-2xl font-bold text-foreground mb-2">Something went wrong</h1>
-              <p className="text-muted-foreground mb-4">We're having trouble loading the team page.</p>
+              <p className="text-muted-foreground mb-4">We&apos;re having trouble loading the team page.</p>
               <Button onClick={() => window.location.reload()}>
                 Refresh Page
               </Button>
@@ -550,7 +559,6 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
           setOpen={setShowInviteModal}
           teamSlug={teamSlug}
           onSuccess={fetchTeam}
-          mode="team"
         />
 
       <Dialog open={showHackathonModal} onOpenChange={setShowHackathonModal}>

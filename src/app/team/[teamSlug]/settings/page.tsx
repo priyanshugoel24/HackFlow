@@ -104,7 +104,7 @@ export default async function TeamSettingsPage({ params }: TeamSettingsPageProps
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground mb-2">Team not found</h1>
-            <p className="text-muted-foreground">The team you're looking for doesn't exist or you don't have access to it.</p>
+            <p className="text-muted-foreground">The team you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.</p>
           </div>
         </div>
       </div>

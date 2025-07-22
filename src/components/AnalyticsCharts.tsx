@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, memo } from 'react';
+import { memo } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -15,110 +15,12 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { TeamAnalytics } from '@/interfaces/TeamAnalytics';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-// Memoized individual chart components
-const CardTypeChart = memo(function CardTypeChart({ data }: { data: any[] }) {
-  if (!data.length) return null;
-  
-  return (
-    <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-md">
-      <h3 className="text-lg font-semibold mb-4">Card Type Distribution</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-            outerRadius={100}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  );
-});
-
-const TaskStatusChart = memo(function TaskStatusChart({ data }: { data: any[] }) {
-  if (!data.length) return null;
-
-  return (
-    <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-md">
-      <h3 className="text-lg font-semibold mb-4">Task Status Overview</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey="value" fill="#8884d8" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-});
-
-const VisibilityChart = memo(function VisibilityChart({ data }: { data: any[] }) {
-  if (!data.length) return null;
-
-  return (
-    <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-md">
-      <h3 className="text-lg font-semibold mb-4">Card Visibility Distribution</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-            outerRadius={100}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  );
-});
-
-const VelocityChart = memo(function VelocityChart({ data }: { data: any[] }) {
-  if (!data.length) return null;
-
-  return (
-    <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-md">
-      <h3 className="text-lg font-semibold mb-4">Weekly Velocity</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="week" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Line type="monotone" dataKey="completed" stroke="#8884d8" activeDot={{ r: 8 }} />
-          <Line type="monotone" dataKey="created" stroke="#82ca9d" />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  );
-});
-
 interface AnalyticsChartsProps {
-  analytics: any;
+  analytics: TeamAnalytics;
 }
 
 const AnalyticsCharts = memo(function AnalyticsCharts({ analytics }: AnalyticsChartsProps) {
@@ -132,36 +34,32 @@ const AnalyticsCharts = memo(function AnalyticsCharts({ analytics }: AnalyticsCh
   }
 
   // Transform data for charts with proper type checking
-  const cardTypeData = Object.entries(analytics.cardTypeDistribution || {}).map(([type, count]) => ({
-    name: String(type),
-    value: Number(count) || 0,
-  }));
-
-  const taskStatusData = Object.entries(analytics.taskStatusOverview || {}).map(([status, count]) => ({
-    name: String(status),
-    value: Number(count) || 0,
-  }));
-
-  const visibilityData = Object.entries(analytics.visibilityDistribution || {}).map(([visibility, count]) => ({
-    name: String(visibility),
-    value: Number(count) || 0,
-  }));
-
-  const completionTrendData = analytics.completionTrends?.map((trend: any) => ({
-    month: String(trend.month || ''),
-    completed: Number(trend.completed) || 0,
-    total: Number(trend.total) || 0,
+  const cardTypeData = analytics.cardTypeDistribution?.map(item => ({
+    name: String(item.type),
+    value: Number(item.count) || 0,
   })) || [];
 
-  const projectProgressData = analytics.projectProgress?.map((project: any) => ({
+  // Since TeamAnalytics doesn't have taskStatusOverview, let's create a simple task status chart
+  const taskStatusData = [
+    { name: 'Completed', value: analytics.completedTasks || 0 },
+    { name: 'Active', value: analytics.activeTasks || 0 },
+  ];
+
+  // Create weekly velocity data from the interface
+  const weeklyVelocityData = analytics.weeklyVelocity?.map((week) => ({
+    week: String(week.week || ''),
+    completed: Number(week.completed) || 0,
+  })) || [];
+
+  const projectProgressData = analytics.projectProgress?.map((project) => ({
     name: String(project.name || ''),
     progress: Number(project.progress) || 0,
   })) || [];
 
-  const memberProductivityData = analytics.memberProductivity?.map((member: any) => ({
-    name: String(member.name || ''),
-    completedTasks: Number(member.completedTasks) || 0,
-    totalTasks: Number(member.totalTasks) || 0,
+  const memberProductivityData = analytics.topContributors?.map((contributor) => ({
+    name: String(contributor.userName || ''),
+    cardsCreated: Number(contributor.cardsCreated) || 0,
+    cardsCompleted: Number(contributor.cardsCompleted) || 0,
   })) || [];
 
   return (
@@ -188,8 +86,8 @@ const AnalyticsCharts = memo(function AnalyticsCharts({ analytics }: AnalyticsCh
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value: any) => [String(value), 'Count']}
-                labelFormatter={(label: any) => `Status: ${String(label)}`}
+                formatter={(value: unknown) => [String(value), 'Count']}
+                labelFormatter={(label: unknown) => `Status: ${String(label)}`}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -204,8 +102,8 @@ const AnalyticsCharts = memo(function AnalyticsCharts({ analytics }: AnalyticsCh
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip 
-                formatter={(value: any) => [String(value), 'Count']}
-                labelFormatter={(label: any) => `Type: ${String(label)}`}
+                formatter={(value: unknown) => [String(value), 'Count']}
+                labelFormatter={(label: unknown) => `Type: ${String(label)}`}
               />
               <Legend />
               <Bar dataKey="value" fill="#8884d8" />
@@ -213,49 +111,40 @@ const AnalyticsCharts = memo(function AnalyticsCharts({ analytics }: AnalyticsCh
           </ResponsiveContainer>
         </div>
 
-        {/* Visibility Distribution */}
+        {/* Weekly Velocity */}
         <div className="bg-card p-6 rounded-lg border">
-          <h3 className="text-lg font-semibold mb-4">Visibility Distribution</h3>
+          <h3 className="text-lg font-semibold mb-4">Weekly Velocity</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={visibilityData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {visibilityData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip 
-                formatter={(value: any) => [String(value), 'Count']}
-                labelFormatter={(label: any) => `Visibility: ${String(label)}`}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Completion Trends */}
-        <div className="bg-card p-6 rounded-lg border">
-          <h3 className="text-lg font-semibold mb-4">Completion Trends</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={completionTrendData}>
+            <LineChart data={weeklyVelocityData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
+              <XAxis dataKey="week" />
               <YAxis />
               <Tooltip 
-                formatter={(value: any, name: any) => [String(value), String(name)]}
-                labelFormatter={(label: any) => `Month: ${String(label)}`}
+                formatter={(value: unknown, name: unknown) => [String(value), String(name)]}
+                labelFormatter={(label: unknown) => `Week: ${String(label)}`}
               />
               <Legend />
               <Line type="monotone" dataKey="completed" stroke="#8884d8" name="Completed" />
-              <Line type="monotone" dataKey="total" stroke="#82ca9d" name="Total" />
             </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Member Productivity */}
+        <div className="bg-card p-6 rounded-lg border">
+          <h3 className="text-lg font-semibold mb-4">Top Contributors</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={memberProductivityData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip 
+                formatter={(value: unknown, name: unknown) => [String(value), String(name)]}
+                labelFormatter={(label: unknown) => `Member: ${String(label)}`}
+              />
+              <Legend />
+              <Bar dataKey="cardsCreated" fill="#8884d8" name="Cards Created" />
+              <Bar dataKey="cardsCompleted" fill="#82ca9d" name="Cards Completed" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -271,30 +160,11 @@ const AnalyticsCharts = memo(function AnalyticsCharts({ analytics }: AnalyticsCh
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip 
-                formatter={(value: any) => [String(value), 'Progress']}
-                labelFormatter={(label: any) => `Project: ${String(label)}`}
+                formatter={(value: unknown) => [String(value), 'Progress']}
+                labelFormatter={(label: unknown) => `Project: ${String(label)}`}
               />
               <Legend />
               <Bar dataKey="progress" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Member Productivity */}
-        <div className="bg-card p-6 rounded-lg border">
-          <h3 className="text-lg font-semibold mb-4">Member Productivity</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={memberProductivityData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value: any, name: any) => [String(value), String(name)]}
-                labelFormatter={(label: any) => `Member: ${String(label)}`}
-              />
-              <Legend />
-              <Bar dataKey="completedTasks" fill="#8884d8" name="Completed Tasks" />
-              <Bar dataKey="totalTasks" fill="#82ca9d" name="Total Tasks" />
             </BarChart>
           </ResponsiveContainer>
         </div>

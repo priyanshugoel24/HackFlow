@@ -4,13 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { generateSlug, generateUniqueSlug } from "@/lib/utils";
 import { logActivity } from "@/lib/logActivity";
 import { getAblyServer } from "@/lib/ably";
-import { 
-  createRateLimiter 
-} from "@/lib/security";
-
-// Rate limiter: 60 requests per minute per user for project operations (increased from 10)
-const rateLimiter = createRateLimiter(60 * 1000, 60);
-
 // CREATE new project
 export async function POST(req: NextRequest) {
   const token = await getToken({ req });

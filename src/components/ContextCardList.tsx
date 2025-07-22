@@ -19,11 +19,7 @@ import {
   Paperclip,
   AlertTriangle,
   Plus,
-  Filter,
-  Calendar,
-  Target,
-  Users,
-  Timer
+  Filter
 } from "lucide-react";
 
 // Lazy load heavy modal components
@@ -46,7 +42,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ErrorBoundary from './ErrorBoundary';
-import { Suspense } from 'react';
 
 // Memoized individual card component to prevent unnecessary re-renders
 const ContextCard = memo(function ContextCard({
@@ -328,7 +323,6 @@ const ContextCardList = memo(function ContextCardList({
 }: ContextCardListProps) {
   // Add hydration flag to prevent hydration mismatches
   const [isClient, setIsClient] = useState(false);
-  const [cards, setCards] = useState<ContextCardWithRelations[]>(initialCards);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<ContextCardWithRelations | null>(null);
@@ -375,7 +369,7 @@ const ContextCardList = memo(function ContextCardList({
     
     try {
       return date.toLocaleDateString('en-US', options);
-    } catch (error) {
+    } catch {
       // Fallback for invalid dates
       return 'Invalid date';
     }
@@ -434,8 +428,8 @@ const ContextCardList = memo(function ContextCardList({
 
   // Memoize filter handlers
   const handleArchiveToggle = useCallback(() => {
-    setShowArchived(!showArchived);
-  }, [showArchived]);
+    setShowArchived(prev => !prev);
+  }, []);
 
   const handleFilterChange = useCallback((filter: 'ALL' | 'TASK' | 'INSIGHT' | 'DECISION') => {
     setCardTypeFilter(filter);
@@ -448,11 +442,8 @@ const ContextCardList = memo(function ContextCardList({
     setLoading(true);
     try {
       const response = await axios.get(`/api/context-cards?projectId=${project.id}&limit=100`);
-      const updatedCards = response.data;
+      const updatedCards: ContextCardWithRelations[] = response.data;
       setAllCards(updatedCards);
-      setCards(updatedCards.filter((card: any) => 
-        showArchived ? true : !card.isArchived
-      ));
     } catch (error) {
       console.error('Error refreshing cards:', error);
       // Fallback to page reload only if API call fails
@@ -460,7 +451,7 @@ const ContextCardList = memo(function ContextCardList({
     } finally {
       setLoading(false);
     }
-  }, [project?.id, showArchived]);
+  }, [project?.id]);
 
   const handleCardCreated = useCallback(() => {
     refreshCards();
@@ -469,11 +460,7 @@ const ContextCardList = memo(function ContextCardList({
   // Update cards when initialCards prop changes
   useEffect(() => {
     setAllCards(initialCards);
-    const filteredCards = initialCards.filter((card: any) => 
-      showArchived ? true : !card.isArchived
-    );
-    setCards(filteredCards);
-  }, [initialCards, showArchived]);
+  }, [initialCards]);
 
   // Update project when initialProject prop changes
   useEffect(() => {
@@ -483,32 +470,23 @@ const ContextCardList = memo(function ContextCardList({
   }, [initialProject]);
 
   // Real-time updates using Ably
-  const { isConnected } = useProjectRealtime(
+  useProjectRealtime(
     project?.id || null,
-    (newCard) => {
+    () => {
       refreshCards();
     },
-    (updatedCard) => {
+    () => {
       refreshCards();
     },
     (deletedCardId) => {
       setAllCards(prevCards => prevCards.filter(card => card.id !== deletedCardId));
     },
-    (activity) => {
+    () => {
       // Handle activity updates if needed
     }
   );
 
   // Update displayed cards when showArchived changes
-  useEffect(() => {
-    if (allCards.length > 0) {
-      const filteredCards = allCards.filter((card: any) => 
-        showArchived ? true : !card.isArchived
-      );
-      setCards(filteredCards);
-    }
-  }, [showArchived, allCards]);
-
   // Show loading during hydration to prevent mismatches
   if (!isClient) {
     return (
@@ -665,7 +643,7 @@ const ContextCardList = memo(function ContextCardList({
             open={modalOpen} 
             setOpen={setModalOpen} 
             projectSlug={projectSlug}
-            project={project as any}
+            project={project || undefined}
             teamSlug={teamSlug}
             onSuccess={handleCardCreated}
           />
@@ -717,7 +695,7 @@ const ContextCardList = memo(function ContextCardList({
               }
             }}
             projectSlug={projectSlug}
-            project={project as any || undefined}
+            project={project || undefined}
             teamSlug={teamSlug}
             existingCard={selectedCard ? {
               ...selectedCard,
@@ -725,8 +703,9 @@ const ContextCardList = memo(function ContextCardList({
               issues: selectedCard.issues || undefined,
               slackLinks: selectedCard.slackLinks || undefined,
               attachments: selectedCard.attachments || undefined,
+              summary: selectedCard.summary || undefined,
               status: selectedCard.status || "ACTIVE"
-            } as any : undefined}
+            } : undefined}
             onSuccess={() => {
               setSelectedCard(null);
               setModalOpen(false); // Ensure add card modal doesn't appear

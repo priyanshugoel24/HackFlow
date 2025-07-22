@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Target, CheckCircle2, Play, Pause, Timer, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
 import { FocusModeProps } from "@/interfaces/FocusModeProps";
 import { focusModeConfig } from '@/config/focusMode';
 import axios from "axios";
@@ -36,14 +35,12 @@ export default function FocusMode({
 
   // Session summary
   const [sessionEnded, setSessionEnded] = useState(false);
-  const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
   const [totalFocusTime, setTotalFocusTime] = useState<number>(0);
 
   // Effect to reset session when modal opens
   useEffect(() => {
     if (open) {
       setCompleted([]); // Reset completed tasks for new session
-      setSessionStartTime(Date.now());
       setSessionEnded(false);
       setTotalFocusTime(0);
       // Reset pomodoro to initial state
@@ -56,6 +53,19 @@ export default function FocusMode({
       Object.keys(taskTimerRefs.current).forEach(stopTaskTimer);
     }
   }, [open, workDuration]);
+
+  const handlePomodoroComplete = useCallback(() => {
+    setIsPomodoroRunning(false);
+    const isWorkSession = pomodoroPhase === "focus";
+    toast.success(isWorkSession ? "Focus session complete! Take a break 🎉" : "Break over! Ready to focus again? 💪");
+    
+    if (isWorkSession) {
+      setTotalFocusTime(prev => prev + (workDuration * 60));
+    }
+    
+    setPomodoroPhase((prev) => (prev === "focus" ? "break" : "focus"));
+    setPomodoroTimeLeft(isWorkSession ? breakDuration * 60 : workDuration * 60);
+  }, [pomodoroPhase, workDuration, breakDuration]);
 
   // Pomodoro timer effect
   useEffect(() => {
@@ -75,20 +85,7 @@ export default function FocusMode({
     return () => {
       if (pomodoroIntervalRef.current) clearInterval(pomodoroIntervalRef.current);
     };
-  }, [isPomodoroRunning]);
-
-  const handlePomodoroComplete = () => {
-    setIsPomodoroRunning(false);
-    const isWorkSession = pomodoroPhase === "focus";
-    toast.success(isWorkSession ? "Focus session complete! Take a break 🎉" : "Break over! Ready to focus again? 💪");
-    
-    if (isWorkSession) {
-      setTotalFocusTime(prev => prev + (workDuration * 60));
-    }
-    
-    setPomodoroPhase((prev) => (prev === "focus" ? "break" : "focus"));
-    setPomodoroTimeLeft(isWorkSession ? breakDuration * 60 : workDuration * 60);
-  };
+  }, [isPomodoroRunning, handlePomodoroComplete]);
 
   const startTaskTimer = (cardId: string) => {
     if (taskTimerRefs.current[cardId]) return;
@@ -140,7 +137,6 @@ export default function FocusMode({
     Object.keys(taskTimerRefs.current).forEach(stopTaskTimer);
     
     // Calculate actual focus time
-    const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
     const focusTime = totalFocusTime + (isPomodoroRunning && pomodoroPhase === "focus" ? (workDuration * 60 - pomodoroTimeLeft) : 0);
     setTotalFocusTime(focusTime);
     
@@ -331,7 +327,7 @@ export default function FocusMode({
                     All tasks completed! Great job!
                   </span>
                 ) : (
-                  <span>Keep going! You've got this.</span>
+                  <span>Keep going! You&apos;ve got this.</span>
                 )}
               </div>
               <Button 

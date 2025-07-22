@@ -30,7 +30,7 @@ export default function Error({
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            We couldn't load your assigned cards. This might be due to a temporary issue or network problem.
+            We couldn&apos;t load your assigned cards. This might be due to a temporary issue or network problem.
           </p>
           
           {process.env.NODE_ENV === 'development' && (

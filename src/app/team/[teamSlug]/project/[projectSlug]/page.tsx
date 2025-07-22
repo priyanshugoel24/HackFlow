@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import Navbar from "@/components/Navbar";
-import LoginPage from "@/components/LoginPage";
 import ProjectPageClient from "@/components/ProjectPageClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -20,7 +19,7 @@ interface ProjectPageProps {
 }
 
 export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
-  const { teamSlug, projectSlug } = await params;
+  const { projectSlug } = await params;
   
   try {
     const session = await getServerSession(authOptions) as Session | null;
@@ -225,7 +224,7 @@ export default async function TeamProjectPage({ params }: ProjectPageProps) {
               Project Not Found
             </h1>
             <p className="text-gray-600 mb-4">
-              The project you're looking for doesn't exist or you don't have access to it.
+              The project you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
             </p>
             <Button onClick={() => redirect(`/team/${teamSlug}`)}>
               <ArrowLeft className="h-4 w-4 mr-2" />

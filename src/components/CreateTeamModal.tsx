@@ -48,13 +48,19 @@ export default function CreateTeamModal({ onTeamCreated }: CreateTeamModalProps)
     setError(null);
 
     try {
-      const response = await axios.post('/api/teams', formData);
+      await axios.post('/api/teams', formData);
 
       setCreateModalOpen(false);
       setFormData({ name: '', slug: '', description: '' });
       onTeamCreated?.(); // Refresh teams list
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to create team');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to create team";
+      setError(errorMessage);
     } finally {
       setCreateLoading(false);
     }

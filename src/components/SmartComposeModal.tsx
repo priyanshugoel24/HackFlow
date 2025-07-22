@@ -37,9 +37,15 @@ export default function SmartComposeModal({
       }
 
       setParsedCard(parsedCard);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error(error.response?.data?.error || "Failed to create card. Please try again.");
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to create card. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -63,9 +69,15 @@ export default function SmartComposeModal({
       setInput("");
       setParsedCard(null);
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error(error.response?.data?.error || "Failed to create card. Please try again.");
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to create card. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

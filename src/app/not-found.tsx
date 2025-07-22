@@ -22,7 +22,7 @@ export default function NotFound() {
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-sm text-muted-foreground">
-              The page you're looking for doesn't exist or you don't have access to it.
+              The page you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
             </p>
             
             <div className="flex flex-col gap-2">

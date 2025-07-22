@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import dynamic from 'next/dynamic';
 import { authOptions } from '@/lib/auth';

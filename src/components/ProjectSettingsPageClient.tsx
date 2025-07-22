@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,9 +10,10 @@ import { Loader2, Save } from "lucide-react";
 import { getAblyClient } from "@/lib/ably";
 import { useSession } from "next-auth/react";
 import axios from "axios";
+import { ProjectData } from "@/interfaces/ProjectData";
 
 interface ProjectSettingsPageClientProps {
-  project: any;
+  project: ProjectData;
   projectSlug: string;
 }
 
@@ -23,7 +23,7 @@ export default function ProjectSettingsPageClient({
 }: ProjectSettingsPageClientProps) {
   const { data: session } = useSession();
   const router = useRouter();
-  const [project, setProject] = useState<any>(initialProject);
+  const [project, setProject] = useState<ProjectData>(initialProject);
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState(initialProject.name || "");
@@ -37,9 +37,10 @@ export default function ProjectSettingsPageClient({
     const ably = getAblyClient();
     const channel = ably.channels.get(`project:${project.id}`);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleProjectUpdate = (msg: any) => {
-      const updated = msg.data;
-      setProject((prev: any) => ({
+      const updated = msg.data as Partial<ProjectData>;
+      setProject((prev: ProjectData) => ({
         ...prev,
         ...updated,
       }));
@@ -90,8 +91,14 @@ export default function ProjectSettingsPageClient({
         tags
       });
       toast.success("Project updated successfully");
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Error updating project");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Error updating project";
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -201,7 +208,7 @@ export default function ProjectSettingsPageClient({
                 </p>
               </div>
               {/* Only show if user is project creator */}
-              {project?.createdById === (session?.user as any)?.id && (
+              {project?.createdById === (session?.user as { id: string })?.id && (
                 <Button
                   variant="outline"
                   className={`transition-all focus:ring-2 ${
@@ -226,10 +233,16 @@ export default function ProjectSettingsPageClient({
                       toast.success(`Project ${action}d`, {
                         description: `The project has been ${action}d successfully.`,
                       });
-                    } catch (error: any) {
+                    } catch (error: unknown) {
                       console.error(`Error ${action}ing project:`, error);
+                      const errorMessage = error instanceof Error && 'response' in error && 
+                        typeof error.response === 'object' && error.response !== null &&
+                        'data' in error.response && typeof error.response.data === 'object' &&
+                        error.response.data !== null && 'error' in error.response.data
+                        ? String(error.response.data.error)
+                        : "An unexpected error occurred. Please try again.";
                       toast.error(`Error ${action}ing project`, {
-                        description: error.response?.data?.error || "An unexpected error occurred. Please try again.",
+                        description: errorMessage,
                       });
                     }
                   }}

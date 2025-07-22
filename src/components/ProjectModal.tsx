@@ -42,7 +42,7 @@ export default function ProjectModal({
       setDescription("");
       setTags("");
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to create project:", error);
     } finally {
       setIsLoading(false);

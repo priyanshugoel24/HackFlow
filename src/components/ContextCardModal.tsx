@@ -34,6 +34,7 @@ import {
 import { sanitizeHtml } from "@/lib/security-client";
 import ExistingCard from "@/interfaces/ExistingCard";
 import Project from "@/interfaces/Project";
+import { TeamMemberResponse } from "@/interfaces/AuthTypes";
 import { GitHubCardAutoFill } from "./GithubCardAutofill";
 import axios from "axios";
 import ErrorBoundary from "./ErrorBoundary";
@@ -68,7 +69,6 @@ const ContextCardModal = memo(function ContextCardModal({
   open,
   setOpen,
   projectSlug,
-  project,
   existingCard,
   onSuccess,
   teamSlug,
@@ -187,7 +187,7 @@ const ContextCardModal = memo(function ContextCardModal({
     const isTeamMember = teamMembers.some((member) => member.userId === user.id);
 
     return isCardCreator && isTeamMember;
-  }, [existingCard?.userId, session?.user, teamMembers]);
+  }, [existingCard, session?.user, teamMembers]);
 
   // Use card presence hook to track who's editing
   const { editors } = useCardPresence(
@@ -258,10 +258,10 @@ const ContextCardModal = memo(function ContextCardModal({
       const fetchTeamMembers = async () => {
         try {
           const response = await axios.get(`/api/teams/${teamSlug}/members`);
-          const members = response.data;
+          const members: TeamMemberResponse[] = response.data;
           const teamMembersList = members
-            .filter((m: any) => m.status === "ACTIVE")
-            .map((member: any) => ({
+            .filter((m) => m.status === "ACTIVE")
+            .map((member) => ({
               userId: member.user.id,
               name: member.user.name,
               email: member.user.email,
@@ -353,9 +353,14 @@ const ContextCardModal = memo(function ContextCardModal({
       });
       
       return res.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Upload API error:", error);
-      const errorMessage = error.response?.data?.error || "Unknown error";
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Unknown error";
       toast.error(`Upload failed: ${errorMessage}`, {
         description: `Failed to upload ${file.name}`,
         duration: 4000,
@@ -379,14 +384,20 @@ const ContextCardModal = memo(function ContextCardModal({
       
       setSummaryText(res.data.summary);
       toast.success("Summary generated!");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(
         "Error generating summary for card:",
         existingCard.id,
         error
       );
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Unknown error";
       toast.error("Failed to generate summary", { 
-        description: error.response?.data?.error || "Unknown error" 
+        description: errorMessage 
       });
       toast.error("Something went wrong");
     } finally {
@@ -587,10 +598,16 @@ const ContextCardModal = memo(function ContextCardModal({
         setExistingAttachments([]);
         setStatus("ACTIVE");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save context card:", error);
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Something went wrong while saving. Please try again.";
       toast.error("Failed to save context card", {
-        description: error.response?.data?.error || "Something went wrong while saving. Please try again.",
+        description: errorMessage,
         duration: 4000,
         position: "top-right",
       });
@@ -598,7 +615,7 @@ const ContextCardModal = memo(function ContextCardModal({
     } finally {
       setIsLoading(false);
     }
-  }, [title, content, type, visibility, status, why, issues, mention, attachments, existingAttachments, projectSlug, existingCard, originalValues, onSuccess]);
+  }, [title, content, type, visibility, status, why, issues, mention, attachments, existingAttachments, projectSlug, existingCard, originalValues, onSuccess, hasChanges, setOpen, teamMembers]);
 
   const getTypeIcon = useCallback((cardType: string) => {
     switch (cardType) {
@@ -619,7 +636,7 @@ const ContextCardModal = memo(function ContextCardModal({
   return (
     <Dialog
       open={open}
-      onOpenChange={(val) => {
+      onOpenChange={useCallback((val: boolean) => {
         if (!val && existingCard && hasChanges()) {
           // If closing modal with unsaved changes, show a warning or save them
           const shouldSave = confirm(
@@ -633,7 +650,7 @@ const ContextCardModal = memo(function ContextCardModal({
         } else {
           setOpen(val);
         }
-      }}
+      }, [existingCard, hasChanges, handleSubmit, setOpen])}
     >
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto bg-background rounded-xl shadow-xl p-8 space-y-6">
         <motion.div
@@ -715,7 +732,7 @@ const ContextCardModal = memo(function ContextCardModal({
                     )
                       return;
                     try {
-                      const res = await axios.patch(
+                      await axios.patch(
                         `/api/context-cards/${existingCard.id}/archive`,
                         {
                           isArchived: !existingCard.isArchived,
@@ -729,10 +746,16 @@ const ContextCardModal = memo(function ContextCardModal({
                           duration: 4000,
                           position: "top-right",
                         });
-                    } catch (err: any) {
+                    } catch (err: unknown) {
                       console.error(`Error ${action}ing card:`, err);
+                      const errorMessage = err instanceof Error && 'response' in err && 
+                        typeof err.response === 'object' && err.response !== null &&
+                        'data' in err.response && typeof err.response.data === 'object' &&
+                        err.response.data !== null && 'error' in err.response.data
+                        ? String(err.response.data.error)
+                        : `Unable to ${action} the card. Please try again later.`;
                       toast.error(`Failed to ${action} card`, {
-                        description: err.response?.data?.error || `Unable to ${action} the card. Please try again later.`,
+                        description: errorMessage,
                         duration: 4000,
                         position: "top-right",
                       });
@@ -754,7 +777,7 @@ const ContextCardModal = memo(function ContextCardModal({
                     if (!confirm("Are you sure you want to delete this card?"))
                       return;
                     try {
-                      const res = await axios.delete(
+                      await axios.delete(
                         `/api/context-cards/${existingCard.id}`
                       );
                       
@@ -765,10 +788,16 @@ const ContextCardModal = memo(function ContextCardModal({
                         duration: 4000,
                         position: "top-right",
                       });
-                    } catch (err: any) {
+                    } catch (err: unknown) {
                       console.error("Error deleting card:", err);
+                      const errorMessage = err instanceof Error && 'response' in err && 
+                        typeof err.response === 'object' && err.response !== null &&
+                        'data' in err.response && typeof err.response.data === 'object' &&
+                        err.response.data !== null && 'error' in err.response.data
+                        ? String(err.response.data.error)
+                        : "Unable to remove the card. Please try again later.";
                       toast.error("Failed to delete card", {
-                        description: err.response?.data?.error || "Unable to remove the card. Please try again later.",
+                        description: errorMessage,
                         duration: 4000,
                         position: "top-right",
                       });

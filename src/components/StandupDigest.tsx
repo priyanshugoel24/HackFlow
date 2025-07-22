@@ -18,10 +18,17 @@ export default function StandupDigest({ projectId }: { projectId: string }) {
     try {
       const res = await axios.get(`/api/standup/${projectId}`);
       setDigest(res.data.summary);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to retrieve the latest updates";
+      
       toast.error("Could not fetch digest", {
-        description: error.response?.data?.error || "Failed to retrieve the latest updates",
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);

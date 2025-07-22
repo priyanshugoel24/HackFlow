@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import axios from "axios";
 import { SearchResult } from "@/interfaces/SearchResult";
 
+import { AIMetadata } from "@/interfaces/AITypes";
+
 export default function SearchBar() {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +20,7 @@ export default function SearchBar() {
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [aiResponse, setAIResponse] = useState<string | null>(null);
-  const [aiMetadata, setAIMetadata] = useState<any>(null);
+  const [aiMetadata, setAIMetadata] = useState<AIMetadata | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const router = useRouter();
   const searchRef = useRef<HTMLDivElement>(null);
@@ -74,9 +76,15 @@ export default function SearchBar() {
         const res = await axios.get(`/api/search?q=${encodeURIComponent(query)}`);
         setResults(res.data.results || []);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Search/AI failed:", error);
-      setError(error.response?.data?.error || "Something went wrong. Please try again.");
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Something went wrong. Please try again.";
+      setError(errorMessage);
       setResults([]);
     } finally {
       setIsLoading(false);
@@ -167,9 +175,15 @@ export default function SearchBar() {
         try {
           const res = await axios.get(`/api/search?q=${encodeURIComponent(debounced)}`);
           setResults(res.data.results || []);
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Search failed:", error);
-          setError(error.response?.data?.error || "Something went wrong. Please try again.");
+          const errorMessage = error instanceof Error && 'response' in error && 
+            typeof error.response === 'object' && error.response !== null &&
+            'data' in error.response && typeof error.response.data === 'object' &&
+            error.response.data !== null && 'error' in error.response.data
+            ? String(error.response.data.error)
+            : "Something went wrong. Please try again.";
+          setError(errorMessage);
           setResults([]);
         } finally {
           setIsLoading(false);
@@ -506,11 +520,11 @@ export default function SearchBar() {
                       Relevant projects identified:
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {aiMetadata.relevantProjects.map((project: any, index: number) => (
+                      {aiMetadata.relevantProjects.map((project, index: number) => (
                         <span
                           key={index}
                           className="text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded-md"
-                          title={`${project.reason} (Score: ${project.score?.toFixed(2)})`}
+                          title={`${project.reason || 'Relevant project'} (Score: ${project.score?.toFixed(2) || 'N/A'})`}
                         >
                           {project.name}
                         </span>
@@ -524,11 +538,11 @@ export default function SearchBar() {
                       Relevant teams identified:
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {aiMetadata.relevantTeams.map((team: any, index: number) => (
+                      {aiMetadata.relevantTeams.map((team, index: number) => (
                         <span
                           key={index}
                           className="text-xs bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-md"
-                          title={`${team.reason} (Score: ${team.score?.toFixed(2)})`}
+                          title={`${team.reason || 'Relevant team'} (Score: ${team.score?.toFixed(2) || 'N/A'})`}
                         >
                           {team.name}
                         </span>

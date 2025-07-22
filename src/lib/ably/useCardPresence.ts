@@ -59,7 +59,7 @@ export function useCardPresence(cardId: string, user: EditingUser) {
         // Ignore cleanup errors
       });
     };
-  }, [cardId, user.id, user.name, user.image]);
+  }, [cardId, user]);
 
   return { editors };
 }

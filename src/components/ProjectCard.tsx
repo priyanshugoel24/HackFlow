@@ -9,15 +9,15 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Folder, Users, Calendar, Archive } from "lucide-react";
+import { Folder, Calendar, Archive } from "lucide-react";
+import { ProjectCardData } from "@/interfaces/ProjectCardData";
 import axios from "axios";
 
-export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: { 
-  onSelect: (id: string) => void;
+export default function ProjectCardGrid({ onRefreshNeeded }: { 
   onRefreshNeeded?: (refreshFn: () => void) => void;
 }) {
-  const [projects, setProjects] = useState<any[]>([]);
-  const [allProjects, setAllProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<ProjectCardData[]>([]);
+  const [allProjects, setAllProjects] = useState<ProjectCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const router = useRouter();
@@ -31,12 +31,12 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
     router.prefetch(`/projects/${projectSlug}/settings`);
   }, [router]);
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
       const res = await axios.get("/api/projects?includeArchived=true");
       setAllProjects(res.data.projects || []);
       // Filter out archived projects
-      const filteredProjects = res.data.projects?.filter((project: any) => 
+      const filteredProjects = res.data.projects?.filter((project: ProjectCardData) => 
         showArchived ? true : !project.isArchived
       ) || [];
       setProjects(filteredProjects);
@@ -45,13 +45,13 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showArchived]);
 
   useEffect(() => {
     fetchProjects();
     // Expose refresh function to parent
     onRefreshNeeded?.(fetchProjects);
-  }, [onRefreshNeeded]);
+  }, [onRefreshNeeded, fetchProjects]);
 
   useEffect(() => {
     // Filter projects based on showArchived state
@@ -66,8 +66,6 @@ export default function ProjectCardGrid({ onSelect, onRefreshNeeded }: {
   const toggleShowArchived = () => {
     setShowArchived(!showArchived);
   };
-
-  const filteredProjects = showArchived ? allProjects : allProjects.filter(project => !project.isArchived);
 
   if (loading) {
     return (

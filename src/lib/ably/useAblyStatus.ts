@@ -35,7 +35,7 @@ export function useAblyStatus() {
           status: newStatus,
         });
         console.log("✅ Status updated via API:", newStatus);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("❌ Error updating status:", error);
         // Revert local state if there was an error
         setStatus(status);
@@ -152,6 +152,7 @@ export function useAblyStatus() {
     handleConnectionStateChange,
     handleStatusMessage,
     fetchInitialStatus,
+    status,
   ]);
 
   return {

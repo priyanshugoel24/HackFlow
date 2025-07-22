@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import LoginPage from '@/components/LoginPage';
@@ -10,9 +9,6 @@ import { Metadata } from 'next';
 import Navbar from '@/components/Navbar';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const session = await getServerSession(authOptions) as Session | null;
-  const userName = session?.user?.name || 'User';
-  
   return {
     title: 'Your Personal Context Management Dashboard',
     description: 'Organize your projects, teams, and tasks in one collaborative workspace. Create context cards, track progress, and manage your workflow efficiently.',

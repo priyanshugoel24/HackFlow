@@ -26,8 +26,6 @@ import { TeamHackathon } from '@/interfaces/TeamHackathon';
 import { HackathonUpdate } from '@/interfaces/HackathonUpdate';
 import { toast } from 'sonner';
 import ErrorBoundary from './ErrorBoundary';
-import { PageLoadingSpinner } from './LoadingSpinner';
-import { Suspense } from 'react';
 
 interface HackathonPageClientProps {
   initialTeam: TeamHackathon | null;
@@ -47,7 +45,6 @@ export default function HackathonPageClient({
   const [team, setTeam] = useState<TeamHackathon | null>(initialTeam);
   const [cards, setCards] = useState<ContextCardWithRelations[]>(initialCards);
   const [updates, setUpdates] = useState<HackathonUpdate[]>(initialUpdates);
-  const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
     hours: number;
@@ -86,7 +83,6 @@ export default function HackathonPageClient({
 
   const fetchTeamData = async () => {
     try {
-      setLoading(true);
       
       // Fetch team details
       const teamResponse = await axios.get(`/api/teams/${teamSlug}`);
@@ -95,7 +91,6 @@ export default function HackathonPageClient({
       if (!teamData.hackathonModeEnabled) {
         // Show placeholder instead of redirecting
         setTeam(teamData);
-        setLoading(false);
         return;
       }
       
@@ -120,8 +115,6 @@ export default function HackathonPageClient({
     } catch (error) {
       console.error('Error fetching hackathon data:', error);
       toast.error('Failed to load hackathon room');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -137,9 +130,15 @@ export default function HackathonPageClient({
       setNewUpdate('');
       fetchTeamData(); // Refresh updates
       toast.success('Update posted!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error posting update:', error);
-      toast.error(error.response?.data?.error || 'Failed to post update');
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to post update";
+      toast.error(errorMessage);
     } finally {
       setSubmittingUpdate(false);
     }
@@ -160,16 +159,18 @@ export default function HackathonPageClient({
 
       toast.success('Hackathon ended successfully!');
       setTeam(prev => prev ? { ...prev, hackathonModeEnabled: false } : null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error ending hackathon:', error);
-      toast.error(error.response?.data?.error || 'Failed to end hackathon');
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to end hackathon";
+      toast.error(errorMessage);
     } finally {
       setEndingHackathon(false);
     }
-  };
-
-  const refreshData = () => {
-    fetchTeamData();
   };
 
   if (!session) {
@@ -217,7 +218,7 @@ export default function HackathonPageClient({
                 </div>
                 <h1 className="text-3xl font-bold mb-2">Hackathon Mode Not Enabled</h1>
                 <p className="text-muted-foreground mb-6">
-                  This team doesn't have hackathon mode enabled. Team admins can enable it from team settings.
+                  This team doesn&apos;t have hackathon mode enabled. Team admins can enable it from team settings.
                 </p>
               </div>
 
@@ -261,7 +262,7 @@ export default function HackathonPageClient({
             <div className="text-center py-12">
               <h1 className="text-2xl font-bold mb-4">Hackathon Room Unavailable</h1>
               <p className="text-muted-foreground mb-6">
-                We're having trouble loading the hackathon room. Please try refreshing the page.
+                We&apos;re having trouble loading the hackathon room. Please try refreshing the page.
               </p>
               <Button onClick={() => window.location.reload()}>
                 Refresh Page

@@ -18,10 +18,17 @@ export default function TeamStandupDigest({ teamSlug }: { teamSlug: string }) {
     try {
       const res = await axios.get(`/api/teams/${teamSlug}/standup`);
       setDigest(res.data.summary);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to retrieve the latest team updates";
+      
       toast.error("Could not fetch team digest", {
-        description: error.response?.data?.error || "Failed to retrieve the latest team updates",
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);

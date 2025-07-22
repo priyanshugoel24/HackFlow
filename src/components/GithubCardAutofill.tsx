@@ -2,10 +2,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Upload } from "lucide-react";
-import Image from "next/image";
 import axios from "axios";
 import { GitHubCardAutoFillProps } from "@/interfaces/GitHubCardAutoFillProps";
 

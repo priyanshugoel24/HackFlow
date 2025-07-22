@@ -4,7 +4,6 @@ import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { usePresenceStore } from "@/lib/store";
 import { useAblyPresence } from "@/lib/ably/useAblyPresence";
-import { useParams } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import SearchBar from "./SearchBar";
 import { UserStatus } from "@/interfaces/UserStatus";
@@ -21,7 +20,6 @@ export default function Navbar() {
   const [error, setError] = useState<string>("");
   const [isClient, setIsClient] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { slug } = useParams<{ slug: string }>(); // Get current project slug
 
   useEffect(() => {
     setIsClient(true);

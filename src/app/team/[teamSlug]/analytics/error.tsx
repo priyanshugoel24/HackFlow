@@ -31,7 +31,7 @@ export default function Error({
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            We couldn't load the team analytics data. This might be due to a temporary issue or insufficient permissions.
+            We couldn&apos;t load the team analytics data. This might be due to a temporary issue or insufficient permissions.
           </p>
           
           {process.env.NODE_ENV === 'development' && (

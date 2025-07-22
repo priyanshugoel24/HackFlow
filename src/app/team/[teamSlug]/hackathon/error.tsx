@@ -30,7 +30,7 @@ export default function Error({
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            We couldn't load the hackathon room. Please check if hackathon mode is enabled for this team or try again later.
+            We couldn&apos;t load the hackathon room. Please check if hackathon mode is enabled for this team or try again later.
           </p>
           
           {process.env.NODE_ENV === 'development' && (

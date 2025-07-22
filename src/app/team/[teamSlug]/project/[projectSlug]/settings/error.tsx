@@ -30,7 +30,7 @@ export default function Error({
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            We couldn't load the project settings. You might not have permission to access this page or there's a temporary issue.
+            We couldn&apos;t load the project settings. You might not have permission to access this page or there&apos;s a temporary issue.
           </p>
           
           {process.env.NODE_ENV === 'development' && (

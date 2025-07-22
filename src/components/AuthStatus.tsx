@@ -1,6 +1,6 @@
 "use client";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
 export default function AuthStatus() {
@@ -9,7 +9,7 @@ export default function AuthStatus() {
   const [statusLoading, setStatusLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     if (!session) return;
     
     setStatusLoading(true);
@@ -17,12 +17,18 @@ export default function AuthStatus() {
     try {
       const response = await axios.get("/api/status");
       setUserStatus(response.data.status);
-    } catch (error: any) {
-      setError(error.response?.data?.error || "Failed to fetch status");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to fetch status";
+      setError(errorMessage);
     } finally {
       setStatusLoading(false);
     }
-  };
+  }, [session]);
 
   const updateStatus = async (newState: string) => {
     setStatusLoading(true);
@@ -33,8 +39,14 @@ export default function AuthStatus() {
       });
       
       setUserStatus(response.data.status);
-    } catch (error: any) {
-      setError(error.response?.data?.error || "Failed to update status");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "Failed to update status";
+      setError(errorMessage);
     } finally {
       setStatusLoading(false);
     }
@@ -44,7 +56,7 @@ export default function AuthStatus() {
     if (session) {
       fetchStatus();
     }
-  }, [session]);
+  }, [session, fetchStatus]);
 
   if (status === "loading") {
     return <div className="p-4">Loading...</div>;

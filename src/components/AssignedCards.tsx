@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
 import dynamic from 'next/dynamic';
 import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
+import { ProjectWithRelations } from "@/interfaces/ProjectWithRelations";
 import { useSession } from "next-auth/react";
 import { paginationConfig } from '@/config/pagination';
 import axios from "axios";
@@ -94,27 +95,7 @@ const AssignedCards = memo(function AssignedCards({
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<ContextCardWithRelations | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isFetching = useRef(false);
-
-  // Memoize query parameters to prevent unnecessary API calls
-  const queryParams = useMemo(() => {
-    let params = `status=ACTIVE&offset=${page * paginationConfig.pageSize}&limit=${paginationConfig.pageSize}`;
-    
-    if (currentUserOnly && userEmail) {
-      params += `&assignedTo=${encodeURIComponent(userEmail)}`;
-      if (teamId) {
-        params += `&teamId=${teamId}`;
-      }
-    } else if (teamId) {
-      params += `&teamId=${teamId}`;
-    } else if (userEmail) {
-      params += `&assignedTo=${encodeURIComponent(userEmail)}`;
-    }
-
-    return params;
-  }, [page, currentUserOnly, userEmail, teamId]);
-
-  // Memoize visible cards to prevent unnecessary re-renders
+  const isFetching = useRef(false);  // Memoize visible cards to prevent unnecessary re-renders
   const visibleCards = useMemo(() => {
     return cards.filter(card => card.status === "ACTIVE");
   }, [cards]);
@@ -248,7 +229,7 @@ const AssignedCards = memo(function AssignedCards({
               if (!val) setSelectedCard(null);
             }}
             projectSlug={selectedCard.project?.slug || ""}
-            project={selectedCard.project as any}
+            project={selectedCard.project as ProjectWithRelations}
             existingCard={{
               ...selectedCard,
               why: selectedCard.why ?? undefined,

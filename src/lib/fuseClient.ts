@@ -1,8 +1,16 @@
 import Fuse from "fuse.js";
 
-let fuse: Fuse<any> | null = null;
+interface SearchableItem {
+  title?: string;
+  name?: string;
+  email?: string;
+  tag?: string;
+  [key: string]: unknown;
+}
 
-export function initFuse(data: any[]) {
+let fuse: Fuse<SearchableItem> | null = null;
+
+export function initFuse(data: SearchableItem[]) {
   fuse = new Fuse(data, {
     includeScore: true,
     threshold: 0.3,

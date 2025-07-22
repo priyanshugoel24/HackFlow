@@ -3,7 +3,8 @@ import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
-import Fuse from "fuse.js";
+import Fuse from 'fuse.js';
+import { ProjectSearchData, TeamSearchData, FuseSearchResult, RelevantProject, RelevantTeam } from "@/interfaces/SearchTypes";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -12,10 +13,10 @@ const bodySchema = z.object({
 });
 
 // Enhanced fuzzy matching for project and team identification
-function findRelevantProjectsAndTeams(prompt: string, projects: Array<{id: string, name: string, slug: string, teamName?: string}>, teams: Array<{id: string, name: string, slug: string}>) {
+function findRelevantProjectsAndTeams(prompt: string, projects: ProjectSearchData[], teams: TeamSearchData[]) {
   const queryLower = prompt.toLowerCase();
-  const relevantProjects: Array<{project: typeof projects[0], score: number, reason: string}> = [];
-  const relevantTeams: Array<{team: typeof teams[0], score: number, reason: string}> = [];
+  const relevantProjects: RelevantProject[] = [];
+  const relevantTeams: RelevantTeam[] = [];
 
   // Create Fuse instances for fuzzy search
   const projectFuse = new Fuse(projects, {
@@ -32,7 +33,7 @@ function findRelevantProjectsAndTeams(prompt: string, projects: Array<{id: strin
 
   // 1. Direct fuzzy search matches for projects
   const projectFuseResults = projectFuse.search(queryLower);
-  projectFuseResults.forEach((result: any) => {
+  projectFuseResults.forEach((result: FuseSearchResult<ProjectSearchData>) => {
     if (result.score! < 0.4) { // Good fuzzy match
       relevantProjects.push({
         project: result.item,
@@ -44,7 +45,7 @@ function findRelevantProjectsAndTeams(prompt: string, projects: Array<{id: strin
 
   // 1. Direct fuzzy search matches for teams
   const teamFuseResults = teamFuse.search(queryLower);
-  teamFuseResults.forEach((result: any) => {
+  teamFuseResults.forEach((result: FuseSearchResult<TeamSearchData>) => {
     if (result.score! < 0.4) { // Good fuzzy match
       relevantTeams.push({
         team: result.item,
@@ -469,11 +470,11 @@ export async function POST(req: NextRequest) {
 
     if (relevantProjects.length > 0 || relevantTeams.length > 0) {
       // If we found specific project matches, focus on those
-      const relevantProjectIds = relevantProjects.slice(0, 3).map((rp: any) => rp.project.id);
+      const relevantProjectIds = relevantProjects.slice(0, 3).map((rp: { project: { id: string } }) => rp.project.id);
       focusedProjects = userProjects.filter(p => relevantProjectIds.includes(p.id));
       
       // If we found specific team matches, focus on those and their projects
-      const relevantTeamIds = relevantTeams.slice(0, 3).map((rt: any) => rt.team.id);
+      const relevantTeamIds = relevantTeams.slice(0, 3).map((rt: { team: { id: string } }) => rt.team.id);
       focusedTeams = userTeams.filter(t => relevantTeamIds.includes(t.id));
       
       // Also include projects from relevant teams
@@ -511,8 +512,8 @@ export async function POST(req: NextRequest) {
         teamProjectIds.includes(project.id)
       );
       
-      const totalTeamCards = teamProjectsData.reduce((sum: number, project: any) => sum + project._count.contextCards, 0);
-      const weeklyActivity = teamProjectsData.reduce((sum: number, project: any) => sum + project._count.activities, 0);
+      const totalTeamCards = teamProjectsData.reduce((sum: number, project: { _count: { contextCards: number } }) => sum + project._count.contextCards, 0);
+      const weeklyActivity = teamProjectsData.reduce((sum: number, project: { _count: { activities: number } }) => sum + project._count.activities, 0);
       
       // Member roles and expertise
       const memberDetails = team.members.map(member => {
