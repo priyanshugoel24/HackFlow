@@ -1,137 +1,75 @@
-# ContextBoard
+# HackFlow
 
-A Next.js application with authentication and status management.
+HackFlow is a powerful team-based productivity and collaboration platform designed for developers, product teams, and hackathon enthusiasts. It combines task management, decision logging, AI-assisted workflows, and real-time collaboration into a single, seamless experience.
 
-## Setup
+---
 
-1. **Clone and Install**
-   ```bash
-   git clone <your-repo>
-   cd contextboard
-   npm install
-   ```
+## 🚀 Features
 
-2. **Environment Configuration**
-   ```bash
-   cp .env.example .env.local
-   ```
-   
-   Edit `.env.local` and add your values:
-   - `DATABASE_URL`: Your PostgreSQL connection string
-   - `NEXTAUTH_SECRET`: Random secret for NextAuth (generate with `openssl rand -base64 32`)
-   - `GITHUB_CLIENT_ID` & `GITHUB_CLIENT_SECRET`: From GitHub OAuth App
-   - `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET`: From Google OAuth App
+### 🧩 Team & Project Management
+- **Team Layer**: Create and manage multiple teams, each containing several projects.
+- **Team Roles**: Owner and Member roles with scoped permissions.
+- **Invite Members**: Add collaborators via email with team-level access control.
+- **Online Presence**: See who's online and editing in real-time across teams.
 
-3. **Database Setup**
-   ```bash
-   npx prisma migrate deploy
-   npx prisma generate
-   ```
+### 📌 Context Cards
+- **Types**: Cards can be tagged as Tasks, Insights, Decisions, or general Notes.
+- **Mentions & Assignments**: Mention teammates and assign cards within team scope.
+- **Tags & Filtering**: Organize cards using tags and rich filters.
+- **Archiving**: Archive and restore completed or outdated cards.
 
-4. **Run Development Server**
-   ```bash
-   npm run dev
-   ```
+### 📚 Real-Time Collaboration
+- **Live Editing**: Google Docs-style collaborative editing using CRDT and Ably + Yjs.
+- **Cursors & Awareness**: View others’ cursors and editing status in real-time.
+- **Presence Indicators**: Know who is editing or online in a specific card.
 
-## OAuth Provider Setup
+### ⚡ Focus & Hackathon Modes
+- **Focus Mode**: Pomodoro-style immersive mode for selected cards with time tracking, session summaries, and progress charts.
+- **Hackathon Mode**: Dedicated productivity mode for sprints and hackathons, scoped to teams.
+- **Progress Tracking**: Project-level progress bars based on completed task cards.
 
-### GitHub OAuth
-1. Go to GitHub Settings > Developer settings > OAuth Apps
-2. Create new OAuth App
-3. Set Authorization callback URL to: `http://localhost:3000/api/auth/callback/github`
-4. Copy Client ID and Client Secret to `.env.local`
+### 🧠 AI Integrations
+- **Standup Digest**: Auto-generated summaries of team activity.
+- **Contextual Assistant**: AI assistant to help write, summarize, or brainstorm inside cards.
+- **Meeting Note Generator**: Convert discussions or notes into structured meeting summaries.
+- **Smart Card Creation**: Generate new cards based on meeting transcripts or AI inputs.
 
-### Google OAuth
-1. Go to Google Cloud Console > APIs & Services > Credentials
-2. Create OAuth 2.0 Client ID
-3. Set Authorized redirect URI to: `http://localhost:3000/api/auth/callback/google`
-4. Copy Client ID and Client Secret to `.env.local`
+### 🔍 Universal Search
+- **Fuzzy Matching**: Search across cards, members, projects, and tags.
+- **AI Search Mode**: Switch to Ask-AI mode for contextual information retrieval.
 
-## Troubleshooting
+### 📊 Analytics Dashboard
+- **Team Analytics**: Project progress, task velocity, and activity insights.
+- **Project Health**: Card-type breakdowns and completion metrics.
 
-### "Not authenticated" Error
-- Ensure your OAuth providers are properly configured
-- Check that `.env.local` has all required variables
-- Verify your OAuth callback URLs match your domain
-- Try signing out and signing back in
+### 💬 Comments & Threads
+- **Threaded Discussions**: Add comment threads on each context card.
+- **Mentions & Editing**: Mention users, edit or delete comments, and view timestamps.
+- **Real-Time Sync**: Comments sync live using Ably.
 
-### Database Connection Issues
-- Check your `DATABASE_URL` in `.env.local`
-- Ensure your PostgreSQL database is running
-- Run `npx prisma migrate deploy` to ensure schema is up-to-date
+---
 
-### Development Server Issues
-- If port 3000 is occupied, Next.js will use port 3001
-- Update your OAuth callback URLs accordingly
-- Clear browser cache and cookies for localhost
+## 🧠 Terminology
 
-## Features
+- **Team**: A group of collaborators working on multiple projects.
+- **Project**: A container of context cards under a specific initiative.
+- **Context Card**: A unit of thought like a task, insight, or decision.
+- **Assigned Cards**: Task-type cards assigned to or mentioning you.
+- **Focus Mode**: A distraction-free modal for deep work on selected cards.
+- **Hackathon Mode**: A productivity mode tailored for sprints or timed competitions.
 
-- **Authentication**: GitHub and Google OAuth
-- **Status Management**: Available, Busy, Focused states
-- **Project Management**: Create, update, and delete projects
-- **Context Cards**: Create and manage context cards with rich content
-- **Project-Context Card Relationships**: Link context cards to specific projects
-- **User Dashboard**: View and update your status
-- **Database**: PostgreSQL with Prisma ORM
+---
 
-## API Endpoints
+## 🧱 Tech Stack
 
-### Authentication
-- `/api/auth/[...nextauth]` - NextAuth endpoints
-
-### Status Management
-- `GET /api/status` - Get current user status
-- `POST /api/status` - Update user status
-
-### Projects
-- `GET /api/projects` - Get all projects for the user
-- `POST /api/projects` - Create a new project
-- `GET /api/projects/[id]` - Get a specific project with its context cards
-- `PATCH /api/projects/[id]` - Update a project
-- `DELETE /api/projects/[id]` - Delete a project
-- `GET /api/projects/[id]/context-cards` - Get context cards for a specific project
-
-### Context Cards
-- `GET /api/context-cards` - Get all context cards for the user
-- `POST /api/context-cards` - Create a new context card (can optionally link to a project)
-- `PATCH /api/context-cards/[id]` - Update a context card
-- `DELETE /api/context-cards/[id]` - Delete a context card
-
-## Routes
-
-### Dynamic Routes
-- `/projects/[id]` - Individual project page showing project details and context cards
-- `/` - Main dashboard with project grid and sidebar
-
-## Project Structure
-
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── auth/[...nextauth]/route.ts       # NextAuth handlers
-│   │   ├── status/route.ts                   # Status API
-│   │   ├── projects/
-│   │   │   ├── route.ts                      # Projects CRUD
-│   │   │   └── [id]/
-│   │   │       ├── route.ts                  # Individual project operations
-│   │   │       └── context-cards/route.ts   # Project-specific context cards
-│   │   └── context-cards/
-│   │       ├── route.ts                      # Context cards CRUD
-│   │       └── [id]/route.ts                 # Individual context card operations
-│   ├── layout.tsx                            # Root layout
-│   └── page.tsx                              # Home page
-├── components/
-│   ├── AuthStatus.tsx                        # Auth component
-│   ├── Navbar.tsx                            # Navigation bar
-│   ├── LoginPage.tsx                         # Login page
-│   └── providers.tsx                         # Session provider
-├── lib/
-│   ├── auth.ts                               # NextAuth configuration
-│   └── prisma.ts                             # Prisma client
-├── types/
-│   └── next-auth.d.ts                        # NextAuth types
-└── prisma/
-    └── schema.prisma                         # Database schema
-```
+- **Framework**: Next.js 14 with App Router and Server Components
+- **Language**: TypeScript + SQL + React
+- **Database**: PostgreSQL via Prisma ORM
+- **Authentication**: NextAuth.js (JWT)
+- **File Storage**: Supabase Storage
+- **Realtime Sync**: Ably Realtime
+- **AI Features**: Gemini API
+- **UI & Styling**: Tailwind CSS + ShadCN UI
+- **Search**: Fuse.js
+- **State Management**: Zustand
+- **Deployment**: Vercel
