@@ -81,7 +81,7 @@ export default function Navbar() {
         <div className="px-6 h-20 flex items-center justify-between gap-3">
           <div className="flex items-center gap-4 min-w-[200px]">
             <div className="text-lg font-semibold text-gray-800 dark:text-white tracking-tight">
-              📋 Context Board
+              📋 HackFlow
             </div>
           </div>
           <div className="w-full ml-48">
@@ -114,7 +114,7 @@ export default function Navbar() {
             href="/"
             className="text-lg font-semibold text-gray-800 dark:text-white tracking-tight hover:opacity-80 transition"
           >
-            📋 Context Board
+            📋 HackFlow
           </Link>
           {!isConnected && (
             <span className="text-xs text-orange-600 bg-orange-100 dark:bg-orange-900 dark:text-orange-300 px-2 py-1 rounded">
