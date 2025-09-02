@@ -17,8 +17,7 @@ import {
   Cell,
 } from 'recharts';
 import { ProjectAnalyticsPageClientProps } from '@/interfaces/ProjectAnalyticsPageClientProps';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+import { ANALYTICS_CHART_COLORS } from '@/config/charts';
 
 export default function ProjectAnalyticsPageClient({ analytics }: ProjectAnalyticsPageClientProps) {
   // Transform data for charts
@@ -134,7 +133,7 @@ export default function ProjectAnalyticsPageClient({ analytics }: ProjectAnalyti
                     dataKey="value"
                   >
                     {cardTypeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={ANALYTICS_CHART_COLORS[index % ANALYTICS_CHART_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -183,7 +182,7 @@ export default function ProjectAnalyticsPageClient({ analytics }: ProjectAnalyti
                     dataKey="value"
                   >
                     {visibilityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={ANALYTICS_CHART_COLORS[index % ANALYTICS_CHART_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />

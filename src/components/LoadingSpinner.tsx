@@ -2,22 +2,17 @@
 
 import { Loader2 } from 'lucide-react';
 import { LoadingSpinnerProps } from '@/interfaces/LoadingSpinnerProps';
+import { SPINNER_SIZE_CLASSES } from '@/config/loading';
 
 export default function LoadingSpinner({ 
   size = 'md', 
   text = 'Loading...', 
   className = '' 
 }: LoadingSpinnerProps) {
-  const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-6 w-6',
-    lg: 'h-8 w-8'
-  };
-
   return (
     <div className={`flex items-center justify-center p-4 ${className}`}>
       <div className="flex flex-col items-center gap-2">
-        <Loader2 className={`animate-spin text-primary ${sizeClasses[size]}`} />
+        <Loader2 className={`animate-spin text-primary ${SPINNER_SIZE_CLASSES[size]}`} />
         {text && (
           <p className="text-sm text-muted-foreground">{text}</p>
         )}

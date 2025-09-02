@@ -16,8 +16,7 @@ import {
   Cell
 } from 'recharts';
 import { AnalyticsChartsProps } from '@/interfaces/AnalyticsChartsProps';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+import { ANALYTICS_CHART_COLORS } from '@/config/charts';
 
 const AnalyticsCharts = memo(function AnalyticsCharts({ analytics }: AnalyticsChartsProps) {
   // Early return if analytics is null or undefined
@@ -78,7 +77,7 @@ const AnalyticsCharts = memo(function AnalyticsCharts({ analytics }: AnalyticsCh
                 dataKey="value"
               >
                 {taskStatusData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={ANALYTICS_CHART_COLORS[index % ANALYTICS_CHART_COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip 
