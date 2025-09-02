@@ -1,12 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-
-interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
-  text?: string;
-  className?: string;
-}
+import { LoadingSpinnerProps } from '@/interfaces/LoadingSpinnerProps';
 
 export default function LoadingSpinner({ 
   size = 'md', 

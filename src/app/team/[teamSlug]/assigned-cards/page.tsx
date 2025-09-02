@@ -16,11 +16,7 @@ const AssignedCardsPageClient = dynamic(() => import('@/components/AssignedCards
   )
 });
 
-interface AssignedCardsPageProps {
-  params: Promise<{
-    teamSlug: string;
-  }>;
-}
+import { AssignedCardsPageProps } from '@/interfaces/AssignedCardsPageProps';
 
 // Server-side data fetching
 async function fetchTeam(teamSlug: string): Promise<AssignedCardsTeam | null> {

@@ -39,13 +39,10 @@ import {
   Timer,
 } from 'lucide-react';
 import { TeamAnalytics } from '@/interfaces/TeamAnalytics';
+import { TeamAnalyticsPageProps } from '@/interfaces/TeamAnalyticsPageProps';
 import { analyticsConfig } from '@/config/analytics';
 import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
-
-interface TeamAnalyticsPageProps {
-  params: Promise<{ teamSlug: string }>;
-}
 
 export async function generateMetadata({ params }: TeamAnalyticsPageProps): Promise<Metadata> {
   const { teamSlug } = await params;

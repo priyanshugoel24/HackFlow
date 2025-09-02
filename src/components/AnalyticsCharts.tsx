@@ -15,13 +15,9 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { TeamAnalytics } from '@/interfaces/TeamAnalytics';
+import { AnalyticsChartsProps } from '@/interfaces/AnalyticsChartsProps';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
-interface AnalyticsChartsProps {
-  analytics: TeamAnalytics;
-}
 
 const AnalyticsCharts = memo(function AnalyticsCharts({ analytics }: AnalyticsChartsProps) {
   // Early return if analytics is null or undefined

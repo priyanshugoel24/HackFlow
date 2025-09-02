@@ -15,11 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Settings, Users, Plus, Mail, Crown, Shield, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { TeamSettingsTeam } from '@/interfaces/TeamSettingsTeam';
-
-interface TeamSettingsPageClientProps {
-  team: TeamSettingsTeam;
-  teamSlug: string;
-}
+import { TeamSettingsPageClientProps } from '@/interfaces/TeamSettingsPageClientProps';
 
 export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: TeamSettingsPageClientProps) {
   const [team, setTeam] = useState<TeamSettingsTeam>(initialTeam);

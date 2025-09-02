@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BarChart3, Users, Target, Activity } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
-import { ProjectAnalytics } from '@/interfaces/ProjectAnalytics';
 import {
   ResponsiveContainer,
   BarChart,
@@ -17,12 +16,9 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import { ProjectAnalyticsPageClientProps } from '@/interfaces/ProjectAnalyticsPageClientProps';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
-interface ProjectAnalyticsPageClientProps {
-  analytics: ProjectAnalytics;
-}
 
 export default function ProjectAnalyticsPageClient({ analytics }: ProjectAnalyticsPageClientProps) {
   // Transform data for charts

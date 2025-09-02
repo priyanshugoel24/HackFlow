@@ -7,11 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { CreateTeamData } from '@/interfaces/CreateTeamData';
+import { CreateTeamModalProps } from '@/interfaces/CreateTeamModalProps';
 import axios from 'axios';
-
-interface CreateTeamModalProps {
-  onTeamCreated?: () => void;
-}
 
 export default function CreateTeamModal({ onTeamCreated }: CreateTeamModalProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false);

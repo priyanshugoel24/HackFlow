@@ -3,15 +3,9 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import ProjectSettingsPageClient from '@/components/ProjectSettingsPageClient';
 import { prisma } from '@/lib/prisma';
+import { ProjectSettingsPageProps } from '@/interfaces/ProjectSettingsPageProps';
 import { Session } from 'next-auth';
 import { ProjectData } from '@/interfaces/ProjectData';
-
-interface ProjectSettingsPageProps {
-  params: Promise<{
-    teamSlug: string;
-    projectSlug: string;
-  }>;
-}
 
 // Server-side data fetching
 async function fetchProject(teamSlug: string, projectSlug: string): Promise<ProjectData | null> {

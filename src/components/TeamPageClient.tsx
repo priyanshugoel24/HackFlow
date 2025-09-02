@@ -38,12 +38,8 @@ import { Plus, Calendar, Settings, UserPlus, BarChart3, Target, Archive, Archive
 import { ContextCardWithRelations } from '@/interfaces/ContextCardWithRelations';
 import { TeamPageTeam } from '@/interfaces/TeamPageTeam';
 import { TeamPageProject } from '@/interfaces/TeamPageProject';
+import { TeamPageClientProps } from '@/interfaces/TeamPageClientProps';
 import ErrorBoundary from './ErrorBoundary';
-
-interface TeamPageClientProps {
-  initialTeam: TeamPageTeam;
-  teamSlug: string;
-}
 
 export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClientProps) {
   const router = useRouter();

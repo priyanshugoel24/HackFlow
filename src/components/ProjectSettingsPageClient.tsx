@@ -11,11 +11,7 @@ import { getAblyClient } from "@/lib/ably";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import { ProjectData } from "@/interfaces/ProjectData";
-
-interface ProjectSettingsPageClientProps {
-  project: ProjectData;
-  projectSlug: string;
-}
+import { ProjectSettingsPageClientProps } from "@/interfaces/ProjectSettingsPageClientProps";
 
 export default function ProjectSettingsPageClient({ 
   project: initialProject, 

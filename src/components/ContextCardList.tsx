@@ -308,12 +308,7 @@ const VirtualizedContextCard = memo(function VirtualizedContextCard({
   );
 });
 
-interface ContextCardListProps {
-  projectSlug: string;
-  initialCards?: ContextCardWithRelations[];
-  project?: ProjectWithRelations;
-  teamSlug?: string;
-}
+import { ContextCardListProps } from '@/interfaces/ContextCardListProps';
 
 const ContextCardList = memo(function ContextCardList({ 
   projectSlug, 

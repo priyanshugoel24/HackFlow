@@ -4,13 +4,10 @@ import { authOptions } from '@/lib/auth';
 import Navbar from '@/components/Navbar';
 import TeamPageClient from '@/components/TeamPageClient';
 import { TeamPageTeam } from '@/interfaces/TeamPageTeam';
+import { TeamPageProps } from '@/interfaces/TeamPageProps';
 import { Session } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { Metadata } from 'next';
-
-interface TeamPageProps {
-  params: Promise<{ teamSlug: string }>;
-}
 
 export async function generateMetadata({ params }: TeamPageProps): Promise<Metadata> {
   const { teamSlug } = await params;

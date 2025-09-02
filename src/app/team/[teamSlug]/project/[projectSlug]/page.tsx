@@ -8,15 +8,9 @@ import { ArrowLeft } from "lucide-react";
 import { ProjectPageProject } from '@/interfaces/ProjectPageProject';
 import { ProjectPageTeam } from '@/interfaces/ProjectPageTeam';
 import { prisma } from '@/lib/prisma';
+import { ProjectPageProps } from '@/interfaces/ProjectPageProps';
 import { Session } from 'next-auth';
 import { Metadata } from 'next';
-
-interface ProjectPageProps {
-  params: Promise<{
-    teamSlug: string;
-    projectSlug: string;
-  }>;
-}
 
 export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
   const { projectSlug } = await params;

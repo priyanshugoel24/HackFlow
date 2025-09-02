@@ -17,16 +17,8 @@ import {
   UserRound,
   BarChart3,
 } from "lucide-react";
-import { ProjectPageProject } from '@/interfaces/ProjectPageProject';
-import { ProjectPageTeam } from '@/interfaces/ProjectPageTeam';
 import { ProjectWithRelations } from '@/interfaces/ProjectWithRelations';
-
-interface ProjectPageClientProps {
-  project: ProjectPageProject;
-  team: ProjectPageTeam;
-  teamSlug: string;
-  projectSlug: string;
-}
+import { ProjectPageClientProps } from '@/interfaces/ProjectPageClientProps';
 
 export default function ProjectPageClient({ 
   project, 

@@ -4,14 +4,9 @@ import { authOptions } from '@/lib/auth';
 import Navbar from '@/components/Navbar';
 import TeamSettingsPageClient from '@/components/TeamSettingsPageClient';
 import { TeamSettingsTeam } from '@/interfaces/TeamSettingsTeam';
+import { TeamSettingsPageProps } from '@/interfaces/TeamSettingsPageProps';
 import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
-
-interface TeamSettingsPageProps {
-  params: Promise<{
-    teamSlug: string;
-  }>;
-}
 
 // Server-side data fetching
 async function fetchTeam(teamSlug: string): Promise<TeamSettingsTeam | null> {

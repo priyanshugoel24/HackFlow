@@ -5,13 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, FolderOpen } from 'lucide-react';
 import { TeamWithRelations } from '@/interfaces/TeamWithRelations';
+import { TeamsDisplayProps } from '@/interfaces/TeamsDisplayProps';
 import CreateTeamModal from './CreateTeamModal';
 import PendingInvitations from './PendingInvitations';
 import axios from 'axios';
-
-interface TeamsDisplayProps {
-  initialTeams: TeamWithRelations[];
-}
 
 export default function TeamsDisplay({ initialTeams }: TeamsDisplayProps) {
   const router = useRouter();

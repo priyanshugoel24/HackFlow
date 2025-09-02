@@ -32,9 +32,8 @@ import {
   validateFileUpload,
 } from "@/lib/security";
 import { sanitizeHtml } from "@/lib/security-client";
-import ExistingCard from "@/interfaces/ExistingCard";
-import Project from "@/interfaces/Project";
 import { TeamMemberResponse } from "@/interfaces/AuthTypes";
+import { ContextCardModalProps } from "@/interfaces/ContextCardModalProps";
 import { GitHubCardAutoFill } from "./GithubCardAutofill";
 import axios from "axios";
 import ErrorBoundary from "./ErrorBoundary";
@@ -54,16 +53,6 @@ const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
     </div>
   )
 });
-
-interface ContextCardModalProps {
-  open: boolean;
-  setOpen: (val: boolean) => void;
-  projectSlug: string;
-  project?: Project;
-  existingCard?: ExistingCard & { createdById?: string };
-  onSuccess?: () => void;
-  teamSlug?: string;
-}
 
 const ContextCardModal = memo(function ContextCardModal({
   open,

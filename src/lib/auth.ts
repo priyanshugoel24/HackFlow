@@ -2,45 +2,10 @@ import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
-
-// Basic interfaces for NextAuth v4 compatibility
-interface NextAuthUser {
-  id?: string;
-  name?: string | null;
-  email?: string | null;
-  image?: string | null;
-}
-
-interface NextAuthAccount {
-  provider: string;
-  type: string;
-  providerAccountId: string;
-  refresh_token?: string | null;
-  access_token?: string | null;
-  expires_at?: number | null;
-  token_type?: string | null;
-  scope?: string | null;
-  id_token?: string | null;
-  session_state?: string | null;
-}
-
-interface NextAuthToken {
-  sub?: string;
-  email?: string | null;
-  name?: string | null;
-  picture?: string | null;
-  [key: string]: unknown;
-}
-
-interface NextAuthSession {
-  user?: {
-    id?: string;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-  };
-  expires: string;
-}
+import { NextAuthUser } from "@/interfaces/NextAuthUser";
+import { NextAuthAccount } from "@/interfaces/NextAuthAccount";
+import { NextAuthToken } from "@/interfaces/NextAuthToken";
+import { NextAuthSession } from "@/interfaces/NextAuthSession";
 
 export const authOptions = {
   adapter: PrismaAdapter(prisma),
@@ -55,7 +20,7 @@ export const authOptions = {
     }),
   ],
   session: {
-    strategy: "jwt" as const, // ✅ use JWT instead of DB sessions
+    strategy: "jwt" as const,
   },
   jwt: {
     maxAge: 60 * 60 * 24, // 1 day
@@ -71,7 +36,7 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }: { session: NextAuthSession; token: NextAuthToken }) {
-      // ✅ Add user ID from token to session
+      // Add user ID from token to session
       if (session.user && token.sub) {
         session.user.id = token.sub;
         session.user.image = token.picture as string;

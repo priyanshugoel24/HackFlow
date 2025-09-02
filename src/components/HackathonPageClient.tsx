@@ -24,14 +24,9 @@ import {
 import { ContextCardWithRelations } from '@/interfaces/ContextCardWithRelations';
 import { TeamHackathon } from '@/interfaces/TeamHackathon';
 import { HackathonUpdate } from '@/interfaces/HackathonUpdate';
+import { HackathonPageClientProps } from '@/interfaces/HackathonPageClientProps';
 import { toast } from 'sonner';
 import ErrorBoundary from './ErrorBoundary';
-
-interface HackathonPageClientProps {
-  initialTeam: TeamHackathon | null;
-  initialCards: ContextCardWithRelations[];
-  initialUpdates: HackathonUpdate[];
-}
 
 export default function HackathonPageClient({ 
   initialTeam, 

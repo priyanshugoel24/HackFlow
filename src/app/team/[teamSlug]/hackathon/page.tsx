@@ -20,11 +20,7 @@ const HackathonPageClient = dynamic(() => import('@/components/HackathonPageClie
   )
 });
 
-interface HackathonPageProps {
-  params: Promise<{
-    teamSlug: string;
-  }>;
-}
+import { HackathonPageProps } from '@/interfaces/HackathonPageProps';
 
 // Server-side data fetching for team data
 async function fetchTeamData(teamSlug: string): Promise<TeamHackathon | null> {

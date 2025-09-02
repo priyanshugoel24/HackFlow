@@ -8,13 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
-
-interface WeeklyVelocityChartProps {
-  data: Array<{
-    week: string;
-    completed: number;
-  }>;
-}
+import { WeeklyVelocityChartProps } from '@/interfaces/WeeklyVelocityChartProps';
 
 export default function WeeklyVelocityChart({ data }: WeeklyVelocityChartProps) {
   return (

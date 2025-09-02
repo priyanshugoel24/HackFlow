@@ -1,24 +1,10 @@
 'use client';
 
-import React, { Component, ReactNode } from 'react';
+import React, { Component } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error?: Error;
-  errorInfo?: React.ErrorInfo;
-}
-
-interface ErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-  resetOnPropsChange?: boolean;
-  resetKeys?: Array<string | number>;
-  className?: string;
-}
+import { ErrorBoundaryState, ErrorBoundaryProps } from '@/interfaces/ErrorBoundaryInterfaces';
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   private resetTimeoutId: number | null = null;

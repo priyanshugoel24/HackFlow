@@ -33,14 +33,8 @@ import {
 } from 'lucide-react';
 import { Session } from 'next-auth';
 import { prisma } from '@/lib/prisma';
+import { AnalyticsPageProps } from '@/interfaces/AnalyticsPageProps';
 import { analyticsConfig } from '@/config/analytics';
-
-interface AnalyticsPageProps {
-  params: Promise<{
-    teamSlug: string;
-    projectSlug: string;
-  }>;
-}
 
 // Server-side data fetching for project analytics
 async function fetchProjectAnalytics(teamSlug: string, projectSlug: string) {

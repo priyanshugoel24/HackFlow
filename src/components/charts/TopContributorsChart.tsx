@@ -9,14 +9,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-
-interface TopContributorsChartProps {
-  data: Array<{
-    userName: string;
-    cardsCreated: number;
-    cardsCompleted: number;
-  }>;
-}
+import { TopContributorsChartProps } from '@/interfaces/TopContributorsChartProps';
 
 export default function TopContributorsChart({ data }: TopContributorsChartProps) {
   return (
