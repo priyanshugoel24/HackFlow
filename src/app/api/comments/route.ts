@@ -1,7 +1,7 @@
 // POST: Create a new comment
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { 
   commentSchema, 
   validateInput, 
@@ -13,32 +13,15 @@ import {
 const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 export async function POST(req: NextRequest) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const user = await getAuthenticatedUser(req);
 
-  // First, ensure the user exists in the database and get the actual user
-  const user = await prisma.user.upsert({
-    where: { email: token.email! },
-    update: {
-      name: token.name,
-      image: token.picture,
-    },
-    create: {
-      email: token.email!,
-      name: token.name,
-      image: token.picture,
-    },
-  });
+    // Rate limiting
+    if (!rateLimiter(user.id)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
 
-  // Rate limiting
-  if (!rateLimiter(user.id)) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
-
-  const { content, cardId, parentId } = await req.json();
+    const { content, cardId, parentId } = await req.json();
 
   // Validate and sanitize input
   const validationResult = validateInput(commentSchema, {
@@ -54,9 +37,8 @@ export async function POST(req: NextRequest) {
     }, { status: 400 });
   }
 
-  const validatedData = validationResult.data!;
+    const validatedData = validationResult.data!;
 
-  try {
     const comment = await prisma.comment.create({
       data: {
         content: validatedData.content,
@@ -73,6 +55,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ comment }, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Failed to create comment", error);
     return NextResponse.json({ error: "Error creating comment" }, { status: 500 });
   }

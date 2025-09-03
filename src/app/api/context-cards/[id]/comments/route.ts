@@ -1,41 +1,23 @@
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logActivity";
-import { getToken } from "next-auth/jwt";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { NextRequest, NextResponse } from "next/server";
 import { getAblyServer } from "@/lib/ably";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-  const { id: cardId } = await params;
-
-  if (!cardId || typeof cardId !== "string") {
-    return NextResponse.json({ error: "Invalid or missing card ID" }, { status: 400 });
-  }
-
-  // Parse pagination params
-  const { searchParams } = req.nextUrl;
-  const limit = parseInt(searchParams.get("limit") || "10");
-  const cursor = searchParams.get("cursor");
-
   try {
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const user = await getAuthenticatedUser(req);
+    
+    const { id: cardId } = await params;
+
+    if (!cardId || typeof cardId !== "string") {
+      return NextResponse.json({ error: "Invalid or missing card ID" }, { status: 400 });
+    }
+
+    // Parse pagination params
+    const { searchParams } = req.nextUrl;
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const cursor = searchParams.get("cursor");
 
     // Ensure the context card exists and user has access to the project
     const card = await prisma.contextCard.findUnique({
@@ -103,36 +85,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
+  try {
+    const user = await getAuthenticatedUser(req);
+    
+    const { id: cardId } = await params;
+    const { content } = await req.json();
 
-  if (!token?.sub) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id: cardId } = await params;
-  const { content } = await req.json();
-
-  if (!cardId || typeof cardId !== "string" || !content?.trim()) {
+    if (!cardId || typeof cardId !== "string" || !content?.trim()) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-
-  try {
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
 
     // Ensure card exists and user has access to the project
     const card = await prisma.contextCard.findUnique({
@@ -210,8 +171,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       description: `Added a comment to card`,
       user: {
         id: user.id,
-        name: token.name,
-        image: token.picture,
+        name: user.name,
+        image: user.image,
       },
       createdAt: new Date().toISOString(),
       projectId: card.project.id,

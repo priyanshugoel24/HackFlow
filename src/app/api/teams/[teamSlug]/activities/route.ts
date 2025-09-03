@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 export async function GET(
   req: NextRequest,
@@ -9,14 +9,8 @@ export async function GET(
   const { teamSlug } = await params;
 
   try {
-    // Check authentication
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    if (!token?.sub) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Check authentication and get user
+    const user = await getAuthenticatedUser(req);
 
     // Find the team by slug
     const team = await prisma.team.findFirst({
@@ -34,7 +28,7 @@ export async function GET(
     // Check if user has access to this team
     const membership = await prisma.teamMember.findFirst({
       where: {
-        userId: token.sub,
+        userId: user.id,
         teamId: team.id,
         status: 'ACTIVE',
       },
@@ -76,6 +70,9 @@ export async function GET(
 
     return NextResponse.json({ activities });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Error fetching team activities:", error);
     return NextResponse.json({ error: "Failed to fetch team activities" }, { status: 500 });
   }

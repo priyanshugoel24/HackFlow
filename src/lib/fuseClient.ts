@@ -1,12 +1,5 @@
+import { SearchableItem } from "@/interfaces/SearchableItem";
 import Fuse from "fuse.js";
-
-interface SearchableItem {
-  title?: string;
-  name?: string;
-  email?: string;
-  tag?: string;
-  [key: string]: unknown;
-}
 
 let fuse: Fuse<SearchableItem> | null = null;
 

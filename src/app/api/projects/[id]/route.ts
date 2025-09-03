@@ -1,35 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { getAblyServer } from "@/lib/ably";
 
 // PATCH: Update a project
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const { name, link, description, tags, isArchived } = await req.json();
-
   try {
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const user = await getAuthenticatedUser(req);
+    
+    const { id } = await params;
+    const { name, link, description, tags, isArchived } = await req.json();
 
     // Check if the id is a CUID (database ID) or a slug
     const isCUID = /^c[a-z0-9]{24}$/i.test(id);
@@ -90,9 +70,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         },
         updatedBy: {
           id: user.id,
-          name: token.name,
-          email: token.email,
-          image: token.picture,
+          name: user.name,
+          email: user.email,
+          image: user.image,
         },
       });
     } catch (ablyError) {
@@ -116,17 +96,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 // DELETE: Delete a project
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const { id } = await params;
-
   try {
+    const user = await getAuthenticatedUser(req);
+    
+    const { id } = await params;
+
     // Check if the id is a CUID (database ID) or a slug
     const isCUID = /^c[a-z0-9]{24}$/i.test(id);
     
@@ -134,7 +108,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const existingProject = await prisma.project.findFirst({
       where: {
         ...(isCUID ? { id } : { slug: id }),
-        createdById: token.sub,
+        createdById: user.id,
       },
     });
 

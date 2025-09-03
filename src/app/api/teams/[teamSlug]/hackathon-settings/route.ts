@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/logActivity';
+import { getAuthenticatedUser } from '@/lib/auth-utils';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ teamSlug: string }> }
 ) {
   try {
-    const token = await getToken({ 
-      req: request, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    if (!token?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await getAuthenticatedUser(request);
 
     const { teamSlug } = await params;
     const body = await request.json();
@@ -24,7 +18,7 @@ export async function PATCH(
     const teamMember = await prisma.teamMember.findFirst({
       where: {
         team: { slug: teamSlug },
-        user: { email: token.email },
+        user: { email: user.email },
         status: 'ACTIVE',
         role: { in: ['OWNER'] },
       },
@@ -76,6 +70,9 @@ export async function PATCH(
 
     return NextResponse.json(updatedTeam);
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Error updating hackathon settings:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -86,13 +83,7 @@ export async function GET(
   { params }: { params: Promise<{ teamSlug: string }> }
 ) {
   try {
-    const token = await getToken({ 
-      req: request, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    if (!token?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await getAuthenticatedUser(request);
 
     const { teamSlug } = await params;
 
@@ -100,7 +91,7 @@ export async function GET(
     const teamMember = await prisma.teamMember.findFirst({
       where: {
         team: { slug: teamSlug },
-        user: { email: token.email },
+        user: { email: user.email },
         status: 'ACTIVE',
       },
       include: {
@@ -127,6 +118,9 @@ export async function GET(
       hackathonEndedAt: teamMember.team.hackathonEndedAt,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Error fetching hackathon settings:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

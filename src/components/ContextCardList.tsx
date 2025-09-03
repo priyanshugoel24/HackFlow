@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { FixedSizeList as List } from 'react-window';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/slugUtil";
 import axios from "axios";
 import { 
   Pin, 

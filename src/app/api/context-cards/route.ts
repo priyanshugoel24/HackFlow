@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import type { TaskStatus, Prisma } from "@prisma/client";
 import { logActivity } from "@/lib/logActivity";
 import { getAblyServer } from "@/lib/ably";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { 
   contextCardSchema, 
   validateInput, 
@@ -18,35 +18,17 @@ const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 // GET all context cards for logged-in user
 export async function GET(req: NextRequest) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-  // Query params
-  const { searchParams } = new URL(req.url);
-  const assignedTo = searchParams.get("assignedTo");
-  const status = searchParams.get("status");
-  const teamId = searchParams.get("teamId");
-  const projectId = searchParams.get("projectId"); // Add projectId parameter
-  const offset = parseInt(searchParams.get("offset") || "0", 10);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50); // max 50 per page
-
   try {
-    // First, ensure the user exists in the database
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const user = await getAuthenticatedUser(req);
+
+    // Query params
+    const { searchParams } = new URL(req.url);
+    const assignedTo = searchParams.get("assignedTo");
+    const status = searchParams.get("status");
+    const teamId = searchParams.get("teamId");
+    const projectId = searchParams.get("projectId"); // Add projectId parameter
+    const offset = parseInt(searchParams.get("offset") || "0", 10);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50); // max 50 per page
 
     // Build query for assigned cards
     let where: Prisma.ContextCardWhereInput = { isArchived: false };
@@ -78,7 +60,7 @@ export async function GET(req: NextRequest) {
               ...where,
               project: {
                 teamId: teamId
-              }
+              },
             };
           }
         } else {
@@ -190,6 +172,7 @@ export async function GET(req: NextRequest) {
         }
       };
     }
+
     if (status) {
       where = { ...where, status: status as TaskStatus };
     }
@@ -224,6 +207,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ cards: cardsWithAssignedUser });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Error fetching context cards:", error);
     return NextResponse.json({ error: "Failed to fetch context cards" }, { status: 500 });
   }
@@ -231,34 +217,14 @@ export async function GET(req: NextRequest) {
 
 // CREATE a new context card
 export async function POST(req: NextRequest) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  // First, ensure the user exists in the database and get the actual user
-  const user = await prisma.user.upsert({
-    where: { email: token.email! },
-    update: {
-      name: token.name,
-      image: token.picture,
-    },
-    create: {
-      email: token.email!,
-      name: token.name,
-      image: token.picture,
-    },
-  });
-
-  // Rate limiting
-  if (!rateLimiter(user.id)) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
-
   try {
+    const user = await getAuthenticatedUser(req);
+
+    // Rate limiting
+    if (!rateLimiter(user.id)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const formData = await req.formData();
 
     const title = formData.get("title") as string;
@@ -364,8 +330,8 @@ export async function POST(req: NextRequest) {
         projectId: project.id, // Use the actual project ID from the database
         type: type as "TASK" | "INSIGHT" | "DECISION",
         ...(type === "TASK" && {
-      status: status as TaskStatus,
-    }),
+          status: status as TaskStatus,
+        }),
         visibility: visibility as "PRIVATE" | "PUBLIC",
         why: why || undefined,
         issues: issues || undefined,
@@ -484,6 +450,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ card: savedCard });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Error creating context card:", error);
     return NextResponse.json({ error: "Failed to create context card" }, { status: 500 });
   }

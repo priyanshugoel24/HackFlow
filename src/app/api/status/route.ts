@@ -1,32 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { getAblyServer, CHANNELS, type AblyStatusData } from "@/lib/ably";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-
-    if (!token?.sub) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const user = await getAuthenticatedUser(req);
 
     const status = await prisma.status.findUnique({
       where: { userId: user.id },
@@ -34,6 +13,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ status: status || { state: "Available" } });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Error fetching status:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -41,28 +23,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-
-    if (!token?.sub) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const user = await getAuthenticatedUser(req);
 
     const { state } = await req.json();
 
@@ -99,6 +60,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ status: updated });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Error updating status:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

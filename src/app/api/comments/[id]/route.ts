@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -26,36 +26,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  // First, ensure the user exists in the database and get the actual user
-  const user = await prisma.user.upsert({
-    where: { email: token.email! },
-    update: {
-      name: token.name,
-      image: token.picture,
-    },
-    create: {
-      email: token.email!,
-      name: token.name,
-      image: token.picture,
-    },
-  });
-
-  const { content } = await req.json();
-  const { id } = await params;
-
   try {
+    const user = await getAuthenticatedUser(req);
+    
+    const { content } = await req.json();
+    const { id } = await params;
+
     const existing = await prisma.comment.findUnique({
       where: { id },
     });
 
-    if (!existing || existing.authorId !== user.id)
+    if (!existing || existing.authorId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const updated = await prisma.comment.update({
       where: { id },
@@ -69,31 +52,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  // First, ensure the user exists in the database and get the actual user
-  const user = await prisma.user.upsert({
-    where: { email: token.email! },
-    update: {
-      name: token.name,
-      image: token.picture,
-    },
-    create: {
-      email: token.email!,
-      name: token.name,
-      image: token.picture,
-    },
-  });
-
   try {
+    const user = await getAuthenticatedUser(req);
+    
     const { id } = await params;
     const existing = await prisma.comment.findUnique({ where: { id } });
-    if (!existing || existing.authorId !== user.id)
+    
+    if (!existing || existing.authorId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await prisma.comment.delete({ where: { id } });
     return NextResponse.json({ success: true });

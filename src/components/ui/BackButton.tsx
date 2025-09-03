@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/slugUtil";
 import { BackButtonProps } from "@/interfaces/BackButtonProps";
 
 export default function BackButton({ 

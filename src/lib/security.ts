@@ -144,6 +144,10 @@ export const querySchema = z.object({
   q: z.string().min(1).max(100),
 });
 
+export const bodySchema = z.object({
+  prompt: z.string().min(1).max(2000),
+});
+
 // Rate limiting helpers
 export const createRateLimiter = (windowMs: number, maxRequests: number) => {
   const requests = new Map<string, number[]>();

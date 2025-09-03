@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/slugUtil";
 import { Folder, Calendar, Archive } from "lucide-react";
 import { ProjectCardData } from "@/interfaces/ProjectCardData";
 import axios from "axios";

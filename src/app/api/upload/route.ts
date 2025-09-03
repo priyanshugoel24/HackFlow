@@ -1,32 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { getToken } from "next-auth/jwt";
 import { randomUUID } from "crypto";
-import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    if (!token?.sub) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const user = await getAuthenticatedUser(req);
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -70,6 +49,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: publicUrl, path: filePath });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Upload API error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

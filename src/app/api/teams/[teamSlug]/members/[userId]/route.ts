@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getAuthenticatedUser } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
 export async function DELETE(
@@ -7,27 +7,7 @@ export async function DELETE(
   { params }: { params: Promise<{ teamSlug: string; userId: string }> }
 ) {
   try {
-    const token = await getToken({ 
-      req: request, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    if (!token?.sub) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // First, ensure the requesting user exists in the database
-    const requestingUser = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const requestingUser = await getAuthenticatedUser(request);
 
     const resolvedParams = await params;
     const { teamSlug, userId } = resolvedParams;

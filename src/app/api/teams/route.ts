@@ -1,31 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
-import { generateSlug, generateUniqueSlug } from '@/lib/utils';
+import { generateSlug, generateUniqueSlug } from '@/lib/slugUtil';
+import { getAuthenticatedUser } from '@/lib/auth-utils';
 
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    
-    if (!token?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Get authenticated user (will handle upsert automatically)
+    const authenticatedUser = await getAuthenticatedUser(req);
 
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email,
-        name: token.name,
-        image: token.picture,
-      },
+    // Get user with team memberships
+    const user = await prisma.user.findUnique({
+      where: { id: authenticatedUser.id },
       include: {
         teamMemberships: {
           include: {
@@ -45,6 +30,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     // If user has no team memberships, return empty array
     const teams = user.teamMemberships?.map((membership) => ({
       ...membership.team,
@@ -54,6 +43,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(teams);
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Error fetching teams:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -61,28 +53,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getToken({ 
-      req: request, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    
-    if (!token?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    // Get authenticated user (will handle upsert automatically)
+    const user = await getAuthenticatedUser(request);
 
     const { name, description } = await request.json();
 
@@ -139,6 +111,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(team, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Error creating team:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

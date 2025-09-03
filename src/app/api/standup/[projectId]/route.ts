@@ -1,33 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { gemini } from "@/lib/gemini"; 
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const authenticatedUser = await getAuthenticatedUser(req);
+    const { projectId } = await params;
 
-  const { projectId } = await params;
+    const user = await prisma.user.findUnique({
+      where: { email: authenticatedUser.email },
+      select: { lastSeenat: true }, 
+    });
 
-  const user = await prisma.user.findUnique({
-    where: { email: token.email },
-    select: { lastSeenat: true }, 
-  });
+    const since = user?.lastSeenat ?? new Date(Date.now() - 1000 * 60 * 60 * 24); // fallback: 24h ago
 
-  const since = user?.lastSeenat ?? new Date(Date.now() - 1000 * 60 * 60 * 24); // fallback: 24h ago
-
-  const [cardsResult, commentsResult] = await Promise.allSettled([
-    prisma.contextCard.findMany({
-      where: {
-        projectId: projectId,
+    const [cardsResult, commentsResult] = await Promise.allSettled([
+      prisma.contextCard.findMany({
+        where: {
+          projectId: projectId,
         updatedAt: { gt: since },
       },
       include: { user: true },
@@ -76,4 +70,11 @@ export async function GET(
       { status: 500 }
     );
   }
+} catch (error) {
+  if (error instanceof Error && error.message === 'No authenticated user found') {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  console.error("Standup route error:", error);
+  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+}
 }

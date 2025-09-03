@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getAuthenticatedUser } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(
@@ -7,13 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ teamSlug: string; projectSlug: string }> }
 ) {
   try {
-    const token = await getToken({ 
-      req: request, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    if (!token?.sub || !token?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await getAuthenticatedUser(request);
 
     const { teamSlug, projectSlug } = await params;
 
@@ -23,7 +17,7 @@ export async function GET(
       include: {
         members: {
           where: {
-            user: { email: token.email },
+            user: { email: user.email },
             status: 'ACTIVE'
           }
         }

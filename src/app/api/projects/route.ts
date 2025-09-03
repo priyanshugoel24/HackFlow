@@ -1,39 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
-import { generateSlug, generateUniqueSlug } from "@/lib/utils";
+import { generateSlug, generateUniqueSlug } from "@/lib/slugUtil";
 import { logActivity } from "@/lib/logActivity";
 import { getAblyServer } from "@/lib/ably";
 import { TeamMember } from "@prisma/client";
 
 // CREATE new project
 export async function POST(req: NextRequest) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub)
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-  const { name, description, tags, teamId } = await req.json();
-
-  if (!name)
-    return NextResponse.json({ error: "Project name is required" }, { status: 400 });
-
   try {
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const user = await getAuthenticatedUser(req);
+    
+    const { name, description, tags, teamId } = await req.json();
+
+    if (!name) {
+      return NextResponse.json({ error: "Project name is required" }, { status: 400 });
+    }
 
     // If teamId is provided, verify user has permission to create projects in this team
     if (teamId) {

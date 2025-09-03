@@ -1,33 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
+import { getAuthenticatedUser } from '@/lib/auth-utils';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamSlug: string }> }
 ) {
   try {
-    const token = await getToken({ 
-      req: request, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    if (!token?.sub) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const user = await getAuthenticatedUser(request);
 
     const resolvedParams = await params;
     const team = await prisma.team.findUnique({
@@ -64,6 +44,9 @@ export async function GET(
 
     return NextResponse.json(team.members);
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Error fetching team members:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -74,27 +57,7 @@ export async function POST(
   { params }: { params: Promise<{ teamSlug: string }> }
 ) {
   try {
-    const token = await getToken({ 
-      req: request, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    if (!token?.sub) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // First, ensure the requesting user exists in the database
-    const requestingUser = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const requestingUser = await getAuthenticatedUser(request);
 
     const { email, role = 'MEMBER' } = await request.json();
 
@@ -174,6 +137,9 @@ export async function POST(
       member: newMember 
     }, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Error adding team member:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

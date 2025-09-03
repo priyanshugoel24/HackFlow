@@ -1,33 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { gemini } from "@/lib/gemini"; 
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ teamSlug: string }> }
 ) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const user = await getAuthenticatedUser(req);
+    
+    const resolvedParams = await params;
+    const { teamSlug } = resolvedParams;
 
-  const resolvedParams = await params;
-  const { teamSlug } = resolvedParams;
-
-  // Get the team and verify user access
-  const team = await prisma.team.findUnique({
-    where: { slug: teamSlug },
-    include: {
-      members: {
-        where: { 
-          user: { email: token.email },
-          status: 'ACTIVE'
+    // Get the team and verify user access
+    const team = await prisma.team.findUnique({
+      where: { slug: teamSlug },
+      include: {
+        members: {
+          where: { 
+            user: { email: user.email },
+            status: 'ACTIVE'
+          },
         },
-      },
       projects: {
         where: { isArchived: false },
         select: { id: true, name: true }
@@ -39,12 +34,12 @@ export async function GET(
     return NextResponse.json({ error: "Team not found or access denied" }, { status: 404 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: token.email },
+  const userDetails = await prisma.user.findUnique({
+    where: { email: user.email },
     select: { lastSeenat: true },
   });
 
-  const since = user?.lastSeenat ?? new Date(Date.now() - 1000 * 60 * 60 * 24); // fallback: 24h ago
+  const since = userDetails?.lastSeenat ?? new Date(Date.now() - 1000 * 60 * 60 * 24); // fallback: 24h ago
   const projectIds = team.projects.map(p => p.id);
 
   const [cards, comments] = await Promise.all([
@@ -112,4 +107,11 @@ export async function GET(
                `Check individual projects for detailed updates.`
     });
   }
+} catch (error) {
+  if (error instanceof Error && error.message === 'No authenticated user found') {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  console.error("Team standup route error:", error);
+  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+}
 }

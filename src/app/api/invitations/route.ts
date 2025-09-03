@@ -1,32 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 // GET /api/invitations - Get pending invitations for the current user
 export async function GET(req: NextRequest) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  try {    
-    
-    // First, ensure the user exists in the database
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+  try {
+    const user = await getAuthenticatedUser(req);
 
     const pendingTeamInvitations = await prisma.teamMember.findMany({
       where: {
@@ -37,7 +16,7 @@ export async function GET(req: NextRequest) {
           },
           {
             user: {
-              email: token.email,
+              email: user.email,
             },
             status: "INVITED",
           },
@@ -73,6 +52,9 @@ export async function GET(req: NextRequest) {
       teamInvitations: pendingTeamInvitations
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'No authenticated user found') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Error fetching pending invitations:", error);
     return NextResponse.json({ error: "Failed to fetch invitations" }, { status: 500 });
   }

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { gemini } from "@/lib/gemini";
-import { z } from "zod";
 import Fuse from "fuse.js";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import {
   ProjectSearchData,
   TeamSearchData,
@@ -11,10 +10,7 @@ import {
   RelevantProject,
   RelevantTeam,
 } from "@/interfaces/SearchTypes";
-
-const bodySchema = z.object({
-  prompt: z.string().min(1).max(2000),
-});
+import { bodySchema } from "@/lib/security";
 
 // Enhanced fuzzy matching for project and team identification
 function findRelevantProjectsAndTeams(
@@ -204,37 +200,17 @@ function findRelevantProjectsAndTeams(
 }
 
 export async function POST(req: NextRequest) {
-  const token = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  if (!token?.sub) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const json = await req.json();
-  const parse = bodySchema.safeParse(json);
-
-  if (!parse.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
-
-  const { prompt } = parse.data;
-
   try {
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: token.email! },
-      update: {
-        name: token.name,
-        image: token.picture,
-      },
-      create: {
-        email: token.email!,
-        name: token.name,
-        image: token.picture,
-      },
-    });
+    const user = await getAuthenticatedUser(req);
+
+    const json = await req.json();
+    const parse = bodySchema.safeParse(json);
+
+    if (!parse.success) {
+      return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    }
+
+    const { prompt } = parse.data;
 
     // Get comprehensive data in parallel for teams, projects, and members
     // Run queries in parallel, but allow partial results if some fail
@@ -928,6 +904,9 @@ ${relevantTeams
       },
     });
   } catch (err) {
+    if (err instanceof Error && err.message === 'No authenticated user found') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error(
       "AI assistant error:",
       err instanceof Error ? err.message : err

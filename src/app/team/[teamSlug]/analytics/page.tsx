@@ -11,7 +11,7 @@ import { ComponentLoadingSpinner } from '@/components/LoadingSpinner';
 import { Suspense } from 'react';
 
 // Lazy load chart components with better loading states
-const AnalyticsCharts = dynamic(() => import('@/components/AnalyticsCharts'), {
+const AnalyticsCharts = dynamic(() => import('@/components/charts/AnalyticsCharts'), {
   loading: () => <ComponentLoadingSpinner text="Loading analytics..." />
 });
 

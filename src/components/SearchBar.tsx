@@ -4,7 +4,7 @@ import { useDebounce } from "@/lib/hooks/useDebounce";
 import { paginationConfig } from '@/config/pagination';
 import { FileText, Folder, User, Tag, Search, Loader2, X, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/slugUtil";
 import axios from "axios";
 import { SearchResult } from "@/interfaces/SearchResult";
 

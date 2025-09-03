@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { gemini } from "@/lib/gemini";
 
@@ -15,13 +15,6 @@ const CONFIG = {
   MAX_TOKENS: 150, // Limit response length
 };
 
-// Validate environment variables
-function validateEnvironment(): string | null {
-  if (!process.env.OPENAI_API_KEY) {
-    return "OpenAI API key not configured";
-  }
-  return null;
-}
 
 // Rate limiting function
 function checkRateLimit(userId: string): { allowed: boolean; error?: string } {
@@ -64,24 +57,12 @@ function validateContent(content: string): string | null {
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Environment validation
-    const envError = validateEnvironment();
-    if (envError) {
-      console.error("Environment validation failed:", envError);
-      return NextResponse.json({ error: "Service configuration error" }, { status: 500 });
-    }
 
     // Authentication check
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET
-    });
-    if (!token?.sub) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const user = await getAuthenticatedUser(req);
 
     // Rate limiting check
-    const rateLimitResult = checkRateLimit(token.sub);
+    const rateLimitResult = checkRateLimit(user.id);
     if (!rateLimitResult.allowed) {
       return NextResponse.json({ error: rateLimitResult.error }, { status: 429 });
     }
@@ -111,7 +92,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               select: {
                 members: {
                   where: {
-                    userId: token.sub,
+                    userId: user.id,
                     status: "ACTIVE"
                   },
                   select: {
@@ -130,7 +111,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Check if user has access to the project (either as creator or team member)
-    const hasProjectAccess = card.project.createdById === token.sub || (card.project.team?.members.length || 0) > 0;
+    const hasProjectAccess = card.project.createdById === user.id || (card.project.team?.members.length || 0) > 0;
     
     if (!hasProjectAccess) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
