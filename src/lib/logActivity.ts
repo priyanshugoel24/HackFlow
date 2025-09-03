@@ -7,12 +7,14 @@ export async function logActivity({
   description,
   userId,
   projectId,
+  teamId,
   metadata = {},
 }: {
   type: ActivityType;
   description: string;
   userId?: string | null;
-  projectId: string;
+  projectId?: string;
+  teamId?: string;
   metadata?: ActivityMetadata;
 }) {
   try {
@@ -22,6 +24,7 @@ export async function logActivity({
         description,
         userId,
         projectId,
+        teamId,
         metadata,
       },
     });

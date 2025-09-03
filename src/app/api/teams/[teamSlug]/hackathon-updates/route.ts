@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 
-// We'll store hackathon updates in the Activity table with a special type
+// Store hackathon updates in the Activity table with a special type
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ teamSlug: string }> }
@@ -34,12 +34,10 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Get hackathon updates from all team projects
+    // Get hackathon updates for this team
     const updates = await prisma.activity.findMany({
       where: {
-        project: {
-          teamId: teamMember.teamId,
-        },
+        teamId: teamMember.teamId,
         type: 'HACKATHON_UPDATE',
       },
       include: {
@@ -114,26 +112,13 @@ export async function POST(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Get the first team project to associate the activity with
-    // (since Activity requires a projectId, we'll use any team project)
-    const teamProject = await prisma.project.findFirst({
-      where: {
-        teamId: teamMember.teamId,
-        isArchived: false,
-      },
-    });
-
-    if (!teamProject) {
-      return NextResponse.json({ error: 'No active projects found for this team' }, { status: 400 });
-    }
-
-    // Create the hackathon update as an activity
+    // Create the hackathon update as a team-level activity
     const update = await prisma.activity.create({
       data: {
         type: 'HACKATHON_UPDATE',
         description: content.trim(),
         userId: teamMember.userId,
-        projectId: teamProject.id,
+        teamId: teamMember.teamId, // Associate with team instead of project
         metadata: {
           teamSlug,
           isTeamHackathonUpdate: true,

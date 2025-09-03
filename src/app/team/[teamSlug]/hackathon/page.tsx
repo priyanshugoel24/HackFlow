@@ -97,6 +97,7 @@ async function fetchTeamData(teamSlug: string): Promise<TeamHackathon | null> {
       userRole: userMembership.role,
       currentUserId: user.id,
       hackathonDeadline: team.hackathonDeadline?.toISOString(),
+      hackathonEndedAt: team.hackathonEndedAt?.toISOString(),
       members: team.members.map(member => ({
         ...member,
         joinedAt: member.joinedAt.toISOString(),

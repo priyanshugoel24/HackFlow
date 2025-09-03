@@ -3,7 +3,7 @@ import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/logActivity';
 
-export async function PUT(
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ teamSlug: string }> }
 ) {
@@ -18,7 +18,7 @@ export async function PUT(
 
     const { teamSlug } = await params;
     const body = await request.json();
-    const { hackathonModeEnabled, hackathonDeadline } = body;
+    const { hackathonModeEnabled, hackathonDeadline, hackathonEndedAt } = body;
 
     // Check if user is an admin or owner of the team
     const teamMember = await prisma.teamMember.findFirst({
@@ -44,31 +44,34 @@ export async function PUT(
       data: {
         hackathonModeEnabled: hackathonModeEnabled ?? undefined,
         hackathonDeadline: hackathonDeadline ? new Date(hackathonDeadline) : undefined,
+        hackathonEndedAt: hackathonEndedAt ? new Date(hackathonEndedAt) : undefined,
       },
     });
 
     // Log activity
     if (hackathonModeEnabled !== undefined) {
-      // For team activities, we'll log against the first project or create a general activity
-      const firstProject = await prisma.project.findFirst({
+      // Log activity for all projects in the team
+      const projects = await prisma.project.findMany({
         where: { teamId: teamMember.teamId },
       });
 
-      if (firstProject) {
-        await logActivity({
+      const activityPromises = projects.map(project =>
+        logActivity({
           type: hackathonModeEnabled ? 'HACKATHON_STARTED' : 'HACKATHON_ENDED',
           description: hackathonModeEnabled 
             ? `Hackathon mode enabled for team ${teamMember.team.name}` 
             : `Hackathon mode disabled for team ${teamMember.team.name}`,
           userId: teamMember.user.id,
-          projectId: firstProject.id,
+          projectId: project.id,
           metadata: {
             teamId: teamMember.teamId,
             teamSlug: teamMember.team.slug,
             hackathonDeadline: hackathonDeadline || null,
           },
-        });
-      }
+        })
+      );
+
+      await Promise.allSettled(activityPromises);
     }
 
     return NextResponse.json(updatedTeam);
@@ -108,6 +111,7 @@ export async function GET(
             slug: true,
             hackathonModeEnabled: true,
             hackathonDeadline: true,
+            hackathonEndedAt: true,
           },
         },
       },
@@ -120,6 +124,7 @@ export async function GET(
     return NextResponse.json({
       hackathonModeEnabled: teamMember.team.hackathonModeEnabled,
       hackathonDeadline: teamMember.team.hackathonDeadline,
+      hackathonEndedAt: teamMember.team.hackathonEndedAt,
     });
   } catch (error) {
     console.error('Error fetching hackathon settings:', error);

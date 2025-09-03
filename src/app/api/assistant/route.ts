@@ -441,6 +441,9 @@ export async function POST(req: NextRequest) {
               team: { select: { name: true } },
             },
           },
+          team: {
+            select: { id: true, name: true },
+          },
         },
         orderBy: { createdAt: "desc" },
         take: 30,
@@ -750,10 +753,11 @@ PROJECT: ${project.name} (${project.slug})
       .map((activity) => {
         const userName =
           activity.user?.name || activity.user?.email?.split("@")[0] || "User";
-        const teamInfo = activity.project.team
+        const teamInfo = activity.project?.team
           ? ` (${activity.project.team.name})`
-          : "";
-        return `[${activity.project.name}${teamInfo}] ${userName}: ${activity.type} - ${activity.description}`;
+          : activity.team?.name ? ` (${activity.team.name})` : "";
+        const projectName = activity.project?.name || (activity.team ? `Team: ${activity.team.name}` : "Unknown");
+        return `[${projectName}${teamInfo}] ${userName}: ${activity.type} - ${activity.description}`;
       })
       .join("\n");
 

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { gemini } from "@/lib/gemini";
-import { Session } from "next-auth";
 
 // Rate limiting map (in production, use Redis or database)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -74,13 +72,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Authentication check
-    const session = await getServerSession(authOptions) as Session | null;
-    if (!session || !session.user?.id) {
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET
+    });
+    if (!token?.sub) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Rate limiting check
-    const rateLimitResult = checkRateLimit(session.user.id);
+    const rateLimitResult = checkRateLimit(token.sub);
     if (!rateLimitResult.allowed) {
       return NextResponse.json({ error: rateLimitResult.error }, { status: 429 });
     }
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               select: {
                 members: {
                   where: {
-                    userId: session.user.id,
+                    userId: token.sub,
                     status: "ACTIVE"
                   },
                   select: {
@@ -129,7 +130,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Check if user has access to the project (either as creator or team member)
-    const hasProjectAccess = card.project.createdById === session.user.id || (card.project.team?.members.length || 0) > 0;
+    const hasProjectAccess = card.project.createdById === token.sub || (card.project.team?.members.length || 0) > 0;
     
     if (!hasProjectAccess) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });

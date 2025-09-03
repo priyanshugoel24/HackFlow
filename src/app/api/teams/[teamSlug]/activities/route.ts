@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { Session } from "next-auth";
+import { getToken } from "next-auth/jwt";
 
 export async function GET(
   req: NextRequest,
@@ -12,8 +10,11 @@ export async function GET(
 
   try {
     // Check authentication
-    const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET
+    });
+    if (!token?.sub) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -31,18 +32,9 @@ export async function GET(
     }
 
     // Check if user has access to this team
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const membership = await prisma.teamMember.findFirst({
       where: {
-        userId: user.id,
+        userId: token.sub,
         teamId: team.id,
         status: 'ACTIVE',
       },
@@ -52,13 +44,20 @@ export async function GET(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Get all activities for projects that belong to this team
+    // Get all activities for this team (both project-level and team-level)
     const activities = await prisma.activity.findMany({
       where: { 
-        project: {
-          teamId: team.id,
-          isArchived: false,
-        }
+        OR: [
+          {
+            project: {
+              teamId: team.id,
+              isArchived: false,
+            }
+          },
+          {
+            teamId: team.id
+          }
+        ]
       },
       orderBy: { createdAt: "desc" },
       include: {
@@ -66,6 +65,9 @@ export async function GET(
           select: { id: true, name: true, image: true },
         },
         project: {
+          select: { id: true, name: true, slug: true },
+        },
+        team: {
           select: { id: true, name: true, slug: true },
         },
       },

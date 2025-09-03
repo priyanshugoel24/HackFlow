@@ -8,6 +8,7 @@ export interface TeamHackathon {
   description?: string;
   hackathonModeEnabled: boolean;
   hackathonDeadline?: string;
+  hackathonEndedAt?: string;
   userRole?: string;
   members: TeamMemberWithRelations[];
   projects: Project[];

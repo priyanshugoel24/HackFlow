@@ -148,12 +148,19 @@ export default function HackathonPageClient({
 
     try {
       setEndingHackathon(true);
-      await axios.patch(`/api/teams/${teamSlug}/hackathon`, {
+      await axios.patch(`/api/teams/${teamSlug}/hackathon-settings`, {
         hackathonModeEnabled: false,
+        hackathonDeadline: null,
+        hackathonEndedAt: new Date().toISOString(),
       });
 
       toast.success('Hackathon ended successfully!');
-      setTeam(prev => prev ? { ...prev, hackathonModeEnabled: false } : null);
+      setTeam(prev => prev ? { 
+        ...prev, 
+        hackathonModeEnabled: false,
+        hackathonDeadline: undefined,
+        hackathonEndedAt: new Date().toISOString()
+      } : null);
     } catch (error: unknown) {
       console.error('Error ending hackathon:', error);
       const errorMessage = error instanceof Error && 'response' in error && 

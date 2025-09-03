@@ -37,7 +37,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: 'HackFlow',
       images: [
         {
-          url: '/og-login.jpg', // You can create this image later
+          url: '/og-login.jpg',
           width: 1200,
           height: 630,
           alt: 'HackFlow Login - Collaborative Workspace Platform',

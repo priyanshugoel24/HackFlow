@@ -15,5 +15,8 @@ export type ActivityType =
   | "CARD_UPDATED" 
   | "PROJECT_CREATED" 
   | "MEMBER_JOINED" 
-  | "MEMBER_REMOVED" 
+  | "MEMBER_REMOVED"
+  | "HACKATHON_STARTED"
+  | "HACKATHON_ENDED"
+  | "HACKATHON_UPDATE"
   | string;

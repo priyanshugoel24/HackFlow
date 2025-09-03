@@ -153,7 +153,6 @@ export async function POST(
       data: { lastActivityAt: new Date() },
     });
 
-    console.log(`✅ Successfully joined team ${team.name} as ${updatedMember.role}`);
 
     return NextResponse.json({ 
       success: true, 

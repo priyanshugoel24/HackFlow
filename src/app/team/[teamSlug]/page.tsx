@@ -196,13 +196,20 @@ async function fetchTeam(teamSlug: string): Promise<TeamPageTeam | null> {
       })
     );
 
-    // Fetch team activities
+    // Fetch team activities (both project-level and team-level)
     const activities = await prisma.activity.findMany({
       where: { 
-        project: {
-          teamId: team.id,
-          isArchived: false,
-        }
+        OR: [
+          {
+            project: {
+              teamId: team.id,
+              isArchived: false,
+            }
+          },
+          {
+            teamId: team.id
+          }
+        ]
       },
       orderBy: { createdAt: "desc" },
       include: {
@@ -210,6 +217,9 @@ async function fetchTeam(teamSlug: string): Promise<TeamPageTeam | null> {
           select: { id: true, name: true, image: true },
         },
         project: {
+          select: { id: true, name: true, slug: true },
+        },
+        team: {
           select: { id: true, name: true, slug: true },
         },
       },
