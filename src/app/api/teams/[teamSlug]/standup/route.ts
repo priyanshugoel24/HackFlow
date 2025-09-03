@@ -7,7 +7,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ teamSlug: string }> }
 ) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

@@ -5,7 +5,10 @@ import { getAblyServer } from "@/lib/ably";
 
 // PATCH: Update a project
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
@@ -113,7 +116,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 // DELETE: Delete a project
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }

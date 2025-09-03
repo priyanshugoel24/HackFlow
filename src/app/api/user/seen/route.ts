@@ -3,7 +3,10 @@ import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
 
   if (!token?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

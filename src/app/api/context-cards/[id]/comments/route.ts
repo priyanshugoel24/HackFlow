@@ -5,7 +5,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAblyServer } from "@/lib/ably";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   const { id: cardId } = await params;
@@ -100,7 +103,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
 
   if (!token?.sub) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

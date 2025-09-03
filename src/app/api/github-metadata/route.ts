@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

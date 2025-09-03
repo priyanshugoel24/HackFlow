@@ -17,7 +17,10 @@ const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 // PATCH: Update a context card
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
@@ -397,7 +400,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 // DELETE: Remove a context card
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }

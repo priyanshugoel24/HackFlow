@@ -13,7 +13,10 @@ import {
 const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // First, ensure the user exists in the database and get the actual user

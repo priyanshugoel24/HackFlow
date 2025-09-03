@@ -6,7 +6,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req });
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET
+    });
     if (!token?.sub) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }

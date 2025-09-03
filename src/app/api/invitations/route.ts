@@ -4,7 +4,10 @@ import { prisma } from "@/lib/prisma";
 
 // GET /api/invitations - Get pending invitations for the current user
 export async function GET(req: NextRequest) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }

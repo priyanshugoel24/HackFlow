@@ -18,7 +18,10 @@ const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 // GET all context cards for logged-in user
 export async function GET(req: NextRequest) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   // Query params
@@ -228,7 +231,10 @@ export async function GET(req: NextRequest) {
 
 // CREATE a new context card
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }

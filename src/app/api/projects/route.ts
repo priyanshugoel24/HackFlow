@@ -8,7 +8,10 @@ import { TeamMember } from "@prisma/client";
 
 // CREATE new project
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub)
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
