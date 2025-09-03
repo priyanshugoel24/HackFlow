@@ -24,7 +24,6 @@ export default function ProjectSettingsPageClient({
 
   const [name, setName] = useState(initialProject.name || "");
   const [description, setDescription] = useState(initialProject.description || "");
-  const [link, setLink] = useState(initialProject.link || "");
   const [tags, setTags] = useState<string[]>(initialProject.tags || []);
   const [newTag, setNewTag] = useState("");
 
@@ -42,7 +41,6 @@ export default function ProjectSettingsPageClient({
       }));
       setName(updated.name || "");
       setDescription(updated.description || "");
-      setLink(updated.link || "");
       setTags(updated.tags || []);
     };
 
@@ -83,7 +81,6 @@ export default function ProjectSettingsPageClient({
       await axios.patch(`/api/projects/${projectSlug}`, {
         name,
         description,
-        link,
         tags
       });
       toast.success("Project updated successfully");
@@ -143,15 +140,6 @@ export default function ProjectSettingsPageClient({
               <Textarea 
                 value={description} 
                 onChange={(e) => setDescription(e.target.value)} 
-                className="rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500" 
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2 block">Link</label>
-              <Input 
-                value={link} 
-                onChange={(e) => setLink(e.target.value)} 
                 className="rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-indigo-500" 
               />
             </div>

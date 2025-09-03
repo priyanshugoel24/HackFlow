@@ -1,7 +1,5 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { gemini } from "@/lib/gemini";
 import { NextRequest, NextResponse } from "next/server";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,8 +8,6 @@ export async function POST(req: NextRequest) {
     if (!input || !projectId) {
       return NextResponse.json({ error: "Missing input or projectId" }, { status: 400 });
     }
-
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
 You are an assistant that helps parse natural language into structured data to create a context card.
@@ -28,9 +24,9 @@ Extract and return a JSON object in the format:
 }
 `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const rawText = await response.text();
+    const rawText = await gemini.generateContent(prompt, {
+      model: "gemini-2.5-flash",
+    });
 
     const jsonStart = rawText.indexOf("{");
     const jsonEnd = rawText.lastIndexOf("}");

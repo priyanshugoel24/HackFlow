@@ -8,7 +8,6 @@ export interface ProjectPageProject {
   isArchived: boolean;
   lastActivityAt: string;
   tags?: string[];
-  link?: string;
   activities?: Activity[];
   contextCards?: ContextCardWithRelations[];
   stats?: {

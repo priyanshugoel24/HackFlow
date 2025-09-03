@@ -4,13 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { generateSlug, generateUniqueSlug } from "@/lib/utils";
 import { logActivity } from "@/lib/logActivity";
 import { getAblyServer } from "@/lib/ably";
+import { TeamMember } from "@prisma/client";
+
 // CREATE new project
 export async function POST(req: NextRequest) {
   const token = await getToken({ req });
   if (!token?.sub)
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  const { name, link, description, tags, teamId } = await req.json();
+  const { name, description, tags, teamId } = await req.json();
 
   if (!name)
     return NextResponse.json({ error: "Project name is required" }, { status: 400 });
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     // If teamId is provided, verify user has permission to create projects in this team
     if (teamId) {
-      const teamMembership = await prisma.teamMember.findUnique({
+      const teamMembership: TeamMember | null = await prisma.teamMember.findUnique({
         where: {
           userId_teamId: {
             userId: user.id,
@@ -45,14 +47,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Access denied to this team" }, { status: 403 });
       }
 
-      // Only allow certain roles to create projects
-      if (!['OWNER', 'MEMBER'].includes(teamMembership.role)) {
-        return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
-      }
     }
 
     // Generate a unique slug for the project
-    const baseSlug = generateSlug(name);
+    const baseSlug = generateSlug(name); 
     const existingProjects = await prisma.project.findMany({
       select: { slug: true }
     });
@@ -63,11 +61,10 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         slug: uniqueSlug,
-        link: link?.startsWith("http") ? link : `https://${link}`,
         description,
         tags: tags || [],
         createdById: user.id,
-        teamId: teamId || null, // Assign to team if provided
+        teamId: teamId || null,
       },
       include: {
         createdBy: {
@@ -102,7 +99,7 @@ export async function POST(req: NextRequest) {
       const ably = getAblyServer();
       const channel = ably.channels.get(`project:${project.id}`);
       await channel.publish("activity:created", {
-        id: Date.now(), // temporary ID for real-time display
+        id: Date.now(),
         type: "PROJECT_CREATED",
         description: `created project "${name}"`,
         user: {
@@ -114,13 +111,12 @@ export async function POST(req: NextRequest) {
         projectId: project.id,
         metadata: { projectName: name, projectSlug: uniqueSlug },
       });
-    } catch (error) {
-      console.error("Failed to publish project creation activity to Ably:", error);
+    } catch (ablyError) {
+      console.error("Ably publish error:", ablyError);
     }
 
     return NextResponse.json({ project });
-  } catch (error) {
-    console.error("Error creating project:", error);
+  } catch {
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
   }
 }

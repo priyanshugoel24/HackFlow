@@ -3,7 +3,6 @@ export interface ProjectSettingsData {
   name: string;
   slug: string;
   description?: string;
-  link?: string;
   isArchived: boolean;
   createdAt: string;
   lastActivityAt: string;

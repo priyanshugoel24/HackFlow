@@ -75,7 +75,6 @@ async function fetchProject(teamSlug: string, projectSlug: string): Promise<Proj
     return {
       ...project,
       description: project.description || undefined,
-      link: project.link || undefined,
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.lastActivityAt.toISOString(),
       teamId: project.teamId || "",

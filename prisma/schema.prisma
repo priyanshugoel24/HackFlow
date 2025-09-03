@@ -61,7 +61,6 @@ model TeamMember {
 model Project {
   id             String        @id @default(cuid())
   name           String
-  link           String?
   createdAt      DateTime      @default(now())
   createdById    String
   description    String?

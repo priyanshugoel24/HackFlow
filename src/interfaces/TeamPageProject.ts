@@ -3,7 +3,6 @@ export interface TeamPageProject {
   name: string;
   slug: string;
   description?: string;
-  link?: string;
   createdAt: string;
   lastActivityAt: string;
   tags: string[];

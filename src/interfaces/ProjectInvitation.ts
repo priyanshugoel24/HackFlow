@@ -10,7 +10,6 @@ export interface ProjectInvitation {
     name: string;
     slug: string;
     description?: string;
-    link?: string;
     tags: string[];
     createdAt: string;
     lastActivityAt: string;

@@ -17,7 +17,6 @@ export default function ProjectModal({
   teamId?: string;
 }) {
   const [name, setName] = useState("");
-  const [link, setLink] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +28,6 @@ export default function ProjectModal({
     try {
       await axios.post("/api/projects", { 
         name: name.trim(), 
-        link: link.trim() || undefined,
         description: description.trim() || undefined,
         tags: tags.trim() ? tags.split(",").map(tag => tag.trim()).filter(Boolean) : [],
         teamId: teamId || undefined
@@ -38,7 +36,6 @@ export default function ProjectModal({
       setOpen(false);
       // Reset form
       setName("");
-      setLink("");
       setDescription("");
       setTags("");
       onSuccess?.();
@@ -63,17 +60,6 @@ export default function ProjectModal({
               value={name} 
               onChange={(e) => setName(e.target.value)}
               required
-              className="dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:border-gray-600"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Link</label>
-            <Input 
-              placeholder="https://your-project.com" 
-              value={link} 
-              onChange={(e) => setLink(e.target.value)}
-              type="url"
               className="dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:border-gray-600"
             />
           </div>

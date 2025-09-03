@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { gemini } from "@/lib/gemini";
 import { Session } from "next-auth";
 
 // Rate limiting map (in production, use Redis or database)
@@ -62,21 +62,6 @@ function validateContent(content: string): string | null {
   }
   
   return null;
-}
-
-// Create Gemini client with error handling
-function createGeminiClient(): GoogleGenerativeAI | null {
-  if (!process.env.GEMINI_API_KEY) {
-    console.error("Gemini API key not configured");
-    return null;
-  }
-
-  try {
-    return new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  } catch (error) {
-    console.error("Failed to create Gemini client:", error);
-    return null;
-  }
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -171,12 +156,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: contentError }, { status: 400 });
     }
 
-    // Create Gemini client
-    const gemini = createGeminiClient();
-    if (!gemini) {
-      return NextResponse.json({ error: "AI service unavailable" }, { status: 503 });
-    }
-
     // Prepare prompt with content length consideration
     const truncatedContent = card.content.length > CONFIG.MAX_CONTENT_LENGTH 
       ? card.content.substring(0, CONFIG.MAX_CONTENT_LENGTH) + "..."
@@ -188,13 +167,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 ${truncatedContent}
 """`;
 
-    // Gemini API call with enhanced error handling
-    const model = gemini.getGenerativeModel({ model: CONFIG.GEMINI_MODEL });
+    // Generate summary using gemini utility
     let summary: string;
     try {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      summary = response.text().trim();
+      summary = await gemini.summarizeContent(prompt);
     } catch (error: unknown) {
       console.error("Gemini API error:", error);
       return NextResponse.json({ error: "AI service temporarily unavailable" }, { status: 503 });

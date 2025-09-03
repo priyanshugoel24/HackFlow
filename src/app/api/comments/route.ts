@@ -9,7 +9,7 @@ import {
   createRateLimiter 
 } from "@/lib/security";
 
-// Rate limiter: 60 comments per minute per user (increased from 30)
+// Rate limiter: 60 comments per minute per user
 const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 export async function POST(req: NextRequest) {

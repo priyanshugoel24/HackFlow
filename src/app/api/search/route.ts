@@ -1,14 +1,7 @@
-// src/app/api/search/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import Fuse from "fuse.js";
 import { getGlobalSearchData } from "@/lib/searchData";
-import { sanitizeSearchQuery } from "@/lib/security";
-import { z } from "zod";
-
-const querySchema = z.object({
-  q: z.string().min(1).max(100),
-});
+import { querySchema, sanitizeSearchQuery } from "@/lib/security";
 
 export async function GET(req: NextRequest) {
   try {

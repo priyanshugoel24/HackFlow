@@ -10,15 +10,15 @@ export const sanitizeHtml = (html: string): string => {
   
   // Basic sanitization safe for all environments including Edge Runtime
   return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
-    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
-    .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '')
-    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/data:/gi, '')
-    .replace(/vbscript:/gi, '')
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '') // Remove object tags
+    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '') // Remove embed tags
+    .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '') // Remove form tags
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove inline event handlers
+    .replace(/javascript:/gi, '') // Remove javascript: protocols
+    .replace(/data:/gi, '') // Remove data: protocols
+    .replace(/vbscript:/gi, '') // Remove vbscript: protocols
     .trim();
 };
 
@@ -123,12 +123,7 @@ export const projectSchema = z.object({
   slug: z.string()
     .min(1, 'Slug is required')
     .max(50, 'Slug must be less than 50 characters')
-    .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'),
-  
-  link: z.string()
-    .url('Invalid URL format')
-    .optional()
-    .or(z.literal(''))
+    .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens')
 });
 
 export const commentSchema = z.object({
@@ -145,30 +140,51 @@ export const commentSchema = z.object({
     .optional()
 });
 
+export const querySchema = z.object({
+  q: z.string().min(1).max(100),
+});
+
 // Rate limiting helpers
 export const createRateLimiter = (windowMs: number, maxRequests: number) => {
   const requests = new Map<string, number[]>();
-  
+  let lastCleanup = Date.now();
+
+  // Cleanup old entries every 10 minutes
+  const cleanupInterval = 10 * 60 * 1000;
+
+  const cleanup = () => {
+    const now = Date.now();
+    if (now - lastCleanup < cleanupInterval) return;
+    lastCleanup = now;
+    for (const [identifier, times] of requests.entries()) {
+      const validTimes = times.filter(time => time > now - windowMs);
+      if (validTimes.length === 0) {
+        requests.delete(identifier);
+      } else {
+        requests.set(identifier, validTimes);
+      }
+    }
+  };
+
   return (identifier: string): boolean => {
+    cleanup();
     const now = Date.now();
     const windowStart = now - windowMs;
-    
+
     if (!requests.has(identifier)) {
       requests.set(identifier, []);
     }
-    
+
     const userRequests = requests.get(identifier)!;
-    
-    // Remove old requests outside the window
     const validRequests = userRequests.filter(time => time > windowStart);
-    
+
     if (validRequests.length >= maxRequests) {
       return false; // Rate limit exceeded
     }
-    
+
     validRequests.push(now);
     requests.set(identifier, validRequests);
-    
+
     return true; // Request allowed
   };
 };

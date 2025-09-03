@@ -5,7 +5,6 @@ export interface ProjectData {
   slug: string;
   isArchived: boolean;
   hackathonModeEnabled?: boolean;
-  link?: string;
   tags?: string[];
   createdById?: string;
   createdAt: string;

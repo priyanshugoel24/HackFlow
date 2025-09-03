@@ -16,12 +16,12 @@ export async function GET(
 
   const user = await prisma.user.findUnique({
     where: { email: token.email },
-    select: { lastSeenat: true },
+    select: { lastSeenat: true }, 
   });
 
   const since = user?.lastSeenat ?? new Date(Date.now() - 1000 * 60 * 60 * 24); // fallback: 24h ago
 
-  const [cards, comments] = await Promise.all([
+  const [cardsResult, commentsResult] = await Promise.allSettled([
     prisma.contextCard.findMany({
       where: {
         projectId: projectId,
@@ -39,6 +39,11 @@ export async function GET(
       include: { author: true, card: true },
     }),
   ]);
+
+  const cards =
+    cardsResult.status === "fulfilled" ? cardsResult.value : [];
+  const comments =
+    commentsResult.status === "fulfilled" ? commentsResult.value : [];
 
   const activitySummary = `
   You are an assistant summarizing recent project updates since ${since.toISOString()}.

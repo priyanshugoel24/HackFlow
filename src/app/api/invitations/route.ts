@@ -9,8 +9,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  try {
-    console.log(`🔍 Fetching invitations for user: ${token.email}`);
+  try {    
     
     // First, ensure the user exists in the database
     const user = await prisma.user.upsert({
@@ -65,9 +64,7 @@ export async function GET(req: NextRequest) {
         },
       },
       orderBy: { joinedAt: "desc" },
-    });
-
-    console.log(`📨 Found ${pendingTeamInvitations.length} team invitations for user ${user.id}`);
+    });    
 
     return NextResponse.json({ 
       teamInvitations: pendingTeamInvitations

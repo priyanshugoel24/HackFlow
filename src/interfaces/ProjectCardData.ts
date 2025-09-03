@@ -3,7 +3,6 @@ export interface ProjectCardData {
   name: string;
   slug: string;
   description?: string;
-  link?: string;
   tags?: string[];
   isArchived: boolean;
   createdAt: string;
