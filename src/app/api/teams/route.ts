@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unable to generate unique team slug. Please try again.' }, { status: 409 });
     }
 
+    // Create the team
     const team = await prisma.team.create({
       data: {
         name,

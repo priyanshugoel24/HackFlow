@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import BackButton from '@/components/ui/BackButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Settings, Users, Plus, Mail, Crown, Shield, User } from 'lucide-react';
+import { Settings, Users, Plus, Mail, Crown, Shield, User, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TeamSettingsTeam } from '@/interfaces/TeamSettingsTeam';
 import { TeamSettingsPageClientProps } from '@/interfaces/TeamSettingsPageClientProps';
@@ -20,7 +21,10 @@ import { TeamSettingsPageClientProps } from '@/interfaces/TeamSettingsPageClient
 export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: TeamSettingsPageClientProps) {
   const [team, setTeam] = useState<TeamSettingsTeam>(initialTeam);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const router = useRouter();
   
   // Form states
   const [teamName, setTeamName] = useState(initialTeam.name);
@@ -108,6 +112,29 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
         ? String(error.response.data.error)
         : 'Failed to remove member';
       toast.error(errorMessage);
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    if (!team || !canManageTeam()) return;
+
+    setDeleting(true);
+    try {
+      await axios.delete(`/api/teams/${teamSlug}`);
+      toast.success('Team deleted successfully');
+      router.push('/'); // Redirect to home after deletion
+    } catch (error: unknown) {
+      console.error('Error deleting team:', error);
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : 'Failed to delete team';
+      toast.error(errorMessage);
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -309,6 +336,68 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
             </CardContent>
           </Card>
         </div>
+
+        {/* Danger Zone */}
+        <Card className="mt-8 border-destructive/20">
+          <CardHeader>
+            <CardTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Danger Zone
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Permanently delete this team and all of its data. This action cannot be undone.
+              </p>
+              
+              <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+                <DialogTrigger asChild>
+                  <Button variant="destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Team
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="text-destructive">Delete Team</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Are you sure you want to delete <strong>{team.name}</strong>? 
+                      This action cannot be undone and will permanently delete:
+                    </p>
+                    <ul className="text-sm text-muted-foreground space-y-1 pl-4">
+                      <li>• All team data and settings</li>
+                      <li>• All team members will be removed</li>
+                      <li>• All projects and their data</li>
+                      <li>• All context cards and comments</li>
+                    </ul>
+                    <p className="text-sm font-medium text-destructive">
+                      This action is irreversible!
+                    </p>
+                    <div className="flex gap-2 justify-end">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowDeleteModal(false)}
+                        disabled={deleting}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        onClick={handleDeleteTeam}
+                        disabled={deleting}
+                      >
+                        {deleting ? 'Deleting...' : 'Delete Team'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
