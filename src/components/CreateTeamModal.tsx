@@ -15,29 +15,9 @@ export default function CreateTeamModal({ onTeamCreated }: CreateTeamModalProps)
   const [createLoading, setCreateLoading] = useState(false);
   const [formData, setFormData] = useState<CreateTeamData>({
     name: '',
-    slug: '',
     description: '',
   });
   const [error, setError] = useState<string | null>(null);
-
-  const handleSlugChange = (name: string) => {
-    // Auto-generate slug from name
-    const slug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
-    return slug;
-  };
-
-  const handleNameChange = (name: string) => {
-    setFormData(prev => ({
-      ...prev,
-      name,
-      slug: handleSlugChange(name)
-    }));
-  };
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,10 +25,13 @@ export default function CreateTeamModal({ onTeamCreated }: CreateTeamModalProps)
     setError(null);
 
     try {
-      await axios.post('/api/teams', formData);
+      await axios.post('/api/teams', {
+        name: formData.name.trim(),
+        description: formData.description?.trim() || undefined,
+      });
 
       setCreateModalOpen(false);
-      setFormData({ name: '', slug: '', description: '' });
+      setFormData({ name: '', description: '' });
       onTeamCreated?.(); // Refresh teams list
     } catch (error: unknown) {
       const errorMessage = error instanceof Error && 'response' in error && 
@@ -85,31 +68,19 @@ export default function CreateTeamModal({ onTeamCreated }: CreateTeamModalProps)
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => handleNameChange(e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Enter team name"
                 required
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="slug">Slug</Label>
-              <Input
-                id="slug"
-                value={formData.slug}
-                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                placeholder="team-slug"
-                required
-                pattern="^[a-z0-9-]+$"
-                title="Only lowercase letters, numbers, and hyphens allowed"
-              />
               <p className="text-xs text-gray-500">
-                Used in URLs. Only lowercase letters, numbers, and hyphens.
+                A unique URL will be automatically generated from the team name.
               </p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Description (Optional)</Label>
               <Textarea
                 id="description"
-                value={formData.description}
+                value={formData.description || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Brief description of your team"
                 rows={3}

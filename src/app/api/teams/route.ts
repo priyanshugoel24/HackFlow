@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
+import { generateSlug, generateUniqueSlug } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -83,25 +84,33 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const { name, description, slug } = await request.json();
+    const { name, description } = await request.json();
 
-    if (!name || !slug) {
-      return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 });
+    if (!name) {
+      return NextResponse.json({ error: 'Team name is required' }, { status: 400 });
     }
 
-    // Check if slug is already taken
+    // Generate a unique slug for the team
+    const baseSlug = generateSlug(name);
+    const existingTeams = await prisma.team.findMany({
+      select: { slug: true }
+    });
+    const existingSlugs = existingTeams.map(t => t.slug);
+    const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+
+    // Check if slug is already taken (additional safety check)
     const existingTeam = await prisma.team.findUnique({
-      where: { slug },
+      where: { slug: uniqueSlug },
     });
 
     if (existingTeam) {
-      return NextResponse.json({ error: 'Team slug already taken' }, { status: 409 });
+      return NextResponse.json({ error: 'Unable to generate unique team slug. Please try again.' }, { status: 409 });
     }
 
     const team = await prisma.team.create({
       data: {
         name,
-        slug,
+        slug: uniqueSlug,
         description,
         createdById: user.id,
         members: {
