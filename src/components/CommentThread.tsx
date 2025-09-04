@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
-import { getAblyClient } from "@/lib/ably";
+import { getAblyClient } from "@/lib/ably/ably";
 import axios from "axios";
 import type * as Ably from 'ably';
 import { Comment } from "@/interfaces/Comment";

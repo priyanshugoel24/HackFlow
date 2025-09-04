@@ -5,7 +5,7 @@ import TeamsDisplay from '@/components/TeamsDisplay';
 import { TeamWithRelations } from '@/interfaces/TeamWithRelations';
 import { Session } from 'next-auth';
 import { Metadata } from 'next';
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components';
 import { getAuthenticatedUserFromSession } from '@/lib/auth-utils';
 import { fetchUserTeams } from '@/lib/teams-utils';
 

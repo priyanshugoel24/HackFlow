@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getAblyClient } from "../ably";
+import { getAblyClient } from "./ably";
 import { channelsConfig } from '@/config/channels';
 import type * as Ably from 'ably';
 import { EditingUser } from "@/interfaces/EditingUser";

@@ -10,7 +10,7 @@ import { Session } from 'next-auth';
 import { getAuthenticatedUserFromSession } from '@/lib/auth-utils';
 
 // Lazy load HackathonPageClient for better performance
-const HackathonPageClient = dynamic(() => import('@/components/HackathonPageClient'), {
+const HackathonPageClient = dynamic(() => import('@/components/client/HackathonPageClient'), {
   loading: () => (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center">

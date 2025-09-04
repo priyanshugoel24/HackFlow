@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { TaskStatus, Prisma } from "@prisma/client";
 import { logActivity } from "@/lib/logActivity";
-import { getAblyServer } from "@/lib/ably";
+import { getAblyServer } from "@/lib/ably/ably";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
 import {
   contextCardSchema,

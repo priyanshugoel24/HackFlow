@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import HeroSection from './HeroSection';
-import LoginForm from './LoginForm';
+import { LoginForm } from './forms';
 import FallbackBackground from './FallbackBackground';
 
 // Dynamically import the animated background for better performance

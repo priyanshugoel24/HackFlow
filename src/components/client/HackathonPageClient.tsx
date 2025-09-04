@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components';
 import OnlineUsers from '@/components/OnlineUsers';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +25,7 @@ import { TeamHackathon } from '@/interfaces/TeamHackathon';
 import { HackathonUpdate } from '@/interfaces/HackathonUpdate';
 import { HackathonPageClientProps } from '@/interfaces/HackathonPageClientProps';
 import { toast } from 'sonner';
-import ErrorBoundary from './ErrorBoundary';
+import { ErrorBoundary } from '@/components';
 
 export default function HackathonPageClient({ 
   initialTeam, 

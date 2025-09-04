@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Users, FolderOpen } from 'lucide-react';
 import { TeamWithRelations } from '@/interfaces/TeamWithRelations';
 import { TeamsDisplayProps } from '@/interfaces/TeamsDisplayProps';
-import CreateTeamModal from './CreateTeamModal';
+import { CreateTeamModal } from './modals';
 import PendingInvitations from './PendingInvitations';
 import axios from 'axios';
 

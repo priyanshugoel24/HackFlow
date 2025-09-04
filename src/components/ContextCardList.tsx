@@ -24,12 +24,12 @@ import {
 import { ContextCardListProps } from '@/interfaces/ContextCardListProps';
 
 // Lazy load heavy modal components
-const ContextCardModal = dynamic(() => import('./ContextCardModal'), {
+const ContextCardModal = dynamic(() => import('./modals/ContextCardModal'), {
   ssr: false,
   loading: () => <div className="animate-pulse bg-gray-200 h-96 rounded-lg" />
 });
 
-const SmartComposeModal = dynamic(() => import('./SmartComposeModal'), {
+const SmartComposeModal = dynamic(() => import('./modals/SmartComposeModal'), {
   loading: () => <div>Loading AI composer...</div>
 });
 import { useProjectRealtime } from "@/lib/ably/useProjectRealtime";

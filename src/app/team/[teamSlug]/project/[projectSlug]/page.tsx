@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import Navbar from "@/components/Navbar";
-import ProjectPageClient from "@/components/ProjectPageClient";
+import { Navbar } from "@/components";
+import { ProjectPageClient } from "@/components/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { ProjectPageProject } from '@/interfaces/ProjectPageProject';

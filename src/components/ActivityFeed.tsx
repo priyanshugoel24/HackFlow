@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { getAblyClient } from "@/lib/ably";
+import { getAblyClient } from "@/lib/ably/ably";
 import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";

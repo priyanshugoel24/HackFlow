@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logActivity";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { NextRequest, NextResponse } from "next/server";
-import { getAblyServer } from "@/lib/ably";
+import { getAblyServer } from "@/lib/ably/ably";
 import { findUserAccessibleCard } from '@/lib/card-queries';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

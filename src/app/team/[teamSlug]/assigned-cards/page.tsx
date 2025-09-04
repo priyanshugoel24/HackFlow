@@ -9,7 +9,7 @@ import { getAuthenticatedUserFromSession } from '@/lib/auth-utils';
 import { fetchTeamBySlug } from '@/lib/teams-utils';
 
 // Lazy load AssignedCardsPageClient
-const AssignedCardsPageClient = dynamic(() => import('@/components/AssignedCardsPageClient'), {
+const AssignedCardsPageClient = dynamic(() => import('@/components/client/AssignedCardsPageClient'), {
   loading: () => (
     <div className="container mx-auto p-6">
       <div className="h-64 bg-gray-100 animate-pulse rounded-lg"></div>

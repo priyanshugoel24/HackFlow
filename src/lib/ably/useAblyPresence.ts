@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { getAblyClient, type AblyPresenceData } from "@/lib/ably";
+import { getAblyClient, type AblyPresenceData } from "@/lib/ably/ably";
 import { channelsConfig } from '@/config';
 import type Ably from 'ably';
 import axios from "axios";

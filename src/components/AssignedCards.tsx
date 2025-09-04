@@ -9,7 +9,7 @@ import axios from "axios";
 import ErrorBoundary from './ErrorBoundary';
 
 // Lazy load ContextCardModal
-const ContextCardModal = dynamic(() => import('./ContextCardModal'), {
+const ContextCardModal = dynamic(() => import('./modals/ContextCardModal'), {
   ssr: false,
   loading: () => <div className="animate-pulse bg-gray-200 h-96 rounded-lg" />
 });

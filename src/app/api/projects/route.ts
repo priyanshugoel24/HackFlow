@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { generateSlug, generateUniqueSlug } from "@/lib/slugUtil";
 import { logActivity } from "@/lib/logActivity";
-import { getAblyServer } from "@/lib/ably";
+import { getAblyServer } from "@/lib/ably/ably";
 import { isActiveTeamMember } from "@/lib/db-queries";
 
 // CREATE new project

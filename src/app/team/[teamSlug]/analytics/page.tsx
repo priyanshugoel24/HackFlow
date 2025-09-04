@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components';
 import BackButton from '@/components/ui/BackButton';
 import { Metadata } from 'next';
 import { ComponentLoadingSpinner } from '@/components/LoadingSpinner';

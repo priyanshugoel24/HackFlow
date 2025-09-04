@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { authOptions } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components';
 import BackButton from '@/components/ui/BackButton';
 import { Suspense } from 'react';
 import { ComponentLoadingSpinner } from '@/components/LoadingSpinner';

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAblyServer, CHANNELS, type AblyStatusData } from "@/lib/ably";
+import { getAblyServer, CHANNELS, type AblyStatusData } from "@/lib/ably/ably";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 export async function GET(req: NextRequest) {

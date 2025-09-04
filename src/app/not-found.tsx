@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Home, ArrowLeft } from 'lucide-react';
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components';
 
 export default function NotFound() {
   return (

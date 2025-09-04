@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
-import { getAblyServer } from "@/lib/ably";
+import { getAblyServer } from "@/lib/ably/ably";
 import { findProjectWithOwnerAccess, PROJECT_WITH_RELATIONS } from "@/lib/db-queries";
 
 // PATCH: Update a project

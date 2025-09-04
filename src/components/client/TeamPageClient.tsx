@@ -4,14 +4,14 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components';
 import OnlineUsers from '@/components/OnlineUsers';
 import ActivityFeed from '@/components/ActivityFeed';
 import AssignedCards from '@/components/AssignedCards';
 import BackButton from '@/components/ui/BackButton';
 
 // Lazy load heavy modal components
-const ProjectModal = dynamic(() => import('@/components/ProjectModal'), {
+const ProjectModal = dynamic(() => import('@/components/modals/ProjectModal'), {
   loading: () => <div>Loading...</div>
 });
 
@@ -19,7 +19,7 @@ const TeamStandupDigest = dynamic(() => import('@/components/TeamStandupDigest')
   loading: () => <div>Loading digest...</div>
 });
 
-const InviteMemberModal = dynamic(() => import('@/components/InviteMemberModal'), {
+const InviteMemberModal = dynamic(() => import('@/components/modals/InviteMemberModal'), {
   loading: () => <div>Loading...</div>
 });
 
@@ -39,7 +39,7 @@ import { ContextCardWithRelations } from '@/interfaces/ContextCardWithRelations'
 import { TeamPageTeam } from '@/interfaces/TeamPageTeam';
 import { TeamPageProject } from '@/interfaces/TeamPageProject';
 import { TeamPageClientProps } from '@/interfaces/TeamPageClientProps';
-import ErrorBoundary from './ErrorBoundary';
+import { ErrorBoundary } from '@/components';
 
 export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClientProps) {
   const router = useRouter();

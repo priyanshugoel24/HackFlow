@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import Navbar from '@/components/Navbar';
-import TeamSettingsPageClient from '@/components/TeamSettingsPageClient';
+import { Navbar } from '@/components';
+import { TeamSettingsPageClient } from '@/components/client';
 import { TeamSettingsTeam } from '@/interfaces/TeamSettingsTeam';
 import { TeamSettingsPageProps } from '@/interfaces/TeamSettingsPageProps';
 import { Session } from 'next-auth';

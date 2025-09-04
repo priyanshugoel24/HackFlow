@@ -32,17 +32,17 @@ import {
 } from "@/lib/security";
 import { sanitizeHtml } from "@/lib/security-client";
 import { ContextCardModalProps } from "@/interfaces/ContextCardModalProps";
-import { GitHubCardAutoFill } from "./GithubCardAutofill";
+import { GitHubCardAutoFill } from "../GithubCardAutofill";
 import axios from "axios";
-import ErrorBoundary from "./ErrorBoundary";
-import { ComponentLoadingSpinner } from "./LoadingSpinner";
+import { ErrorBoundary } from "@/components";
+import { ComponentLoadingSpinner } from "../LoadingSpinner";
 
 // Lazy load heavy components
-const CommentThread = dynamic(() => import('./CommentThread'), {
+const CommentThread = dynamic(() => import('../CommentThread'), {
   loading: () => <ComponentLoadingSpinner text="Loading comments..." />
 });
 
-const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
+const RichTextEditor = dynamic(() => import('../RichTextEditor'), {
   ssr: false,
   loading: () => (
     <div className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-3 text-gray-500 dark:text-gray-400 animate-pulse">

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useDebounce } from "@/lib/hooks/useDebounce";
+import { useDebounce } from "@/hooks/useDebounce";
 import { paginationConfig } from '@/config/pagination';
 import { FileText, Folder, User, Tag, Search, Loader2, X, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";

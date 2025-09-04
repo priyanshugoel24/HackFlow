@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import { Navbar } from "@/components";
 import ContextCardList from "@/components/ContextCardList";
 import OnlineUsers from "@/components/OnlineUsers";
 import ActivityFeed from "@/components/ActivityFeed";

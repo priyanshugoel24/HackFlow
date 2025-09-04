@@ -4,10 +4,10 @@ import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { usePresenceStore } from "@/lib/store";
 import { useAblyPresence } from "@/lib/ably/useAblyPresence";
-import { ThemeToggle } from "./ThemeToggle";
-import SearchBar from "./SearchBar";
+import { ThemeToggle } from "../ThemeToggle";
+import { SearchBar } from "@/components";
 import { UserStatus } from "@/interfaces/UserStatus";
-import ErrorBoundary from './ErrorBoundary';
+import { ErrorBoundary } from '@/components';
 import Image from 'next/image';
 
 export default function Navbar() {

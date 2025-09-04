@@ -1,5 +1,5 @@
 "use client";
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BarChart3, Users, Target, Activity } from 'lucide-react';
