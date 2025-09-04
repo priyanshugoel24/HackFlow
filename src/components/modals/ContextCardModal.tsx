@@ -21,7 +21,6 @@ import {
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
-import { useCardPresence } from "@/lib/ably/useCardPresence";
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import {
@@ -103,22 +102,6 @@ const ContextCardModal = memo(function ContextCardModal({
     status: "ACTIVE" | "CLOSED";
   } | null>(null);
 
-  // Memoize user object to prevent unnecessary re-renders
-  const currentUser = useMemo(() => {
-    if (!session?.user) return { id: "anonymous", name: "Anonymous" };
-    const user = session.user as {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-    };
-    return {
-      id: user.id,
-      name: user.name || user.email?.split('@')[0] || "User",
-      image: user.image || undefined,
-    };
-  }, [session?.user]);
-
   // Memoize expensive computations
   const computedValues = useMemo(() => {
     const hasAnyChanges = (() => {
@@ -194,26 +177,6 @@ const ContextCardModal = memo(function ContextCardModal({
 
     return isCardCreator;
   }, [existingCard, session?.user]);
-
-  // Use card presence hook to track who's editing
-  const { editors } = useCardPresence(
-    existingCard?.id || `new-${projectSlug}`,
-    currentUser
-  );
-
-  // Filter out current user and only show when modal is open
-  const otherEditors =
-    open && session?.user
-      ? editors.filter((editor) => {
-          const user = session.user as {
-            id: string;
-            name?: string | null;
-            email?: string | null;
-            image?: string | null;
-          };
-          return editor.id !== user.id;
-        })
-      : [];
 
   useEffect(() => {
     if (existingCard) {
@@ -622,52 +585,6 @@ const ContextCardModal = memo(function ContextCardModal({
             <DialogTitle className="sr-only">
               {/* {existingCard ? "Edit Note" : "Add a New Note"} */}
             </DialogTitle>
-
-            {/* Show currently editing users */}
-            {otherEditors.length > 0 && (
-              <div className="flex items-center gap-3 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  Currently editing:
-                </span>
-                <div className="flex -space-x-3">
-                  {otherEditors
-                    .slice(0, 3) // Show max 3 avatars
-                    .map((editor) => (
-                      <div
-                        key={editor.id}
-                        className="relative w-8 h-8 rounded-full border-3 border-white dark:border-gray-800 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden shadow-sm"
-                        title={`${editor.name} is editing`}
-                      >
-                        {editor.image ? (
-                          <div className="relative w-full h-full">
-                            <Image
-                              src={editor.image}
-                              alt={editor.name}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                            {editor.name.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                        {/* Online indicator */}
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-                      </div>
-                    ))}
-                  {otherEditors.length > 3 && (
-                    <div className="w-8 h-8 rounded-full border-3 border-white dark:border-gray-800 bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-sm font-semibold text-gray-600 dark:text-gray-300 shadow-sm">
-                      +{otherEditors.length - 3}
-                    </div>
-                  )}
-                </div>
-                <span className="text-xs text-blue-600 dark:text-blue-400">
-                  {otherEditors.length} user
-                  {otherEditors.length !== 1 ? "s" : ""} editing
-                </span>
-              </div>
-            )}
           </DialogHeader>
           <div className="flex items-center justify-between mb-6">
             <input
