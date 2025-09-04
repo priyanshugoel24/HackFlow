@@ -86,7 +86,6 @@ const AssignedCards = memo(function AssignedCards({
 }) {
 
   const { data: sessionData } = useSession();
-  // Use email instead of userId for consistent identification across browsers
   const userEmail = sessionData?.user?.email;
   const [cards, setCards] = useState<ContextCardWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +94,8 @@ const AssignedCards = memo(function AssignedCards({
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<ContextCardWithRelations | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isFetching = useRef(false);  // Memoize visible cards to prevent unnecessary re-renders
+  const isFetching = useRef(false);
+  // Memoize visible cards to prevent unnecessary re-renders
   const visibleCards = useMemo(() => {
     return cards.filter(card => card.status === "ACTIVE");
   }, [cards]);
@@ -234,7 +234,6 @@ const AssignedCards = memo(function AssignedCards({
               ...selectedCard,
               why: selectedCard.why ?? undefined,
               issues: selectedCard.issues ?? undefined,
-              slackLinks: selectedCard.slackLinks ?? undefined,
               attachments: selectedCard.attachments ?? undefined,
               status: selectedCard.status ?? "ACTIVE",
               summary: selectedCard.summary ?? undefined,

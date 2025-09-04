@@ -1,5 +1,4 @@
 "use client";
-
 import { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Points, PointMaterial } from '@react-three/drei';
@@ -25,6 +24,7 @@ function ParticleField() {
     return positions;
   }, []);
 
+  // Rotate the particle field
   useFrame((state) => {
     if (ref.current) {
       ref.current.rotation.x = state.clock.elapsedTime * 0.05;

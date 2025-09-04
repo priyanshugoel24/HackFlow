@@ -1,33 +1,13 @@
 'use server';
-
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { Session } from 'next-auth';
 import { logActivity } from '@/lib/logActivity';
 import { TaskStatus } from '@/interfaces/TaskStatus';
+import { getAuthenticatedUserFromAction } from '@/lib/auth-utils';
 
 export async function archiveContextCard(cardId: string, isArchived: boolean) {
   try {
-    const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
-      throw new Error('Unauthorized');
-    }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {
-        name: session.user.name,
-        image: session.user.image,
-      },
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-      },
-    });
+    const user = await getAuthenticatedUserFromAction();
 
     // Check if user has access to this card
     const card = await prisma.contextCard.findFirst({
@@ -103,24 +83,7 @@ export async function archiveContextCard(cardId: string, isArchived: boolean) {
 
 export async function updateContextCardStatus(cardId: string, status: TaskStatus) {
   try {
-    const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
-      throw new Error('Unauthorized');
-    }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {
-        name: session.user.name,
-        image: session.user.image,
-      },
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-      },
-    });
+    const user = await getAuthenticatedUserFromAction();
 
     // Check if user has access to this card
     const card = await prisma.contextCard.findFirst({

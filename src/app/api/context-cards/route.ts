@@ -335,7 +335,6 @@ export async function POST(req: NextRequest) {
         visibility: visibility as "PRIVATE" | "PUBLIC",
         why: why || undefined,
         issues: issues || undefined,
-        slackLinks: mention ? [mention] : [],
         attachments: attachments.map((f) => f.name), // placeholder, file name only
         ...(notifyUserId && {
           assignedToId: notifyUserId

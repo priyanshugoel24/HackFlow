@@ -4,20 +4,20 @@ import { prisma } from "@/lib/prisma";
 import { getAblyServer } from "@/lib/ably";
 
 // PATCH: Update a project
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ projectSlug: string }> }) {
   try {
     const user = await getAuthenticatedUser(req);
     
-    const { id } = await params;
+    const { projectSlug } = await params;
     const { name, link, description, tags, isArchived } = await req.json();
 
-    // Check if the id is a CUID (database ID) or a slug
-    const isCUID = /^c[a-z0-9]{24}$/i.test(id);
+    // Check if the projectSlug is a CUID (database ID) or a slug
+    const isCUID = /^c[a-z0-9]{24}$/i.test(projectSlug);
     
     // Ensure the user is the creator of the project (only creators can delete projects)
     const project = await prisma.project.findFirst({
       where: {
-        ...(isCUID ? { id } : { slug: id }),
+        ...(isCUID ? { id: projectSlug } : { slug: projectSlug }),
         createdById: user.id // Only creator can delete
       }
     });
@@ -95,19 +95,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 // DELETE: Delete a project
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ projectSlug: string }> }) {
   try {
     const user = await getAuthenticatedUser(req);
     
-    const { id } = await params;
+    const { projectSlug } = await params;
 
-    // Check if the id is a CUID (database ID) or a slug
-    const isCUID = /^c[a-z0-9]{24}$/i.test(id);
+    // Check if the projectSlug is a CUID (database ID) or a slug
+    const isCUID = /^c[a-z0-9]{24}$/i.test(projectSlug);
     
     // First check if the project exists and user is the creator (only creators can delete)
     const existingProject = await prisma.project.findFirst({
       where: {
-        ...(isCUID ? { id } : { slug: id }),
+        ...(isCUID ? { id: projectSlug } : { slug: projectSlug }),
         createdById: user.id,
       },
     });

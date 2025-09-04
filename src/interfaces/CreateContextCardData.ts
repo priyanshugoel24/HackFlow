@@ -7,5 +7,4 @@ export interface CreateContextCardData {
   issues?: string;
   projectId: string;
   attachments?: string[];
-  slackLinks?: string[];
 }

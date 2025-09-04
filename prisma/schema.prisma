@@ -92,7 +92,6 @@ model ContextCard {
   isArchived   Boolean       @default(false)
   issues       String?
   linkedCardId String?
-  slackLinks   String[]
   type         CardType      @default(TASK)
   visibility   Visibility    @default(PRIVATE)
   why          String?

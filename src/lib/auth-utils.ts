@@ -1,18 +1,8 @@
 import { NextRequest } from 'next/server';
+import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
-
-export interface UserInfo {
-  id: string;
-  email: string;
-  name?: string | null;
-  image?: string | null;
-}
-
-interface JWTToken {
-  email?: string;
-  name?: string;
-  picture?: string;
-}
+import { UserInfo } from '@/interfaces/UserInfo';
+import { JWTToken } from '@/interfaces/JWTToken';
 
 /**
  * Gets user information from middleware headers and ensures user exists in database
@@ -23,6 +13,43 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<UserIn
   const userId = request.headers.get('X-User-ID');
   const name = request.headers.get('X-User-Name');
   const picture = request.headers.get('X-User-Picture');
+
+  if (!email || !userId) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Ensure user exists in database with latest info from auth provider
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: {
+      name: name || undefined,
+      image: picture || undefined,
+    },
+    create: {
+      email,
+      name: name || undefined,
+      image: picture || undefined,
+    },
+  });
+
+  return {
+    id: user.id,
+    email: user.email!,
+    name: user.name,
+    image: user.image,
+  };
+}
+
+/**
+ * Gets user information from middleware headers in server actions
+ * This should be called at the start of server actions that need authenticated user data
+ */
+export async function getAuthenticatedUserFromAction(): Promise<UserInfo> {
+  const headersList = await headers();
+  const email = headersList.get('X-User-Email');
+  const userId = headersList.get('X-User-ID');
+  const name = headersList.get('X-User-Name');
+  const picture = headersList.get('X-User-Picture');
 
   if (!email || !userId) {
     throw new Error('No authenticated user found');

@@ -10,7 +10,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ErrorBoundary
         onError={(error, errorInfo) => {
           console.error('Application Error:', error, errorInfo);
-          // TODO: Send to monitoring service (e.g., Sentry, LogRocket)
         }}
       >
         <StatusProvider>

@@ -161,13 +161,6 @@ const ContextCard = memo(function ContextCard({
               ))}
             </div>
           )}
-          
-          {card.slackLinks && card.slackLinks.length > 0 && (
-            <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-              <MessageSquare className="h-3 w-3" />
-              <span>{card.slackLinks.length} slack link{card.slackLinks.length !== 1 ? 's' : ''}</span>
-            </div>
-          )}
         </div>
         
         <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 pt-2 border-t border-gray-200 dark:border-gray-700">
@@ -283,22 +276,13 @@ const VirtualizedContextCard = memo(function VirtualizedContextCard({
           )}
           
           <div className="flex flex-wrap gap-1">
-            {card.attachments && card.attachments.length > 0 && (
-              <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                <Paperclip className="h-3 w-3" />
-                <span>{card.attachments.length} attachment{card.attachments.length !== 1 ? 's' : ''}</span>
-              </div>
-            )}
-            
-            {card.slackLinks && card.slackLinks.length > 0 && (
-              <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                <MessageSquare className="h-3 w-3" />
-                <span>{card.slackLinks.length} slack link{card.slackLinks.length !== 1 ? 's' : ''}</span>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 pt-2 border-t border-gray-200 dark:border-gray-700">
+          {card.attachments && card.attachments.length > 0 && (
+            <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+              <Paperclip className="h-3 w-3" />
+              <span>{card.attachments.length} attachment{card.attachments.length !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+        </div>          <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 pt-2 border-t border-gray-200 dark:border-gray-700">
             <span>Updated {formatDate(card.updatedAt)}</span>
             <span>Created {formatDate(card.createdAt)}</span>
           </div>
@@ -696,7 +680,6 @@ const ContextCardList = memo(function ContextCardList({
               ...selectedCard,
               why: selectedCard.why || undefined,
               issues: selectedCard.issues || undefined,
-              slackLinks: selectedCard.slackLinks || undefined,
               attachments: selectedCard.attachments || undefined,
               summary: selectedCard.summary || undefined,
               status: selectedCard.status || "ACTIVE"

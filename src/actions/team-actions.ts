@@ -1,23 +1,17 @@
 'use server';
-
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { Session } from 'next-auth';
+import { getAuthenticatedUserFromAction } from '@/lib/auth-utils';
 
 export async function updateTeamHackathonSettings(teamSlug: string, hackathonModeEnabled: boolean, hackathonDeadline?: string) {
   try {
-    const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
-      throw new Error('Unauthorized');
-    }
+    const user = await getAuthenticatedUserFromAction();
 
     // Check if user is an owner or admin of the team
     const teamMember = await prisma.teamMember.findFirst({
       where: {
         team: { slug: teamSlug },
-        user: { email: session.user.email },
+        userId: user.id,
         status: 'ACTIVE',
         role: { in: ['OWNER'] },
       },
@@ -51,24 +45,7 @@ export async function updateTeamHackathonSettings(teamSlug: string, hackathonMod
 
 export async function archiveProject(projectId: string, isArchived: boolean) {
   try {
-    const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
-      throw new Error('Unauthorized');
-    }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {
-        name: session.user.name,
-        image: session.user.image,
-      },
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-      },
-    });
+    const user = await getAuthenticatedUserFromAction();
 
     // Check if the user has permission to archive this project
     const project = await prisma.project.findFirst({

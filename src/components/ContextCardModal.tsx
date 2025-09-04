@@ -15,7 +15,6 @@ import {
   Eye,
   EyeOff,
   Paperclip,
-  AtSign,
   Trash2,
   Archive,
 } from "lucide-react";
@@ -32,7 +31,6 @@ import {
   validateFileUpload,
 } from "@/lib/security";
 import { sanitizeHtml } from "@/lib/security-client";
-import { TeamMemberResponse } from "@/interfaces/AuthTypes";
 import { ContextCardModalProps } from "@/interfaces/ContextCardModalProps";
 import { GitHubCardAutoFill } from "./GithubCardAutofill";
 import axios from "axios";
@@ -60,7 +58,6 @@ const ContextCardModal = memo(function ContextCardModal({
   projectSlug,
   existingCard,
   onSuccess,
-  teamSlug,
 }: ContextCardModalProps) {
   const { data: session } = useSession();
   const [title, setTitle] = useState("");
@@ -69,7 +66,12 @@ const ContextCardModal = memo(function ContextCardModal({
   const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">("PRIVATE");
   const [why, setWhy] = useState("");
   const [issues, setIssues] = useState("");
-  const [mention, setMention] = useState("");
+  const [assignedTo, setAssignedTo] = useState<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  } | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -92,7 +94,12 @@ const ContextCardModal = memo(function ContextCardModal({
     visibility: "PRIVATE" | "PUBLIC";
     why: string;
     issues: string;
-    mention: string;
+    assignedTo: {
+      id: string;
+      name: string | null;
+      email: string | null;
+      image: string | null;
+    } | null;
     existingAttachments: string[];
     status: "ACTIVE" | "CLOSED";
   } | null>(null);
@@ -125,7 +132,7 @@ const ContextCardModal = memo(function ContextCardModal({
         visibility,
         why: (why || "").trim(),
         issues: (issues || "").trim(),
-        mention: (mention || "").trim(),
+        assignedTo,
         existingAttachments,
         status,
       };
@@ -137,6 +144,20 @@ const ContextCardModal = memo(function ContextCardModal({
         return JSON.stringify(sortedA) === JSON.stringify(sortedB);
       };
 
+      const assignedToChanged = () => {
+        const currentAssigned = currentValues.assignedTo;
+        const originalAssigned = originalValues.assignedTo;
+        
+        // Both null/undefined
+        if (!currentAssigned && !originalAssigned) return false;
+        
+        // One null, one not
+        if (!currentAssigned || !originalAssigned) return true;
+        
+        // Compare IDs
+        return currentAssigned.id !== originalAssigned.id;
+      };
+
       return (
         currentValues.title !== originalValues.title.trim() ||
         currentValues.content !== originalValues.content.trim() ||
@@ -144,7 +165,7 @@ const ContextCardModal = memo(function ContextCardModal({
         currentValues.visibility !== originalValues.visibility ||
         currentValues.why !== (originalValues.why || "").trim() ||
         currentValues.issues !== (originalValues.issues || "").trim() ||
-        currentValues.mention !== (originalValues.mention || "").trim() ||
+        assignedToChanged() ||
         currentValues.status !== originalValues.status ||
         !arraysEqual(currentValues.existingAttachments, originalValues.existingAttachments) ||
         attachments.length > 0
@@ -154,11 +175,11 @@ const ContextCardModal = memo(function ContextCardModal({
     const isValid = title.trim().length > 0 && content.trim().length > 0;
 
     return { hasAnyChanges, isValid };
-  }, [title, content, type, visibility, why, issues, mention, status, existingAttachments, attachments, originalValues, existingCard]);
+  }, [title, content, type, visibility, why, issues, assignedTo, status, existingAttachments, attachments, originalValues, existingCard]);
 
   // Check if the current user has permission to archive/unarchive this card
   const canArchive = useMemo(() => {
-    if (!existingCard || !session?.user || !teamMembers.length) {
+    if (!existingCard || !session?.user) {
       return false;
     }
 
@@ -171,12 +192,9 @@ const ContextCardModal = memo(function ContextCardModal({
     
     // Check if user is card creator (by user ID - this is the main creator field)
     const isCardCreator = existingCard.userId === user.id;
-    
-    // Check if user is a team member
-    const isTeamMember = teamMembers.some((member) => member.userId === user.id);
 
-    return isCardCreator && isTeamMember;
-  }, [existingCard, session?.user, teamMembers]);
+    return isCardCreator;
+  }, [existingCard, session?.user]);
 
   // Use card presence hook to track who's editing
   const { editors } = useCardPresence(
@@ -207,9 +225,14 @@ const ContextCardModal = memo(function ContextCardModal({
         visibility: existingCard.visibility || "PRIVATE",
         why: existingCard.why || "",
         issues: existingCard.issues || "",
-        mention: existingCard.slackLinks?.[0] || "",
         existingAttachments: existingCard.attachments || [],
         status: existingCard.status || "ACTIVE",
+        assignedTo: existingCard.assignedTo ? {
+          id: existingCard.assignedTo.id,
+          name: existingCard.assignedTo.name,
+          email: existingCard.assignedTo.email,
+          image: existingCard.assignedTo.image,
+        } : null,
       };
 
       setTitle(initialValues.title);
@@ -219,9 +242,9 @@ const ContextCardModal = memo(function ContextCardModal({
       setWhy(initialValues.why);
       setIssues(initialValues.issues);
       setStatus(initialValues.status as "ACTIVE" | "CLOSED");
-      setMention(initialValues.mention);
       setExistingAttachments(initialValues.existingAttachments);
       setAttachments([]);
+      setAssignedTo(initialValues.assignedTo);
 
       // Store original values for change detection
       setOriginalValues(initialValues);
@@ -233,91 +256,71 @@ const ContextCardModal = memo(function ContextCardModal({
       setWhy("");
       setIssues("");
       setStatus("ACTIVE");
-      setMention("");
       setAttachments([]);
       setExistingAttachments([]);
+      setAssignedTo(null);
       setOriginalValues(null);
     }
   }, [existingCard, open]);
 
-  // Get team members for mention dropdown
+  // Fetch team members for assignment
   useEffect(() => {
-    // Load team members if teamSlug is provided
-    if (teamSlug) {
-      const fetchTeamMembers = async () => {
-        try {
-          const response = await axios.get(`/api/teams/${teamSlug}/members`);
-          const members: TeamMemberResponse[] = response.data;
-          const teamMembersList = members
-            .filter((m) => m.status === "ACTIVE")
-            .map((member) => ({
-              userId: member.user.id,
-              name: member.user.name,
-              email: member.user.email,
-              image: member.user.image,
-            }));
-          setTeamMembers(teamMembersList);
-          // Also initialize filteredMembers with all team members
-          setFilteredMembers(teamMembersList);
-        } catch (error) {
-          console.error('Error fetching team members:', error);
-        }
-      };
-      
-      fetchTeamMembers();
-    }
-  }, [teamSlug]);
+    const fetchTeamMembers = async () => {
+      if (!projectSlug || !open) return;
 
-  // Memoize filtered members computation - only use team members
-  const allMembers = useMemo(() => {
-    // Only use team members for mentions
-    return teamMembers || [];
-  }, [teamMembers]);
+      try {
+        const response = await axios.get(`/api/projects/${projectSlug}/team-members`);
+        const members = response.data.map((member: {
+          user: {
+            id: string;
+            name?: string;
+            email?: string;
+            image?: string;
+          };
+        }) => ({
+          userId: member.user.id,
+          name: member.user.name,
+          email: member.user.email,
+          image: member.user.image,
+        }));
+        setTeamMembers(members);
+        setFilteredMembers(members);
+      } catch (error) {
+        console.error('Failed to fetch team members:', error);
+      }
+    };
 
-  // Filter members based on search input (from team members only)
-  const filterMembers = useCallback((input: string) => {
-    setMention(input);
+    fetchTeamMembers();
+  }, [projectSlug, open]);
 
-    if (!input.trim()) {
-      // Show all team members when input is empty
-      setFilteredMembers(allMembers);
-      setShowMemberDropdown(allMembers.length > 0);
+  // Handle assignment search
+  const handleAssignmentSearch = useCallback((query: string) => {
+    if (!query.trim()) {
+      setFilteredMembers(teamMembers);
       return;
     }
 
-    const searchTerm = input.toLowerCase().trim();
-    const filteredMembers = allMembers.filter(
-      (member) =>
-        (member.name && member.name.toLowerCase().includes(searchTerm)) ||
-        (member.email && member.email.toLowerCase().includes(searchTerm))
+    const filtered = teamMembers.filter(member =>
+      member.name?.toLowerCase().includes(query.toLowerCase()) ||
+      member.email?.toLowerCase().includes(query.toLowerCase())
     );
+    setFilteredMembers(filtered);
+  }, [teamMembers]);
 
-    setFilteredMembers(filteredMembers);
-    setShowMemberDropdown(filteredMembers.length > 0);
-  }, [allMembers]);
-
-  // Handle selecting a member from the dropdown
-  const handleSelectMember = useCallback((member: {
-    userId: string;
-    name?: string;
-    email?: string;
-  }) => {
-    // Always prefer the name, but fallback to email if no name
-    const displayName = member.name || member.email || `User ${member.userId.slice(-4)}`;
-    setMention(displayName);
+  // Handle assignment selection
+  const handleAssignmentSelect = useCallback((member: typeof teamMembers[0]) => {
+    setAssignedTo({
+      id: member.userId,
+      name: member.name || null,
+      email: member.email || null,
+      image: member.image || null,
+    });
     setShowMemberDropdown(false);
   }, []);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setShowMemberDropdown(false);
-    };
-
-    document.addEventListener("click", handleClickOutside);
-    return () => {
-      document.removeEventListener("click", handleClickOutside);
-    };
+  // Handle assignment removal
+  const handleAssignmentRemove = useCallback(() => {
+    setAssignedTo(null);
   }, []);
 
   // Check if any values have changed from original
@@ -406,7 +409,6 @@ const ContextCardModal = memo(function ContextCardModal({
       status,
       why: why ? sanitizeText(why.trim()) : undefined,
       issues: issues ? sanitizeText(issues.trim()) : undefined,
-      mention: mention ? sanitizeText(mention.trim()) : undefined,
       projectId: projectSlug,
     };
 
@@ -432,30 +434,6 @@ const ContextCardModal = memo(function ContextCardModal({
     }
 
     setIsLoading(true);
-    let notifyUserId = null;
-
-    // Check if we need to notify someone (when a user is mentioned)
-    if (mention && mention.trim()) {
-      let mentionedMember = null;
-      const trimmedMention = mention.trim();
-      
-      // Find in team members only
-      if (teamMembers.length > 0) {
-        const teamMember = teamMembers.find((m) => {
-          const memberName = m.name?.toLowerCase() || '';
-          const memberEmail = m.email?.toLowerCase() || '';
-          const mentionLower = trimmedMention.toLowerCase();
-          return memberName === mentionLower || memberEmail === mentionLower;
-        });
-        if (teamMember) {
-          mentionedMember = { userId: teamMember.userId };
-        }
-      }
-      
-      if (mentionedMember) {
-        notifyUserId = mentionedMember.userId;
-      }
-    }
 
     try {
       const uploadedUrls: string[] = [...existingAttachments];
@@ -477,8 +455,8 @@ const ContextCardModal = memo(function ContextCardModal({
           status?: "ACTIVE" | "CLOSED";
           why?: string;
           issues?: string;
-          slackLinks?: string[];
           attachments?: string[];
+          assignedToId?: string | null;
           notifyUserId?: string;
         } = {};
 
@@ -497,8 +475,13 @@ const ContextCardModal = memo(function ContextCardModal({
           (sanitizedData.issues || "") !== (originalValues?.issues || "").trim()
         )
           updateData.issues = sanitizedData.issues;
-        if (mention.trim() !== (originalValues?.mention || "").trim())
-          updateData.slackLinks = mention.trim() ? [mention.trim()] : [];
+        
+        // Check if assigned user has changed
+        const currentAssignedId = assignedTo?.id || null;
+        const originalAssignedId = originalValues?.assignedTo?.id || null;
+        if (currentAssignedId !== originalAssignedId) {
+          updateData.assignedToId = currentAssignedId;
+        }
         
         // Helper function for array comparison
         const arraysEqual = (a: string[], b: string[]) => {
@@ -522,11 +505,6 @@ const ContextCardModal = memo(function ContextCardModal({
           return;
         }
 
-        // Include notification info if someone is mentioned
-        if (notifyUserId) {
-          updateData.notifyUserId = notifyUserId;
-        }
-
         res = await axios.patch(`/api/context-cards/${existingCard.id}`, updateData);
       } else {
         // Create new card
@@ -541,19 +519,13 @@ const ContextCardModal = memo(function ContextCardModal({
         if (sanitizedData.why) formData.append("why", sanitizedData.why);
         if (sanitizedData.issues)
           formData.append("issues", sanitizedData.issues);
-        if (sanitizedData.mention)
-          formData.append("mention", sanitizedData.mention);
+        if (assignedTo) formData.append("notifyUserId", assignedTo.id);
         for (const file of attachments) {
           formData.append("attachments", file);
         }
         existingAttachments.forEach((url) => {
           formData.append("existingAttachments", url);
         });
-
-        // Include notification info if someone is mentioned
-        if (notifyUserId) {
-          formData.append("notifyUserId", notifyUserId);
-        }
 
         res = await axios.post("/api/context-cards", formData, {
           headers: {
@@ -582,7 +554,6 @@ const ContextCardModal = memo(function ContextCardModal({
         setVisibility("PRIVATE");
         setWhy("");
         setIssues("");
-        setMention("");
         setAttachments([]);
         setExistingAttachments([]);
         setStatus("ACTIVE");
@@ -604,7 +575,7 @@ const ContextCardModal = memo(function ContextCardModal({
     } finally {
       setIsLoading(false);
     }
-  }, [title, content, type, visibility, status, why, issues, mention, attachments, existingAttachments, projectSlug, existingCard, originalValues, onSuccess, hasChanges, setOpen, teamMembers]);
+  }, [title, content, type, visibility, status, why, issues, assignedTo, attachments, existingAttachments, projectSlug, existingCard, originalValues, onSuccess, hasChanges, setOpen]);
 
   const getTypeIcon = useCallback((cardType: string) => {
     switch (cardType) {
@@ -944,64 +915,88 @@ const ContextCardModal = memo(function ContextCardModal({
             />
           </div>
 
-          <div className="flex items-center gap-3 relative">
-            <AtSign className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-            <div className="w-full relative">
-              <input
-                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md p-3 text-base text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:focus:ring-yellow-500 cursor-pointer"
-                placeholder="Mention team member (optional)"
-                value={mention}
-                onChange={(e) => filterMembers(e.target.value)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Show all members when clicking on empty field, or show filtered results
-                  if (!mention.trim()) {
-                    setFilteredMembers(allMembers);
-                    setShowMemberDropdown(allMembers.length > 0);
-                  } else {
-                    setShowMemberDropdown(filteredMembers.length > 0);
-                  }
-                }}
-              />
-
-              {showMemberDropdown && filteredMembers.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                  {filteredMembers.map((member) => (
-                    <div
-                      key={member.userId}
-                      className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectMember(member);
-                      }}
-                    >
-                      {member.image ? (
-                        <div className="relative w-6 h-6">
-                          <Image
-                            src={member.image}
-                            alt={member.name || member.email || "User"}
-                            fill
-                            className="rounded-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-600 dark:text-gray-400">
-                          {member.name ? member.name[0].toUpperCase() : 
-                           member.email ? member.email[0].toUpperCase() : "@"}
-                        </div>
-                      )}
-                      <div>
-                        <div className="font-medium text-gray-800 dark:text-gray-200">
-                          {member.name || member.email || `User ${member.userId.slice(-4)}`}
-                        </div>
-                        {member.email && member.name && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {member.email}
-                          </div>
-                        )}
+          {/* Assignment field */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Assign to team member (optional)
+            </label>
+            <div className="relative">
+              {assignedTo ? (
+                <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-3">
+                  <div className="flex items-center gap-2">
+                    {assignedTo.image ? (
+                      <Image 
+                        src={assignedTo.image} 
+                        alt={assignedTo.name || assignedTo.email || 'User'} 
+                        width={24}
+                        height={24}
+                        className="w-6 h-6 rounded-full"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-gray-400 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-white">
+                        {(assignedTo.name || assignedTo.email || 'U').charAt(0).toUpperCase()}
                       </div>
+                    )}
+                    <span className="text-sm text-gray-800 dark:text-gray-200">
+                      {assignedTo.name || assignedTo.email}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAssignmentRemove}
+                    className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Type @ to mention team members..."
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-3 text-base text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:focus:ring-yellow-500"
+                    onFocus={() => setShowMemberDropdown(true)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.includes('@')) {
+                        const query = value.split('@').pop() || '';
+                        handleAssignmentSearch(query);
+                        setShowMemberDropdown(true);
+                      } else {
+                        setShowMemberDropdown(false);
+                      }
+                    }}
+                  />
+                  
+                  {showMemberDropdown && filteredMembers.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {filteredMembers.map((member) => (
+                        <button
+                          key={member.userId}
+                          type="button"
+                          onClick={() => handleAssignmentSelect(member)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200"
+                        >
+                          {member.image ? (
+                            <Image 
+                              src={member.image} 
+                              alt={member.name || member.email || 'User'} 
+                              width={24}
+                              height={24}
+                              className="w-6 h-6 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-400 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-white">
+                              {(member.name || member.email || 'U').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-sm">
+                            {member.name || member.email}
+                          </span>
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>

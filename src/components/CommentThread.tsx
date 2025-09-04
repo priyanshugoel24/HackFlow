@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,26 @@ import { Comment } from "@/interfaces/Comment";
 import { paginationConfig } from '@/config/pagination';
 import { channelsConfig } from '@/config/channels';
 import ErrorBoundary from './ErrorBoundary';
+
+// Helper function to merge and sort comments with deduplication
+const mergeAndSortComments = (existingComments: Comment[], newComments: Comment[]): Comment[] => {
+  const commentMap = new Map();
+  
+  // Add existing comments
+  existingComments.forEach(comment => {
+    commentMap.set(comment.id, comment);
+  });
+  
+  // Add new comments
+  newComments.forEach(comment => {
+    commentMap.set(comment.id, comment);
+  });
+  
+  // Return sorted array
+  return Array.from(commentMap.values()).sort((a, b) => 
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+};
 
 export default function CommentThread({ cardId }: { cardId: string }) {
   const { data: session } = useSession();
@@ -30,24 +49,7 @@ export default function CommentThread({ cardId }: { cardId: string }) {
 
       if (cursor) {
         // For pagination, append older comments and ensure no duplicates
-        setComments((prev) => {
-          const commentMap = new Map();
-          
-          // Add existing comments
-          prev.forEach(comment => {
-            commentMap.set(comment.id, comment);
-          });
-          
-          // Add new comments
-          data.comments.forEach((comment: Comment) => {
-            commentMap.set(comment.id, comment);
-          });
-          
-          // Return sorted array
-          return Array.from(commentMap.values()).sort((a, b) => 
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-        });
+        setComments((prev) => mergeAndSortComments(prev, data.comments));
       } else {
         // For initial load, replace all comments
         setComments(data.comments);
@@ -76,33 +78,20 @@ export default function CommentThread({ cardId }: { cardId: string }) {
 
     const handleNewComment = (msg: Ably.Message) => {
       setComments((prev) => {
-        // Create a Map for O(1) lookup performance and deduplication
-        const commentMap = new Map();
-        
-        // Add existing comments to the map
-        prev.forEach(comment => {
-          commentMap.set(comment.id, comment);
-        });
-        
         // Add or update the new comment - msg.data contains the comment data
         const commentData = msg.data as Comment;
-        commentMap.set(commentData.id, commentData);
-        
-        // Convert back to array and sort by createdAt
-        return Array.from(commentMap.values()).sort((a, b) => 
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
+        return mergeAndSortComments(prev, [commentData]);
       });
     };
 
-    // Subscribe to the channel (this will auto-attach if needed)
+    // Subscribe to the channel
     channel.subscribe("comment:created", handleNewComment);
 
     return () => {
       // Only unsubscribe from our specific event handler
       channel.unsubscribe("comment:created", handleNewComment);
       
-      // Improved cleanup to prevent race conditions
+      // cleanup to prevent race conditions
       const cleanupChannel = async () => {
         try {
           // Check if channel is in a state where it can be safely detached
@@ -116,7 +105,6 @@ export default function CommentThread({ cardId }: { cardId: string }) {
             }
           }
         } catch (error) {
-          // Silently handle any detach errors to prevent console spam
           console.debug('Channel cleanup completed with minor issues:', error instanceof Error ? error.message : 'Unknown error');
         }
       };
@@ -135,7 +123,6 @@ export default function CommentThread({ cardId }: { cardId: string }) {
       });
 
       setNewComment("");
-      // Don't manually add the comment here since it will come through the real-time subscription
     } catch (error) {
       console.error("Error posting comment:", error);
     } finally {

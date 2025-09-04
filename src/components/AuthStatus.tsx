@@ -83,7 +83,7 @@ export default function AuthStatus() {
             ) : (
               <div className="space-y-2">
                 <p className="text-sm">
-                  Current: <span className="font-medium">{userStatus?.state || "Available"}</span>
+                  Current: <span className="font-medium">{userStatus?.state || "Unavailable"}</span>
                 </p>
                 <div className="flex gap-2">
                   <button

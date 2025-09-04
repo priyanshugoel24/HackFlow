@@ -41,7 +41,7 @@ export default function ActivityFeed({ projectId, slug, teamSlug, initialActivit
         }
         
         const data = res.data;
-        setActivities(data.activities || []);
+        setActivities(data?.activities ?? []);
         
         // If we used slug, we need to get the actual projectId for Ably channel
         if (slug && !projectId && !teamSlug) {
@@ -63,19 +63,17 @@ export default function ActivityFeed({ projectId, slug, teamSlug, initialActivit
     fetchActivities();
   }, [identifier, projectId, slug, teamSlug, initialActivities]);
 
+  // Subscribe to activity updates
   useEffect(() => {
     if (!actualProjectId || !session?.user) return;
 
     const user = session.user as { id: string };
     if (!user.id) return;
     
-    console.log("🔌 ActivityFeed connecting to Ably for project:", actualProjectId);
-    
     const ably = getAblyClient(user.id);
     const channel = ably.channels.get(channelsConfig.PROJECT_CHANNEL(actualProjectId));
 
     const handleNewActivity = (msg: Ably.Message) => {
-      console.log("📨 ActivityFeed received activity:", msg.name, msg.data);
       if (msg.name === "activity:created") {
         const activityData = msg.data as Activity;
         setActivities((prev) => [activityData, ...prev]);
@@ -85,7 +83,6 @@ export default function ActivityFeed({ projectId, slug, teamSlug, initialActivit
     channel.subscribe("activity:created", handleNewActivity);
 
     return () => {
-      console.log("🔇 ActivityFeed unsubscribing from project:", actualProjectId);
       channel.unsubscribe("activity:created", handleNewActivity);
       // Don't release channels as they might be used by other components
       // Just unsubscribe from our specific events
@@ -110,7 +107,7 @@ export default function ActivityFeed({ projectId, slug, teamSlug, initialActivit
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.3 }} 
               className="flex items-start gap-3 bg-white dark:bg-gray-900 shadow-sm dark:shadow-none rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md dark:hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-500 transition-all"
             >
               {activity.user?.image ? (

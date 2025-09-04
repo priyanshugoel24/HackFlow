@@ -41,12 +41,12 @@ export async function PATCH(
       type,
       visibility,
       attachments,
-      slackLinks,
       issues,
       why,
       linkedCardId,
       isArchived,
       status,
+      assignedToId,
       notifyUserId,
     } = body;
 
@@ -89,6 +89,14 @@ export async function PATCH(
       const existing = await prisma.contextCard.findFirst({
         where: { id },
         include: {
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            },
+          },
           project: {
             include: {
               team: {
@@ -135,7 +143,6 @@ export async function PATCH(
         type !== undefined ||
         visibility !== undefined ||
         attachments !== undefined ||
-        slackLinks !== undefined ||
         issues !== undefined ||
         why !== undefined ||
         linkedCardId !== undefined ||
@@ -250,8 +257,6 @@ export async function PATCH(
         (visibility !== undefined && visibility !== existing.visibility) ||
         (attachments !== undefined &&
           !valuesEqual(attachments, existing.attachments)) ||
-        (slackLinks !== undefined &&
-          !valuesEqual(slackLinks, existing.slackLinks)) ||
         (issues !== undefined &&
           (issues || "").trim() !== (existing.issues || "").trim()) ||
         (why !== undefined &&
@@ -259,7 +264,8 @@ export async function PATCH(
         (linkedCardId !== undefined &&
           linkedCardId !== existing.linkedCardId) ||
         (isArchived !== undefined && isArchived !== existing.isArchived) ||
-        (status !== undefined && status !== existing.status);
+        (status !== undefined && status !== existing.status) ||
+        (assignedToId !== undefined && assignedToId !== existing.assignedToId);
 
       if (!hasChanges) {
         console.log("✅ No changes detected, returning existing card");
@@ -279,18 +285,26 @@ export async function PATCH(
           ...(type !== undefined && { type }),
           ...(visibility !== undefined && { visibility }),
           ...(attachments !== undefined && { attachments }),
-          ...(slackLinks !== undefined && { slackLinks }),
           ...(issues !== undefined && { issues }),
           ...(why !== undefined && { why }),
           ...(linkedCardId !== undefined && { linkedCardId }),
           ...(isArchived !== undefined && { isArchived }),
           ...(status !== undefined && { status: status as TaskStatus }),
+          ...(assignedToId !== undefined && { assignedToId }),
         },
         include: {
           project: {
             select: {
               id: true,
               name: true,
+            },
+          },
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
             },
           },
           linkedCard: {
