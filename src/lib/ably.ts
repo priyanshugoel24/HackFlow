@@ -23,9 +23,8 @@ export function getAblyClient(clientId?: string): Ably.Realtime {
     
     console.log("🔌 Creating new Ably client with clientId:", currentClientId);
     
-    clientAbly = new Ably.Realtime({
+    const ablyOptions: Ably.ClientOptions = {
       key: ablyKey,
-      clientId: currentClientId || undefined,
       autoConnect: true,
       disconnectedRetryTimeout: 1000, // Faster reconnection
       suspendedRetryTimeout: 2000, // Faster recovery
@@ -35,7 +34,14 @@ export function getAblyClient(clientId?: string): Ably.Realtime {
       // Optimize for real-time performance
       echoMessages: false, // Don't echo our own messages
       queueMessages: true, // Queue messages when disconnected
-    });
+    };
+
+    // Only set clientId if we have one
+    if (currentClientId) {
+      ablyOptions.clientId = currentClientId;
+    }
+    
+    clientAbly = new Ably.Realtime(ablyOptions);
 
     // Log connection events for debugging
     clientAbly.connection.on('connected', () => {

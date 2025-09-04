@@ -306,7 +306,9 @@ const ContextCardList = memo(function ContextCardList({
   const [selectedCard, setSelectedCard] = useState<ContextCardWithRelations | null>(null);
   const [project, setProject] = useState<ProjectWithRelations | null>(initialProject || null);
   const [showArchived, setShowArchived] = useState(false);
-  const [allCards, setAllCards] = useState<ContextCardWithRelations[]>(initialCards);
+  const [allCards, setAllCards] = useState<ContextCardWithRelations[]>(
+    Array.isArray(initialCards) ? initialCards : []
+  );
   const [smartComposeOpen, setSmartComposeOpen] = useState(false);
   const [cardTypeFilter, setCardTypeFilter] = useState<'ALL' | 'TASK' | 'INSIGHT' | 'DECISION'>('ALL');
 
@@ -363,7 +365,9 @@ const ContextCardList = memo(function ContextCardList({
 
   // Memoize filtered and sorted cards
   const displayedCards = useMemo(() => {
-    let filtered = showArchived ? allCards : allCards.filter(card => !card.isArchived);
+    // Ensure allCards is always an array to prevent filter errors
+    const cardsArray = Array.isArray(allCards) ? allCards : [];
+    let filtered = showArchived ? cardsArray : cardsArray.filter(card => !card.isArchived);
     
     // Apply type filter
     if (cardTypeFilter !== 'ALL') {
@@ -419,7 +423,8 @@ const ContextCardList = memo(function ContextCardList({
     setLoading(true);
     try {
       const response = await axios.get(`/api/context-cards?projectId=${project.id}&limit=100`);
-      const updatedCards: ContextCardWithRelations[] = response.data;
+      // The API returns { cards: [...] }, so we need to access the cards property
+      const updatedCards: ContextCardWithRelations[] = response.data.cards || [];
       setAllCards(updatedCards);
     } catch (error) {
       console.error('Error refreshing cards:', error);
@@ -436,7 +441,7 @@ const ContextCardList = memo(function ContextCardList({
 
   // Update cards when initialCards prop changes
   useEffect(() => {
-    setAllCards(initialCards);
+    setAllCards(Array.isArray(initialCards) ? initialCards : []);
   }, [initialCards]);
 
   // Update project when initialProject prop changes
@@ -526,7 +531,7 @@ const ContextCardList = memo(function ContextCardList({
               <Archive className="h-3.5 w-3.5 mr-1" />
               {showArchived ? "Hide Archived" : "Show Archived"}
             </Button>
-            {showArchived && allCards.some(card => card.isArchived) && (
+            {showArchived && Array.isArray(allCards) && allCards.some(card => card.isArchived) && (
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 Showing {allCards.filter(card => card.isArchived).length} archived cards
               </span>

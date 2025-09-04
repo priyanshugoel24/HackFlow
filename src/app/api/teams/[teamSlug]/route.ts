@@ -2,6 +2,82 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ teamSlug: string }> }
+) {
+  try {
+    const user = await getAuthenticatedUser(request);
+
+    const resolvedParams = await params;
+
+    const team = await prisma.team.findUnique({
+      where: { slug: resolvedParams.teamSlug },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+              },
+            },
+          },
+        },
+        projects: {
+          where: { isArchived: false },
+          include: {
+            _count: {
+              select: {
+                contextCards: {
+                  where: { isArchived: false },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        _count: {
+          select: {
+            members: true,
+            projects: true,
+          },
+        },
+      },
+    });
+
+    if (!team) {
+      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+    }
+
+    // Check if current user is a member of this team
+    const userMembership = team.members.find(member => member.userId === user.id);
+    if (!userMembership || userMembership.status !== 'ACTIVE') {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    // Add user role and current user ID to the response
+    const teamResponse = {
+      ...team,
+      userRole: userMembership.role,
+      currentUserId: user.id,
+      // Map projects to include required fields
+      projects: team.projects.map(project => ({
+        ...project,
+        createdAt: project.createdAt.toISOString(),
+        lastActivityAt: project.lastActivityAt.toISOString(),
+      })),
+    };
+
+    return NextResponse.json(teamResponse);
+  } catch (error) {
+    console.error('Error fetching team:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ teamSlug: string }> }

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Trash2 } from "lucide-react";
 import { getAblyClient } from "@/lib/ably";
 import { useSession } from "next-auth/react";
 import axios from "axios";
@@ -26,10 +26,14 @@ export default function ProjectSettingsPageClient({
   const [description, setDescription] = useState(initialProject.description || "");
   const [tags, setTags] = useState<string[]>(initialProject.tags || []);
   const [newTag, setNewTag] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
+    // Only set up subscriptions if we have a session
+    if (!session?.user) return;
+
     // Set up real-time subscriptions
-    const ably = getAblyClient();
+    const ably = getAblyClient((session.user as { id: string }).id);
     const channel = ably.channels.get(`project:${project.id}`);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,7 +77,7 @@ export default function ProjectSettingsPageClient({
       
       cleanupChannel();
     };
-  }, [project.id]);
+  }, [project.id, session]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -97,15 +101,75 @@ export default function ProjectSettingsPageClient({
     }
   };
 
-  const handleAddTag = () => {
+  const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
       setTags([...tags, newTag.trim()]);
       setNewTag("");
     }
   };
 
-  const handleRemoveTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag));
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleDeleteProject = async () => {
+    if (!project) return;
+
+    // Double confirmation for delete action
+    const projectName = project.name;
+    const firstConfirm = confirm(
+      `Are you sure you want to permanently delete the project "${projectName}"?
+
+This action cannot be undone and will delete all tasks, comments, and data associated with this project.`
+    );
+    
+    if (!firstConfirm) return;
+
+    const secondConfirm = confirm(
+      `This is your final warning!
+
+Deleting "${projectName}" will permanently remove:
+• All tasks and their data
+• All comments and activity
+• All project files and attachments
+
+Type the project name "${projectName}" in the next dialog to confirm deletion.`
+    );
+    
+    if (!secondConfirm) return;
+
+    const typedName = prompt(`Please type "${projectName}" to confirm deletion:`);
+    if (typedName !== projectName) {
+      toast.error("Project name doesn't match", {
+        description: "Deletion cancelled for safety.",
+      });
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await axios.delete(`/api/projects/${project.slug}`);
+      
+      toast.success("Project deleted", {
+        description: "The project has been permanently deleted.",
+      });
+      
+      // Redirect to team dashboard
+      router.push(`/team/${project.team?.slug || ''}`);
+    } catch (error: unknown) {
+      console.error("Error deleting project:", error);
+      const errorMessage = error instanceof Error && 'response' in error && 
+        typeof error.response === 'object' && error.response !== null &&
+        'data' in error.response && typeof error.response.data === 'object' &&
+        error.response.data !== null && 'error' in error.response.data
+        ? String(error.response.data.error)
+        : "An unexpected error occurred. Please try again.";
+      toast.error("Error deleting project", {
+        description: errorMessage,
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -157,7 +221,7 @@ export default function ProjectSettingsPageClient({
             />
             <Button 
               variant="outline" 
-              onClick={handleAddTag} 
+              onClick={addTag} 
               className="transition-all focus:ring-2 focus:ring-indigo-500 px-4 py-2"
             >
               Add
@@ -169,7 +233,7 @@ export default function ProjectSettingsPageClient({
                 key={tag}
                 variant="secondary"
                 className="cursor-pointer hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors rounded-lg px-3 py-1 select-none"
-                onClick={() => handleRemoveTag(tag)}
+                onClick={() => removeTag(tag)}
               >
                 {tag}
               </Badge>
@@ -232,6 +296,42 @@ export default function ProjectSettingsPageClient({
                   }}
                 >
                   {project?.isArchived ? "Unarchive Project" : "Archive Project"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Danger Zone - Delete Project */}
+        <section className="pt-8 border-t border-red-200 dark:border-red-800">
+          <h2 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-6">Danger Zone</h2>
+          <div className="mb-4 p-4 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-900/20">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="text-md font-medium text-red-900 dark:text-red-100 mb-2">
+                  Delete Project
+                </h3>
+                <p className="text-sm text-red-700 dark:text-red-300 mb-3">
+                  Permanently delete this project and all its data. This action cannot be undone.
+                </p>
+                <ul className="text-sm text-red-600 dark:text-red-400 space-y-1">
+                  <li>• All tasks and their data will be deleted</li>
+                  <li>• All comments and activity history will be lost</li>
+                  <li>• All project files and attachments will be removed</li>
+                  <li>• Team members will lose access to this project</li>
+                </ul>
+              </div>
+              {/* Only show if user is project creator */}
+              {project?.createdById === (session?.user as { id: string })?.id && (
+                <Button
+                  variant="destructive"
+                  className="ml-4 transition-all focus:ring-2 focus:ring-red-500"
+                  onClick={handleDeleteProject}
+                  disabled={deleting}
+                >
+                  {deleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {!deleting && <Trash2 className="h-4 w-4 mr-2" />}
+                  {deleting ? "Deleting..." : "Delete Project"}
                 </Button>
               )}
             </div>

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getUserTeamMembership } from '@/lib/team-queries';
+import { ACTIVITY_WITH_RELATIONS } from '@/lib/activity-queries';
 
 export async function GET(
   req: NextRequest,
@@ -12,30 +14,11 @@ export async function GET(
     // Check authentication and get user
     const user = await getAuthenticatedUser(req);
 
-    // Find the team by slug
-    const team = await prisma.team.findFirst({
-      where: {
-        slug: teamSlug,
-        isArchived: false,
-      },
-      select: { id: true },
-    });
-
-    if (!team) {
-      return NextResponse.json({ error: "Team not found" }, { status: 404 });
-    }
-
     // Check if user has access to this team
-    const membership = await prisma.teamMember.findFirst({
-      where: {
-        userId: user.id,
-        teamId: team.id,
-        status: 'ACTIVE',
-      },
-    });
+    const userMembership = await getUserTeamMembership(user.id, teamSlug);
 
-    if (!membership) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    if (!userMembership) {
+      return NextResponse.json({ error: "Team not found or access denied" }, { status: 404 });
     }
 
     // Get all activities for this team (both project-level and team-level)
@@ -44,27 +27,17 @@ export async function GET(
         OR: [
           {
             project: {
-              teamId: team.id,
+              teamId: userMembership.team.id,
               isArchived: false,
             }
           },
           {
-            teamId: team.id
+            teamId: userMembership.team.id
           }
         ]
       },
       orderBy: { createdAt: "desc" },
-      include: {
-        user: {
-          select: { id: true, name: true, image: true },
-        },
-        project: {
-          select: { id: true, name: true, slug: true },
-        },
-        team: {
-          select: { id: true, name: true, slug: true },
-        },
-      },
+      include: ACTIVITY_WITH_RELATIONS,
       take: 100, // Show more activities for team view
     });
 

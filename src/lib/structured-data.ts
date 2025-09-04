@@ -38,8 +38,6 @@ export function generateOrganizationStructuredData(): OrganizationStructuredData
     name: "Context Board",
     description: "Your personal context management dashboard for organizing projects, teams, and tasks in one collaborative workspace.",
     url: process.env.NEXTAUTH_URL || "http://localhost:3000",
-    // Add logo when available
-    // logo: `${process.env.NEXTAUTH_URL}/logo.png`,
   };
 }
 

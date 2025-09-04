@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthenticatedUser } from '@/lib/auth-utils';
+import { 
+  getUserTeamMembership,
+  getTeamMembersWithPagination 
+} from '@/lib/team-queries';
 
 export async function GET(
   request: NextRequest,
@@ -10,39 +14,18 @@ export async function GET(
     const user = await getAuthenticatedUser(request);
 
     const resolvedParams = await params;
-    const team = await prisma.team.findUnique({
-      where: { slug: resolvedParams.teamSlug },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-              },
-            },
-          },
-          where: { status: 'ACTIVE' },
-        },
-      },
-    });
-
-    if (!team) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
-    }
-
-    // Check if user is a member of this team
-    const userMembership = team.members.find(
-      (member) => member.user.id === user.id
-    );
+    
+    // Check if user has access to this team
+    const userMembership = await getUserTeamMembership(user.id, resolvedParams.teamSlug);
 
     if (!userMembership) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return NextResponse.json({ error: 'Team not found or access denied' }, { status: 404 });
     }
 
-    return NextResponse.json(team.members);
+    // Get team members
+    const teamMembers = await getTeamMembersWithPagination(userMembership.team.id);
+
+    return NextResponse.json(teamMembers);
   } catch (error) {
     if (error instanceof Error && error.message === 'No authenticated user found') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -67,24 +50,11 @@ export async function POST(
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    const team = await prisma.team.findUnique({
-      where: { slug: resolvedParams.teamSlug },
-      include: {
-        members: {
-          where: { 
-            userId: requestingUser.id,
-            role: { in: ['OWNER'] }
-          },
-        },
-      },
-    });
+    // Check if requesting user is an owner of the team
+    const userMembership = await getUserTeamMembership(requestingUser.id, resolvedParams.teamSlug);
 
-    if (!team) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
-    }
-
-    if (team.members.length === 0) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    if (!userMembership || userMembership.role !== 'OWNER') {
+      return NextResponse.json({ error: 'Team not found or access denied' }, { status: 404 });
     }
 
     // Find or create the user
@@ -102,7 +72,7 @@ export async function POST(
       where: {
         userId_teamId: {
           userId: user.id,
-          teamId: team.id,
+          teamId: userMembership.team.id,
         },
       },
     });
@@ -114,7 +84,7 @@ export async function POST(
     const newMember = await prisma.teamMember.create({
       data: {
         userId: user.id,
-        teamId: team.id,
+        teamId: userMembership.team.id,
         role: role,
         status: 'INVITED', // Create as invitation, not direct membership
         addedById: requestingUser.id,

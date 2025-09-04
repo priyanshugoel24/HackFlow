@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { generateSlug, generateUniqueSlug } from "@/lib/slugUtil";
 import { logActivity } from "@/lib/logActivity";
 import { getAblyServer } from "@/lib/ably";
-import { TeamMember } from "@prisma/client";
+import { isActiveTeamMember } from "@/lib/db-queries";
 
 // CREATE new project
 export async function POST(req: NextRequest) {
@@ -19,19 +19,11 @@ export async function POST(req: NextRequest) {
 
     // If teamId is provided, verify user has permission to create projects in this team
     if (teamId) {
-      const teamMembership: TeamMember | null = await prisma.teamMember.findUnique({
-        where: {
-          userId_teamId: {
-            userId: user.id,
-            teamId: teamId,
-          },
-        },
-      });
+      const hasAccess = await isActiveTeamMember(user.id, teamId);
 
-      if (!teamMembership || teamMembership.status !== 'ACTIVE') {
+      if (!hasAccess) {
         return NextResponse.json({ error: "Access denied to this team" }, { status: 403 });
       }
-
     }
 
     // Generate a unique slug for the project

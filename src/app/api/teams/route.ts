@@ -2,44 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateSlug, generateUniqueSlug } from '@/lib/slugUtil';
 import { getAuthenticatedUser } from '@/lib/auth-utils';
+import { getUserTeamsWithRoles, isTeamSlugAvailable } from '@/lib/db-queries';
 
 export async function GET(req: NextRequest) {
   try {
     // Get authenticated user (will handle upsert automatically)
     const authenticatedUser = await getAuthenticatedUser(req);
 
-    // Get user with team memberships
-    const user = await prisma.user.findUnique({
-      where: { id: authenticatedUser.id },
-      include: {
-        teamMemberships: {
-          include: {
-            team: {
-              include: {
-                _count: {
-                  select: {
-                    members: true,
-                    projects: true,
-                  },
-                },
-              },
-            },
-          },
-          where: { status: 'ACTIVE' },
-        },
-      },
-    });
+    // Get user teams with roles using utility
+    const teamsWithRoles = await getUserTeamsWithRoles(authenticatedUser.id);
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // If user has no team memberships, return empty array
-    const teams = user.teamMemberships?.map((membership) => ({
+    // Transform to match the expected format
+    const teams = teamsWithRoles.map((membership) => ({
       ...membership.team,
       role: membership.role,
       joinedAt: membership.joinedAt,
-    })) || [];
+    }));
 
     return NextResponse.json(teams);
   } catch (error) {
@@ -71,11 +49,9 @@ export async function POST(request: NextRequest) {
     const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
 
     // Check if slug is already taken (additional safety check)
-    const existingTeam = await prisma.team.findUnique({
-      where: { slug: uniqueSlug },
-    });
+    const slugAvailable = await isTeamSlugAvailable(uniqueSlug);
 
-    if (existingTeam) {
+    if (!slugAvailable) {
       return NextResponse.json({ error: 'Unable to generate unique team slug. Please try again.' }, { status: 409 });
     }
 

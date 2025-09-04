@@ -3,6 +3,7 @@ import { logActivity } from "@/lib/logActivity";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { NextRequest, NextResponse } from "next/server";
 import { getAblyServer } from "@/lib/ably";
+import { findUserAccessibleCard } from '@/lib/card-queries';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,36 +20,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const limit = parseInt(searchParams.get("limit") || "10");
     const cursor = searchParams.get("cursor");
 
-    // Ensure the context card exists and user has access to the project
-    const card = await prisma.contextCard.findUnique({
-      where: { id: cardId },
-      include: {
-        project: {
-          include: {
-            team: {
-              include: {
-                members: {
-                  where: {
-                    userId: user.id,
-                    status: "ACTIVE"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-    });
+    // Ensure the context card exists and user has access to it
+    const card = await findUserAccessibleCard(cardId, user.id);
 
     if (!card) {
-      return NextResponse.json({ error: "Context card not found" }, { status: 404 });
-    }
-
-    // Check if user has access to the project (either as creator or team member)
-    const hasAccess = card.project.createdById === user.id || (card.project.team?.members.length || 0) > 0;
-    
-    if (!hasAccess) {
-      return NextResponse.json({ error: "Access denied. You must be a member of this project's team to view comments." }, { status: 403 });
+      return NextResponse.json({ error: "Context card not found or access denied" }, { status: 404 });
     }
 
     // Fetch comments with author info, paginated
@@ -92,39 +68,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { content } = await req.json();
 
     if (!cardId || typeof cardId !== "string" || !content?.trim()) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
+      return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    }
 
-    // Ensure card exists and user has access to the project
-    const card = await prisma.contextCard.findUnique({
-      where: { id: cardId },
+    // Ensure card exists and user has access to it
+    const card = await findUserAccessibleCard(cardId, user.id, {
       include: {
         project: {
-          include: {
-            team: {
-              include: {
-                members: {
-                  where: {
-                    userId: user.id,
-                    status: "ACTIVE"
-                  }
-                }
-              }
-            }
-          }
-        }
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
       },
     });
 
     if (!card) {
-      return NextResponse.json({ error: "Context card not found" }, { status: 404 });
-    }
-
-    // Check if user has access to the project (either as creator or team member)
-    const hasAccess = card.project.createdById === user.id || (card.project.team?.members.length || 0) > 0;
-    
-    if (!hasAccess) {
-      return NextResponse.json({ error: "Access denied. You must be a member of this project's team to comment." }, { status: 403 });
+      return NextResponse.json({ error: "Context card not found or access denied" }, { status: 404 });
     }
 
     // Create comment
@@ -151,7 +112,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       description: `Added a comment to card`,
       metadata: { cardId, commentId: newComment.id },
       userId: user.id,
-      projectId: card.project.id, // Use the project ID from the card we already fetched
+      projectId: card.project.id,
     });
 
     const ably = getAblyServer();

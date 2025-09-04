@@ -11,6 +11,10 @@ import {
   sanitizeHtml,
   createRateLimiter,
 } from "@/lib/security";
+import { 
+  findCardWithModifyAccess
+} from '@/lib/card-queries';
+import { findUserAccessibleProject } from '@/lib/project-queries';
 
 // Rate limiter: 60 requests per minute per user for updates (increased from 30)
 const rateLimiter = createRateLimiter(60 * 1000, 60);
@@ -85,9 +89,8 @@ export async function PATCH(
     }
 
     try {
-      // First check if the card exists and user has access to the project
-      const existing = await prisma.contextCard.findFirst({
-        where: { id },
+      // First check if the card exists and user has access to modify it
+      const existing = await findCardWithModifyAccess(id, user.id, {
         include: {
           assignedTo: {
             select: {
@@ -115,23 +118,8 @@ export async function PATCH(
       });
 
       if (!existing) {
-        console.log("❌ Card not found. ID:", id);
-        return NextResponse.json({ error: "Card not found" }, { status: 404 });
-      }
-
-      // Check if user has access to the project (creator or team member)
-      const isProjectCreator = existing.project.createdById === user.id;
-      const isTeamMember = (existing.project.team?.members?.length || 0) > 0;
-      const hasProjectAccess = isProjectCreator || isTeamMember;
-
-      if (!hasProjectAccess) {
-        return NextResponse.json(
-          {
-            error:
-              "Access denied. You must be a member of this project's team.",
-          },
-          { status: 403 }
-        );
+        console.log("❌ Card not found or access denied. ID:", id);
+        return NextResponse.json({ error: "Card not found or access denied" }, { status: 404 });
       }
 
       // Determine if this is a content/structure edit vs a status/meta update
@@ -171,25 +159,7 @@ export async function PATCH(
 
       // If projectId is being changed, verify new project exists and user has access
       if (projectId !== undefined && projectId !== existing.projectId) {
-        const project = await prisma.project.findFirst({
-          where: {
-            id: projectId,
-            OR: [
-              { createdById: user.id },
-              {
-                team: {
-                  members: {
-                    some: {
-                      userId: user.id,
-                      status: "ACTIVE",
-                    },
-                  },
-                },
-              },
-            ],
-            isArchived: false,
-          },
-        });
+        const project = await findUserAccessibleProject(projectId, user.id);
 
         if (!project) {
           return NextResponse.json(

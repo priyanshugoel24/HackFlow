@@ -2,25 +2,16 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { getAuthenticatedUserFromAction } from '@/lib/auth-utils';
+import { getUserTeamMembership, findProjectWithOwnerAccess } from '@/lib/db-queries';
 
 export async function updateTeamHackathonSettings(teamSlug: string, hackathonModeEnabled: boolean, hackathonDeadline?: string) {
   try {
     const user = await getAuthenticatedUserFromAction();
 
     // Check if user is an owner or admin of the team
-    const teamMember = await prisma.teamMember.findFirst({
-      where: {
-        team: { slug: teamSlug },
-        userId: user.id,
-        status: 'ACTIVE',
-        role: { in: ['OWNER'] },
-      },
-      include: {
-        team: true,
-      },
-    });
+    const teamMember = await getUserTeamMembership(user.id, teamSlug);
 
-    if (!teamMember) {
+    if (!teamMember || teamMember.role !== 'OWNER') {
       throw new Error('Access denied');
     }
 
@@ -48,24 +39,7 @@ export async function archiveProject(projectId: string, isArchived: boolean) {
     const user = await getAuthenticatedUserFromAction();
 
     // Check if the user has permission to archive this project
-    const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        OR: [
-          { createdById: user.id },
-          {
-            team: {
-              members: {
-                some: {
-                  userId: user.id,
-                  role: { in: ["OWNER"] },
-                  status: "ACTIVE"
-                }
-              }
-            }
-          }
-        ]
-      },
+    const project = await findProjectWithOwnerAccess(projectId, user.id, {
       include: {
         team: {
           select: {
@@ -88,7 +62,7 @@ export async function archiveProject(projectId: string, isArchived: boolean) {
     });
 
     // Revalidate relevant paths
-    if (project.team) {
+    if (project?.team) {
       revalidatePath(`/team/${project.team.slug}`);
       revalidatePath(`/team/${project.team.slug}/project/${project.slug}`);
     }

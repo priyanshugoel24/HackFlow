@@ -4,16 +4,18 @@ import type { TaskStatus, Prisma } from "@prisma/client";
 import { logActivity } from "@/lib/logActivity";
 import { getAblyServer } from "@/lib/ably";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
-import { 
-  contextCardSchema, 
-  validateInput, 
-  sanitizeText, 
-  sanitizeHtml, 
+import {
+  contextCardSchema,
+  validateInput,
+  sanitizeText,
+  sanitizeHtml,
   createRateLimiter,
-  validateFileUpload 
+  validateFileUpload
 } from "@/lib/security";
-
-// Rate limiter: 60 requests per minute per user (increased from 20)
+import { 
+  createUserCardAccessWhere
+} from '@/lib/card-queries';
+import { findUserAccessibleProject } from '@/lib/project-queries';// Rate limiter: 60 requests per minute per user (increased from 20)
 const rateLimiter = createRateLimiter(60 * 1000, 60);
 
 // GET all context cards for logged-in user
@@ -113,31 +115,9 @@ export async function GET(req: NextRequest) {
       }
     } else if (projectId) {
       // Filter by specific project - check if user has access to this project
-      const isCUID = /^c[a-z0-9]{24}$/i.test(projectId);
+      console.log(`🔍 Checking access for project: ${projectId}, user: ${user.id}`);
       
-      console.log(`🔍 Checking access for project: ${projectId} (isCUID: ${isCUID}), user: ${user.id}`);
-      
-      const accessibleProject = await prisma.project.findFirst({
-        where: {
-          ...(isCUID ? { id: projectId } : { slug: projectId }),
-          OR: [
-            { createdById: user.id },
-            // Team-based access: if user is an active team member and project belongs to that team
-            {
-              team: {
-                members: {
-                  some: {
-                    userId: user.id,
-                    status: "ACTIVE"
-                  }
-                }
-              }
-            }
-          ],
-          isArchived: false,
-        },
-        select: { id: true, name: true, slug: true }
-      });
+      const accessibleProject = await findUserAccessibleProject(projectId, user.id);
 
       if (accessibleProject) {
         console.log(`✅ User has access to project: ${accessibleProject.name} (${accessibleProject.id})`);
@@ -151,26 +131,8 @@ export async function GET(req: NextRequest) {
         where = { ...where, id: 'non-existent-id' };
       }
     } else {
-      // Default: show all cards from projects where user is a member or creator through teams
-      where = {
-        ...where,
-        project: {
-          OR: [
-            { createdById: user.id },
-            // Team-based access: if user is an active team member and project belongs to that team
-            {
-              team: {
-                members: {
-                  some: {
-                    userId: user.id,
-                    status: "ACTIVE"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      };
+      // Default: show all cards from projects where user is a member or creator
+      where = createUserCardAccessWhere(user.id);
     }
 
     if (status) {
@@ -270,30 +232,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Check if the identifier is a CUID (database ID) or a slug
-    // CUID format: starts with 'c' followed by 24 alphanumeric characters
-    const isCUID = /^c[a-z0-9]{24}$/i.test(projectIdentifier);
-
     // Verify project access - ALL TEAM MEMBERS should be able to create cards
-    const project = await prisma.project.findFirst({
-      where: {
-        ...(isCUID ? { id: projectIdentifier } : { slug: projectIdentifier }),
-        OR: [
-          { createdById: user.id },
-          // Team-based access: if user is an active team member and project belongs to that team
-          {
-            team: {
-              members: {
-                some: {
-                  userId: user.id,
-                  status: "ACTIVE"
-                }
-              }
-            }
-          }
-        ],
-        isArchived: false,
-      },
+    const project = await findUserAccessibleProject(projectIdentifier, user.id, {
       include: {
         team: {
           include: {
@@ -312,7 +252,7 @@ export async function POST(req: NextRequest) {
 
     if (!project) {
       console.error(`❌ Project not found or access denied`);
-      console.error(`   - Project identifier: ${projectIdentifier} (isCUID: ${isCUID})`);
+      console.error(`   - Project identifier: ${projectIdentifier}`);
       console.error(`   - User ID: ${user.id}`);
       console.error(`   - User email: ${user.email}`);
       

@@ -4,37 +4,14 @@ import { revalidatePath } from 'next/cache';
 import { logActivity } from '@/lib/logActivity';
 import { TaskStatus } from '@/interfaces/TaskStatus';
 import { getAuthenticatedUserFromAction } from '@/lib/auth-utils';
+import { findCardWithModifyAccess } from '@/lib/db-queries';
 
 export async function archiveContextCard(cardId: string, isArchived: boolean) {
   try {
     const user = await getAuthenticatedUserFromAction();
 
     // Check if user has access to this card
-    const card = await prisma.contextCard.findFirst({
-      where: {
-        id: cardId,
-        OR: [
-          { userId: user.id },
-          { assignedToId: user.id },
-          {
-            project: {
-              OR: [
-                { createdById: user.id },
-                {
-                  team: {
-                    members: {
-                      some: {
-                        userId: user.id,
-                        status: "ACTIVE"
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        ]
-      },
+    const card = await findCardWithModifyAccess(cardId, user.id, {
       include: {
         project: {
           include: {
@@ -62,16 +39,27 @@ export async function archiveContextCard(cardId: string, isArchived: boolean) {
 
     // Log the activity
     await logActivity({
-      type: isArchived ? "CARD_ARCHIVED" : "CARD_UNARCHIVED",
+      type: "CARD_ARCHIVED",
       description: `${isArchived ? 'Archived' : 'Unarchived'} card "${card.title}"`,
-      metadata: { cardId: card.id },
+      metadata: { cardId: card.id, isArchived },
       userId: user.id,
       projectId: card.projectId,
     });
 
-    // Revalidate relevant paths
-    if (card.project.team) {
-      revalidatePath(`/team/${card.project.team.slug}/project/${card.project.slug}`);
+    // Revalidate relevant paths - we'll fetch project separately for now
+    const project = await prisma.project.findUnique({
+      where: { id: card.projectId },
+      include: {
+        team: {
+          select: {
+            slug: true
+          }
+        }
+      }
+    });
+
+    if (project?.team) {
+      revalidatePath(`/team/${project.team.slug}/project/${project.slug}`);
     }
 
     return { success: true, card: updatedCard };
@@ -86,31 +74,7 @@ export async function updateContextCardStatus(cardId: string, status: TaskStatus
     const user = await getAuthenticatedUserFromAction();
 
     // Check if user has access to this card
-    const card = await prisma.contextCard.findFirst({
-      where: {
-        id: cardId,
-        OR: [
-          { userId: user.id },
-          { assignedToId: user.id },
-          {
-            project: {
-              OR: [
-                { createdById: user.id },
-                {
-                  team: {
-                    members: {
-                      some: {
-                        userId: user.id,
-                        status: "ACTIVE"
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        ]
-      },
+    const card = await findCardWithModifyAccess(cardId, user.id, {
       include: {
         project: {
           include: {
@@ -145,9 +109,20 @@ export async function updateContextCardStatus(cardId: string, status: TaskStatus
       projectId: card.projectId,
     });
 
-    // Revalidate relevant paths
-    if (card.project.team) {
-      revalidatePath(`/team/${card.project.team.slug}/project/${card.project.slug}`);
+    // Revalidate relevant paths - we'll fetch project separately for now
+    const project = await prisma.project.findUnique({
+      where: { id: card.projectId },
+      include: {
+        team: {
+          select: {
+            slug: true
+          }
+        }
+      }
+    });
+
+    if (project?.team) {
+      revalidatePath(`/team/${project.team.slug}/project/${project.slug}`);
     }
 
     return { success: true, card: updatedCard };

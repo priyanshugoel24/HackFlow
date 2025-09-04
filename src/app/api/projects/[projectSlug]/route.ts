@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { getAblyServer } from "@/lib/ably";
+import { findProjectWithOwnerAccess, PROJECT_WITH_RELATIONS } from "@/lib/db-queries";
 
 // PATCH: Update a project
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ projectSlug: string }> }) {
@@ -11,15 +12,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pr
     const { projectSlug } = await params;
     const { name, link, description, tags, isArchived } = await req.json();
 
-    // Check if the projectSlug is a CUID (database ID) or a slug
-    const isCUID = /^c[a-z0-9]{24}$/i.test(projectSlug);
-    
-    // Ensure the user is the creator of the project (only creators can delete projects)
-    const project = await prisma.project.findFirst({
-      where: {
-        ...(isCUID ? { id: projectSlug } : { slug: projectSlug }),
-        createdById: user.id // Only creator can delete
-      }
+    // Ensure the user is the creator of the project (only creators can edit projects)
+    const project = await findProjectWithOwnerAccess(projectSlug, user.id, {
+      include: PROJECT_WITH_RELATIONS
     });
 
     if (!project) {
@@ -37,24 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pr
         ...(isArchived !== undefined && { isArchived }),
         lastActivityAt: new Date(),
       },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-        team: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            description: true,
-          },
-        },
-      },
+      include: PROJECT_WITH_RELATIONS,
     });
 
     // Publish real-time update to Ably
@@ -101,16 +79,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ p
     
     const { projectSlug } = await params;
 
-    // Check if the projectSlug is a CUID (database ID) or a slug
-    const isCUID = /^c[a-z0-9]{24}$/i.test(projectSlug);
-    
     // First check if the project exists and user is the creator (only creators can delete)
-    const existingProject = await prisma.project.findFirst({
-      where: {
-        ...(isCUID ? { id: projectSlug } : { slug: projectSlug }),
-        createdById: user.id,
-      },
-    });
+    const existingProject = await findProjectWithOwnerAccess(projectSlug, user.id);
 
     if (!existingProject) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
@@ -120,6 +90,33 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ p
     await prisma.project.delete({
       where: { id: existingProject.id }, // Always use the actual ID for deletes
     });
+
+    // Notify other users via real-time channels
+    try {
+      const ably = getAblyServer();
+      
+      // Notify project channel about deletion
+      await ably.channels.get(`project:${existingProject.id}`).publish("project:deleted", {
+        projectId: existingProject.id,
+        projectSlug: existingProject.slug,
+        deletedBy: user.id,
+        deletedAt: new Date().toISOString()
+      });
+
+      // Notify team channel about project deletion
+      if (existingProject.teamId) {
+        await ably.channels.get(`team:${existingProject.teamId}`).publish("project:deleted", {
+          projectId: existingProject.id,
+          projectSlug: existingProject.slug,
+          teamId: existingProject.teamId,
+          deletedBy: user.id,
+          deletedAt: new Date().toISOString()
+        });
+      }
+    } catch (ablyError) {
+      console.error("Error publishing delete event:", ablyError);
+      // Don't fail the deletion if Ably fails
+    }
 
     return NextResponse.json({ 
       success: true, 
