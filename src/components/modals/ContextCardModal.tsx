@@ -9,14 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  FileText,
-  Lightbulb,
-  CheckCircle,
   Eye,
   EyeOff,
   Paperclip,
   Trash2,
   Archive,
+  CheckCircle,
 } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { motion } from "framer-motion";
@@ -35,6 +33,10 @@ import { GitHubCardAutoFill } from "../GithubCardAutofill";
 import axios from "axios";
 import { ErrorBoundary } from "@/components";
 import { ComponentLoadingSpinner } from "../LoadingSpinner";
+import { CARD_TYPES, VISIBILITY_OPTIONS, STATUS_OPTIONS } from "@/config/contextCard";
+import { getTypeIcon, getUserAvatarFallback } from "@/utils/contextCard";
+import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { uploadFileToSupabase, TeamMember } from "@/services/contextCardService";
 
 // Lazy load heavy components
 const CommentThread = dynamic(() => import('../CommentThread'), {
@@ -74,15 +76,16 @@ const ContextCardModal = memo(function ContextCardModal({
   const [existingAttachments, setExistingAttachments] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<"ACTIVE" | "CLOSED">("ACTIVE");
-  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
-  const [filteredMembers, setFilteredMembers] = useState<
-    Array<{ userId: string; name?: string; email?: string; image?: string }>
-  >([]);
-  const [teamMembers, setTeamMembers] = useState<
-    Array<{ userId: string; name?: string; email?: string; image?: string }>
-  >([]);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summaryText, setSummaryText] = useState(existingCard?.summary || "");
+
+  // Use custom hooks
+  const {
+    filteredMembers,
+    showMemberDropdown,
+    setShowMemberDropdown,
+    handleAssignmentSearch,
+  } = useTeamMembers(projectSlug, open);
 
   // Track original values to detect changes
   const [originalValues, setOriginalValues] = useState<{
@@ -225,52 +228,8 @@ const ContextCardModal = memo(function ContextCardModal({
     }
   }, [existingCard, open]);
 
-  // Fetch team members for assignment
-  useEffect(() => {
-    const fetchTeamMembers = async () => {
-      if (!projectSlug || !open) return;
-
-      try {
-        const response = await axios.get(`/api/projects/${projectSlug}/team-members`);
-        const members = response.data.map((member: {
-          user: {
-            id: string;
-            name?: string;
-            email?: string;
-            image?: string;
-          };
-        }) => ({
-          userId: member.user.id,
-          name: member.user.name,
-          email: member.user.email,
-          image: member.user.image,
-        }));
-        setTeamMembers(members);
-        setFilteredMembers(members);
-      } catch (error) {
-        console.error('Failed to fetch team members:', error);
-      }
-    };
-
-    fetchTeamMembers();
-  }, [projectSlug, open]);
-
-  // Handle assignment search
-  const handleAssignmentSearch = useCallback((query: string) => {
-    if (!query.trim()) {
-      setFilteredMembers(teamMembers);
-      return;
-    }
-
-    const filtered = teamMembers.filter(member =>
-      member.name?.toLowerCase().includes(query.toLowerCase()) ||
-      member.email?.toLowerCase().includes(query.toLowerCase())
-    );
-    setFilteredMembers(filtered);
-  }, [teamMembers]);
-
   // Handle assignment selection
-  const handleAssignmentSelect = useCallback((member: typeof teamMembers[0]) => {
+  const handleAssignmentSelect = useCallback((member: TeamMember) => {
     setAssignedTo({
       id: member.userId,
       name: member.name || null,
@@ -278,7 +237,7 @@ const ContextCardModal = memo(function ContextCardModal({
       image: member.image || null,
     });
     setShowMemberDropdown(false);
-  }, []);
+  }, [setShowMemberDropdown]);
 
   // Handle assignment removal
   const handleAssignmentRemove = useCallback(() => {
@@ -294,35 +253,6 @@ const ContextCardModal = memo(function ContextCardModal({
   const isFormValid = useCallback(() => {
     return computedValues.isValid;
   }, [computedValues.isValid]);
-
-  // Upload file via API route to avoid exposing service key and for SSR security
-  const uploadFileToSupabase = async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const res = await axios.post("/api/upload", formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      return res.data;
-    } catch (error: unknown) {
-      console.error("Upload API error:", error);
-      const errorMessage = error instanceof Error && 'response' in error && 
-        typeof error.response === 'object' && error.response !== null &&
-        'data' in error.response && typeof error.response.data === 'object' &&
-        error.response.data !== null && 'error' in error.response.data
-        ? String(error.response.data.error)
-        : "Unknown error";
-      toast.error(`Upload failed: ${errorMessage}`, {
-        description: `Failed to upload ${file.name}`,
-        duration: 4000,
-        position: "top-right",
-      });
-      return null;
-    }
-  };
 
   const handleSummarize = useCallback(async () => {
     if (!existingCard?.id) return;
@@ -539,18 +469,6 @@ const ContextCardModal = memo(function ContextCardModal({
     }
   }, [title, content, type, visibility, status, why, issues, assignedTo, attachments, existingAttachments, projectSlug, existingCard, originalValues, onSuccess, hasChanges, setOpen]);
 
-  const getTypeIcon = useCallback((cardType: string) => {
-    switch (cardType) {
-      case "INSIGHT":
-        return <Lightbulb className="h-4 w-4" />;
-      case "DECISION":
-        return <CheckCircle className="h-4 w-4" />;
-      case "TASK":
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
-  }, []);
-
   const removeExistingAttachment = useCallback((url: string) => {
     setExistingAttachments(existingAttachments.filter((att) => att !== url));
   }, [existingAttachments]);
@@ -719,7 +637,7 @@ const ContextCardModal = memo(function ContextCardModal({
                 Type
               </label>
               <div className="flex gap-2 flex-wrap">
-                {["TASK", "INSIGHT", "DECISION"].map((cardType) => (
+                {CARD_TYPES.map((cardType) => (
                   <Badge
                     key={cardType}
                     onClick={() =>
@@ -742,7 +660,7 @@ const ContextCardModal = memo(function ContextCardModal({
                 Visibility
               </label>
               <div className="flex gap-2 flex-wrap">
-                {["PRIVATE", "PUBLIC"].map((vis) => (
+                {VISIBILITY_OPTIONS.map((vis) => (
                   <Badge
                     key={vis}
                     onClick={() => setVisibility(vis as "PRIVATE" | "PUBLIC")}
@@ -772,7 +690,7 @@ const ContextCardModal = memo(function ContextCardModal({
                 Task Status
               </label>
               <div className="flex gap-2">
-                {["ACTIVE", "CLOSED"].map((statusOption) => (
+                {STATUS_OPTIONS.map((statusOption) => (
                   <Badge
                     key={statusOption}
                     onClick={() =>
@@ -850,7 +768,7 @@ const ContextCardModal = memo(function ContextCardModal({
                       />
                     ) : (
                       <div className="w-6 h-6 rounded-full bg-gray-400 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-white">
-                        {(assignedTo.name || assignedTo.email || 'U').charAt(0).toUpperCase()}
+                        {getUserAvatarFallback(assignedTo.name, assignedTo.email)}
                       </div>
                     )}
                     <span className="text-sm text-gray-800 dark:text-gray-200">
@@ -903,7 +821,7 @@ const ContextCardModal = memo(function ContextCardModal({
                             />
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-gray-400 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-white">
-                              {(member.name || member.email || 'U').charAt(0).toUpperCase()}
+                              {getUserAvatarFallback(member.name, member.email)}
                             </div>
                           )}
                           <span className="text-sm">
