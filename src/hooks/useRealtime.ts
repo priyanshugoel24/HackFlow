@@ -20,7 +20,7 @@ export function useRealtime(channelName: string, eventName: string, callback: (m
     return () => {
       channel.unsubscribe(eventName, callback);
       
-      // Optionally detach the channel if needed
+      // detach the channel
       const cleanupChannel = async () => {
         try {
           if (channel.state === 'attached') {

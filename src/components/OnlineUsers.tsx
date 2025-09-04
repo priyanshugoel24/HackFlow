@@ -16,7 +16,7 @@ const OnlineUsers = memo(function OnlineUsers() {
     setIsClient(true);
   }, []);
   
-  // Initialize Ably presence. This hook now only manages the connection.
+  // Initialize Ably presence. 
   useAblyPresence();
 
   // Memoize status color function

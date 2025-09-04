@@ -32,13 +32,13 @@ export function useAblyPresence() {
         id: presenceEmail,
         name: data?.name || presenceEmail.split('@')[0] || 'User',
         image: data?.image,
-        status: (data?.status as UserStatus) || 'Available',
+        status: (data?.status as UserStatus) || 'Unavailable',
         lastSeen: data?.lastSeen || new Date().toISOString(),
       };
     });
   }, []);
 
-  const updatePresenceMembers = useCallback(async () => {
+  const updatePresenceMembers = useCallback(async () => { 
     if (!presenceRef.current) return;
     try {
       const members = await presenceRef.current.get();

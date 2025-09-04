@@ -57,12 +57,6 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
   // Hackathon state
   const [hackathonDeadline, setHackathonDeadline] = useState('');
 
-  useEffect(() => {
-    if (team?.projects) {
-      fetchProjectStats();
-    }
-  }, [team]);
-
   // Prefetch important project and team routes when team loads
   useEffect(() => {
     if (team && teamSlug) {
@@ -99,12 +93,6 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchProjectStats = async () => {
-    // Stats are now calculated server-side in the team API
-    // No need for separate client-side calculation
-    return;
   };
 
   const handleProjectClick = (project: TeamPageProject) => {

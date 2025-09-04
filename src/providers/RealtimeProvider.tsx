@@ -66,10 +66,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export const useRealtime = () => {
+export const useRealtimeConnection = () => {
   const context = useContext(RealtimeContext);
   if (context === undefined) {
-    throw new Error('useRealtime must be used within a RealtimeProvider');
+    throw new Error('useRealtimeConnection must be used within a RealtimeProvider');
   }
   return context;
 };

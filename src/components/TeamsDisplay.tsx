@@ -16,6 +16,7 @@ export default function TeamsDisplay({ initialTeams }: TeamsDisplayProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Only fetch teams when explicitly needed (e.g., after creating/joining a team)
   const fetchTeams = async () => {
     try {
       setLoading(true);

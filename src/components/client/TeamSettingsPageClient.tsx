@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Settings, Users, Plus, Mail, Crown, Shield, User, Trash2 } from 'lucide-react';
+import { Settings, Users, Plus, Crown, Shield, User, Trash2 } from 'lucide-react';
+import { InviteMemberModal } from '@/components/modals';
 import { toast } from 'sonner';
 import { TeamSettingsTeam } from '@/interfaces/TeamSettingsTeam';
 import { TeamSettingsPageClientProps } from '@/interfaces/TeamSettingsPageClientProps';
@@ -29,8 +29,6 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
   // Form states
   const [teamName, setTeamName] = useState(initialTeam.name);
   const [teamDescription, setTeamDescription] = useState(initialTeam.description || '');
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'MEMBER'>('MEMBER');
 
   const fetchTeam = async () => {
     try {
@@ -63,34 +61,6 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
       toast.error(errorMessage);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleInviteMember = async () => {
-    if (!inviteEmail.trim()) {
-      toast.error('Please enter an email address');
-      return;
-    }
-
-    try {
-      await axios.post(`/api/teams/${teamSlug}/members`, {
-        email: inviteEmail,
-        role: inviteRole,
-      });
-      toast.success('Member invited successfully');
-      setInviteEmail('');
-      setInviteRole('MEMBER');
-      setShowInviteModal(false);
-      fetchTeam(); // Refresh team data
-    } catch (error: unknown) {
-      console.error('Error inviting member:', error);
-      const errorMessage = error instanceof Error && 'response' in error && 
-        typeof error.response === 'object' && error.response !== null &&
-        'data' in error.response && typeof error.response.data === 'object' &&
-        error.response.data !== null && 'error' in error.response.data
-        ? String(error.response.data.error)
-        : 'Failed to invite member';
-      toast.error(errorMessage);
     }
   };
 
@@ -248,48 +218,10 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
                   <Users className="h-5 w-5" />
                   Team Members
                 </CardTitle>
-                <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-                  <DialogTrigger asChild>
-                    <Button size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Invite
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Invite Team Member</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="invite-email">Email Address</Label>
-                        <Input
-                          id="invite-email"
-                          type="email"
-                          value={inviteEmail}
-                          onChange={(e) => setInviteEmail(e.target.value)}
-                          placeholder="Enter email address"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="invite-role">Role</Label>
-                        <Select value={inviteRole} onValueChange={(value: 'MEMBER') => setInviteRole(value)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="MEMBER">Member</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <Button onClick={handleInviteMember} className="w-full">
-                        <Mail className="h-4 w-4 mr-2" />
-                        Send Invitation
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button size="sm" onClick={() => setShowInviteModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Invite
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -336,6 +268,14 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
             </CardContent>
           </Card>
         </div>
+
+        {/* Invite Member Modal */}
+        <InviteMemberModal
+          open={showInviteModal}
+          setOpen={setShowInviteModal}
+          teamSlug={teamSlug}
+          onSuccess={fetchTeam}
+        />
 
         {/* Danger Zone */}
         <Card className="mt-8 border-destructive/20">
