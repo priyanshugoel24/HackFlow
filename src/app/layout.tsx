@@ -8,7 +8,7 @@ import { Suspense } from "react";
 import { PageLoadingSpinner } from "@/components/LoadingSpinner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { PresenceErrorFallback } from "@/components/PresenceErrorFallback";
-import Providers from "@/components/Providers";
+import { Providers } from "@/components/providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
