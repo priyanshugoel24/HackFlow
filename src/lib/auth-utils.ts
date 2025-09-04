@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { headers } from 'next/headers';
+import { Session } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { UserInfo } from '@/interfaces/UserInfo';
 import { JWTToken } from '@/interfaces/JWTToken';
@@ -66,6 +67,37 @@ export async function getAuthenticatedUserFromAction(): Promise<UserInfo> {
       email,
       name: name || undefined,
       image: picture || undefined,
+    },
+  });
+
+  return {
+    id: user.id,
+    email: user.email!,
+    name: user.name,
+    image: user.image,
+  };
+}
+
+/**
+ * Gets user information from NextAuth session and ensures user exists in database
+ * This should be called in server components that have access to NextAuth session
+ */
+export async function getAuthenticatedUserFromSession(session: Session | null): Promise<UserInfo | null> {
+  if (!session?.user?.email) {
+    return null;
+  }
+
+  // Ensure user exists in database with latest info from auth provider
+  const user = await prisma.user.upsert({
+    where: { email: session.user.email },
+    update: {
+      name: session.user.name || undefined,
+      image: session.user.image || undefined,
+    },
+    create: {
+      email: session.user.email,
+      name: session.user.name || undefined,
+      image: session.user.image || undefined,
     },
   });
 

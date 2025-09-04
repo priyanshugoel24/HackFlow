@@ -6,8 +6,9 @@ import TeamPageClient from '@/components/TeamPageClient';
 import { TeamPageTeam } from '@/interfaces/TeamPageTeam';
 import { TeamPageProps } from '@/interfaces/TeamPageProps';
 import { Session } from 'next-auth';
-import { prisma } from '@/lib/prisma';
 import { Metadata } from 'next';
+import { getAuthenticatedUserFromSession } from '@/lib/auth-utils';
+import { prisma } from '@/lib/prisma';
 
 export async function generateMetadata({ params }: TeamPageProps): Promise<Metadata> {
   const { teamSlug } = await params;
@@ -80,23 +81,12 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
 async function fetchTeam(teamSlug: string): Promise<TeamPageTeam | null> {
   try {
     const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
+    
+    // Get authenticated user
+    const user = await getAuthenticatedUserFromSession(session);
+    if (!user) {
       return null;
     }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {
-        name: session.user.name,
-        image: session.user.image,
-      },
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-      },
-    });
 
     const team = await prisma.team.findUnique({
       where: { slug: teamSlug },

@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log the error to console (you can extend this to send to monitoring service)
+    // Log the error to console for debugging
     console.error('Application Error:', error);
   }, [error]);
 

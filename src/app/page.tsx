@@ -4,9 +4,10 @@ import LoginPage from '@/components/LoginPage';
 import TeamsDisplay from '@/components/TeamsDisplay';
 import { TeamWithRelations } from '@/interfaces/TeamWithRelations';
 import { Session } from 'next-auth';
-import { prisma } from '@/lib/prisma';
 import { Metadata } from 'next';
 import Navbar from '@/components/Navbar';
+import { getAuthenticatedUserFromSession } from '@/lib/auth-utils';
+import { fetchUserTeams } from '@/lib/teams-utils';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -41,68 +42,18 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-// Server-side data fetching using Prisma directly
+// Server-side data fetching using auth and teams utilities
 async function fetchTeams(session: Session): Promise<TeamWithRelations[]> {
   try {
-    if (!session?.user?.email) {
+    // Ensure user exists in database and get user info
+    const user = await getAuthenticatedUserFromSession(session);
+    
+    if (!user) {
       return [];
     }
 
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {
-        name: session.user.name,
-        image: session.user.image,
-      },
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-      },
-      include: {
-        teamMemberships: {
-          include: {
-            team: {
-              include: {
-                createdBy: true,
-                members: {
-                  include: {
-                    user: true,
-                  },
-                  where: { status: 'ACTIVE' },
-                },
-                projects: {
-                  include: {
-                    createdBy: true,
-                  },
-                  where: { isArchived: false },
-                },
-                _count: {
-                  select: {
-                    members: true,
-                    projects: true,
-                  },
-                },
-              },
-            },
-          },
-          where: { status: 'ACTIVE' },
-        },
-      },
-    });
-
-    // If user has no team memberships, return empty array
-    const teams = user.teamMemberships?.map((membership) => ({
-      ...membership.team,
-      role: membership.role,
-      joinedAt: membership.joinedAt,
-      members: membership.team.members.map(member => ({
-        ...member,
-        team: membership.team,
-      })),
-    })) as TeamWithRelations[] || [];
-
+    // Fetch teams for the authenticated user
+    const teams = await fetchUserTeams(user.id);
     return teams;
   } catch (error) {
     console.error('Error fetching teams:', error);
@@ -117,7 +68,7 @@ export default async function Home() {
     return <LoginPage />;
   }
 
-  // Fetch teams server-side using Prisma directly
+  // Fetch teams server-side using auth and teams utilities
   const teams = await fetchTeams(session);
 
   return (

@@ -43,6 +43,7 @@ import { TeamAnalyticsPageProps } from '@/interfaces/TeamAnalyticsPageProps';
 import { analyticsConfig } from '@/config/analytics';
 import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
+import { getAuthenticatedUserFromSession } from '@/lib/auth-utils';
 
 export async function generateMetadata({ params }: TeamAnalyticsPageProps): Promise<Metadata> {
   const { teamSlug } = await params;
@@ -115,23 +116,12 @@ export async function generateMetadata({ params }: TeamAnalyticsPageProps): Prom
 async function fetchTeamAnalytics(teamSlug: string): Promise<TeamAnalytics | null> {
   try {
     const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
+    
+    // Get authenticated user
+    const user = await getAuthenticatedUserFromSession(session);
+    if (!user) {
       return null;
     }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {
-        name: session.user.name,
-        image: session.user.image,
-      },
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-      },
-    });
 
     const team = await prisma.team.findUnique({
       where: { slug: teamSlug },

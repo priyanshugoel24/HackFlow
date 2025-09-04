@@ -21,6 +21,7 @@ import {
   Plus,
   Filter
 } from "lucide-react";
+import { ContextCardListProps } from '@/interfaces/ContextCardListProps';
 
 // Lazy load heavy modal components
 const ContextCardModal = dynamic(() => import('./ContextCardModal'), {
@@ -292,8 +293,6 @@ const VirtualizedContextCard = memo(function VirtualizedContextCard({
   );
 });
 
-import { ContextCardListProps } from '@/interfaces/ContextCardListProps';
-
 const ContextCardList = memo(function ContextCardList({ 
   projectSlug, 
   initialCards = [], 
@@ -338,8 +337,7 @@ const ContextCardList = memo(function ContextCardList({
   const formatDate = useCallback((dateString: string | Date) => {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
     
-    // Use a more stable date format to avoid hydration mismatches
-    // Only show the date part without time to avoid timezone issues
+    // format for showing dates
     const options: Intl.DateTimeFormatOptions = {
       month: 'short',
       day: 'numeric',

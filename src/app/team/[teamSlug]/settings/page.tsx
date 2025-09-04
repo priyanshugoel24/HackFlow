@@ -5,58 +5,23 @@ import Navbar from '@/components/Navbar';
 import TeamSettingsPageClient from '@/components/TeamSettingsPageClient';
 import { TeamSettingsTeam } from '@/interfaces/TeamSettingsTeam';
 import { TeamSettingsPageProps } from '@/interfaces/TeamSettingsPageProps';
-import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
+import { getAuthenticatedUserFromSession } from '@/lib/auth-utils';
+import { fetchTeamBySlug } from '@/lib/teams-utils';
 
-// Server-side data fetching
+// Server-side data fetching using auth and teams utilities
 async function fetchTeam(teamSlug: string): Promise<TeamSettingsTeam | null> {
   try {
     const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
+    
+    // Get authenticated user
+    const user = await getAuthenticatedUserFromSession(session);
+    if (!user) {
       return null;
     }
 
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {
-        name: session.user.name,
-        image: session.user.image,
-      },
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-      },
-    });
-
-    const team = await prisma.team.findUnique({
-      where: { slug: teamSlug },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-              },
-            },
-          },
-          where: { status: 'ACTIVE' },
-        },
-        _count: {
-          select: {
-            members: {
-              where: { status: 'ACTIVE' }
-            },
-            projects: true,
-          },
-        },
-      },
-    });
-
+    // Fetch team using utility
+    const team = await fetchTeamBySlug(teamSlug);
     if (!team) {
       return null;
     }

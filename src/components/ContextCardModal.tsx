@@ -42,7 +42,6 @@ const CommentThread = dynamic(() => import('./CommentThread'), {
   loading: () => <ComponentLoadingSpinner text="Loading comments..." />
 });
 
-// Lazy load RichTextEditor since it's a heavy component
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
   ssr: false,
   loading: () => (

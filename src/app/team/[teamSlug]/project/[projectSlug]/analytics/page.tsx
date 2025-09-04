@@ -35,28 +35,18 @@ import { Session } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { AnalyticsPageProps } from '@/interfaces/AnalyticsPageProps';
 import { analyticsConfig } from '@/config/analytics';
+import { getAuthenticatedUserFromSession } from '@/lib/auth-utils';
 
 // Server-side data fetching for project analytics
 async function fetchProjectAnalytics(teamSlug: string, projectSlug: string) {
   try {
     const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
+    
+    // Get authenticated user
+    const user = await getAuthenticatedUserFromSession(session);
+    if (!user) {
       return null;
     }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {
-        name: session.user.name,
-        image: session.user.image,
-      },
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-      },
-    });
 
     const project = await prisma.project.findUnique({
       where: { slug: projectSlug },

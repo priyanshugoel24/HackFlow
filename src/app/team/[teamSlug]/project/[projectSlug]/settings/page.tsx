@@ -6,28 +6,18 @@ import { prisma } from '@/lib/prisma';
 import { ProjectSettingsPageProps } from '@/interfaces/ProjectSettingsPageProps';
 import { Session } from 'next-auth';
 import { ProjectData } from '@/interfaces/ProjectData';
+import { getAuthenticatedUserFromSession } from '@/lib/auth-utils';
 
 // Server-side data fetching
 async function fetchProject(teamSlug: string, projectSlug: string): Promise<ProjectData | null> {
   try {
     const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
+    
+    // Get authenticated user
+    const user = await getAuthenticatedUserFromSession(session);
+    if (!user) {
       return null;
     }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {
-        name: session.user.name,
-        image: session.user.image,
-      },
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-      },
-    });
 
     // Get project data
     const project = await prisma.project.findUnique({

@@ -7,6 +7,7 @@ import { ContextCardWithRelations } from '@/interfaces/ContextCardWithRelations'
 import { HackathonUpdate } from '@/interfaces/HackathonUpdate';
 import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
+import { getAuthenticatedUserFromSession } from '@/lib/auth-utils';
 
 // Lazy load HackathonPageClient for better performance
 const HackathonPageClient = dynamic(() => import('@/components/HackathonPageClient'), {
@@ -26,23 +27,12 @@ import { HackathonPageProps } from '@/interfaces/HackathonPageProps';
 async function fetchTeamData(teamSlug: string): Promise<TeamHackathon | null> {
   try {
     const session = await getServerSession(authOptions) as Session | null;
-    if (!session?.user?.email) {
+    
+    // Get authenticated user
+    const user = await getAuthenticatedUserFromSession(session);
+    if (!user) {
       return null;
     }
-
-    // First, ensure the user exists in the database and get the actual user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {
-        name: session.user.name,
-        image: session.user.image,
-      },
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-      },
-    });
 
     const team = await prisma.team.findUnique({
       where: { slug: teamSlug },

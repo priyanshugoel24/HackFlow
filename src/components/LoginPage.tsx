@@ -1,5 +1,4 @@
 "use client";
-
 import { Suspense } from 'react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -106,7 +105,7 @@ export default function LoginPage() {
             </div>
           </div>
           
-          {/* Bottom - Login Form */}
+          {/* Login Form */}
           <div className="flex-1 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm min-h-[55vh]">
             <LoginForm />
           </div>

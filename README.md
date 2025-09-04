@@ -62,7 +62,7 @@ HackFlow is a powerful team-based productivity and collaboration platform design
 
 ## 🧱 Tech Stack
 
-- **Framework**: Next.js 14 with App Router and Server Components
+- **Framework**: Next.js 15 with App Router and Server Components
 - **Language**: TypeScript + SQL + React
 - **Database**: PostgreSQL via Prisma ORM
 - **Authentication**: NextAuth.js (JWT)
