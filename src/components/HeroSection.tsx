@@ -1,73 +1,42 @@
 "use client";
 
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, Brain, CheckCircle2, MessageSquare } from 'lucide-react';
+import { Users, Target, Brain, MessageSquare } from 'lucide-react';
+import { 
+  heroContainerVariants, 
+  heroItemVariants, 
+  heroLogoVariants 
+} from '@/config/animations';
 
 const features = [
   {
-    icon: Users,
-    title: "Real-time Collaborative Editing",
-    description: "Work together seamlessly with your team in real-time"
+    icon: Target,
+    title: "Smart Project Management",
+    description: "Organize your work with intelligent task prioritization and automated workflows"
   },
   {
-    icon: CheckCircle2,
-    title: "Team-based Projects with Task Tracking",
-    description: "Organize projects and track progress with powerful task management"
+    icon: Users,
+    title: "Team Collaboration",
+    description: "Real-time collaboration with your team members across different time zones"
   },
   {
     icon: Brain,
-    title: "AI-powered Summaries and Digests",
+    title: "AI-Powered Insights",
     description: "Get intelligent insights and automated summaries of your work"
   }
 ];
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.3,
-      delayChildren: 0.2
-    }
-  }
-};
-
-const itemVariants = {
-  hidden: { y: 30, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      duration: 0.8,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ease: [0.25, 0.46, 0.45, 0.94] as any
-    }
-  }
-};
-
-const logoVariants = {
-  hidden: { scale: 0.8, opacity: 0 },
-  visible: {
-    scale: 1,
-    opacity: 1,
-    transition: {
-      duration: 1,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ease: [0.25, 0.46, 0.45, 0.94] as any
-    }
-  }
-};
 
 export default function HeroSection() {
   return (
     <motion.div 
       className="relative z-10 flex flex-col justify-center h-full px-8 lg:px-12"
-      variants={containerVariants}
+      variants={heroContainerVariants}
       initial="hidden"
       animate="visible"
     >
       {/* Logo and Brand */}
-      <motion.div variants={logoVariants} className="mb-8">
+      <motion.div variants={heroLogoVariants} className="mb-8">
         <div className="flex items-center gap-3 mb-6">
           {/* Enhanced Logo */}
           <div className="relative w-14 h-14 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25">
@@ -81,13 +50,13 @@ export default function HeroSection() {
           </div>
         </div>
         <motion.p 
-          variants={itemVariants}
+          variants={heroItemVariants}
           className="text-xl lg:text-2xl text-gray-600 dark:text-gray-300 font-medium"
         >
           Collaborate, Capture, Create
         </motion.p>
         <motion.p 
-          variants={itemVariants}
+          variants={heroItemVariants}
           className="text-base lg:text-lg text-gray-500 dark:text-gray-400 mt-2 max-w-md"
         >
           The modern workspace for teams that build together. Real-time collaboration meets intelligent project management.
@@ -95,11 +64,11 @@ export default function HeroSection() {
       </motion.div>
 
       {/* Features */}
-      <motion.div variants={itemVariants} className="space-y-6">
+      <motion.div variants={heroItemVariants} className="space-y-6">
         {features.map((feature, index) => (
           <motion.div
             key={index}
-            variants={itemVariants}
+            variants={heroItemVariants}
             className="flex items-start gap-4 group cursor-default"
             whileHover={{ x: 5 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -121,7 +90,7 @@ export default function HeroSection() {
 
       {/* Stats with enhanced animations */}
       <motion.div 
-        variants={itemVariants}
+        variants={heroItemVariants}
         className="mt-12 grid grid-cols-3 gap-6 pt-8 border-t border-gray-200/60 dark:border-gray-700/60"
       >
         <motion.div 

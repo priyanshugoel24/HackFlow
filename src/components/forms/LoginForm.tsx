@@ -4,44 +4,17 @@ import { motion } from 'framer-motion';
 import { signIn } from "next-auth/react";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
-const formVariants = {
-  hidden: { x: 50, opacity: 0 },
-  visible: {
-    x: 0,
-    opacity: 1,
-    transition: {
-      duration: 0.8,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ease: [0.25, 0.46, 0.45, 0.94] as any,
-      delayChildren: 0.3,
-      staggerChildren: 0.2
-    }
-  }
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      duration: 0.6,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ease: [0.25, 0.46, 0.45, 0.94] as any
-    }
-  }
-};
+import { loginFormVariants, loginItemVariants } from '@/config/animations';
 
 export default function LoginForm() {
   return (
     <motion.div
       className="flex items-center justify-center h-full px-8 lg:px-12"
-      variants={formVariants}
+      variants={loginFormVariants}
       initial="hidden"
       animate="visible"
     >
-      <motion.div variants={itemVariants} className="w-full max-w-md">
+      <motion.div variants={loginItemVariants} className="w-full max-w-md">
         <Card className="shadow-2xl border-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl ring-1 ring-gray-200/50 dark:ring-gray-700/50">
           <CardHeader className="space-y-1 text-center pb-8">
             <CardTitle className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
@@ -53,7 +26,7 @@ export default function LoginForm() {
           </CardHeader>
           
           <CardContent className="space-y-4">
-            <motion.div variants={itemVariants}>
+            <motion.div variants={loginItemVariants}>
               <Button
                 onClick={() => signIn("google")}
                 variant="outline"
@@ -69,7 +42,7 @@ export default function LoginForm() {
               </Button>
             </motion.div>
 
-            <motion.div variants={itemVariants}>
+            <motion.div variants={loginItemVariants}>
               <Button
                 onClick={() => signIn("github")}
                 variant="outline"
@@ -83,7 +56,7 @@ export default function LoginForm() {
             </motion.div>
 
             <motion.div 
-              variants={itemVariants}
+              variants={loginItemVariants}
               className="pt-6 border-t border-gray-200/60 dark:border-gray-700/60"
             >
               <p className="text-xs text-center text-gray-500 dark:text-gray-400 leading-relaxed">
@@ -103,7 +76,7 @@ export default function LoginForm() {
 
         {/* Additional info */}
         <motion.div 
-          variants={itemVariants}
+          variants={loginItemVariants}
           className="mt-8 text-center"
         >
           <p className="text-sm text-gray-600 dark:text-gray-400">

@@ -8,6 +8,7 @@ export { channelsConfig } from './channels';
 export { databaseConfig } from './database';
 export { environmentConfig } from './environment';
 export { focusModeConfig } from './focusMode';
+export * from './animations';
 export { geminiConfig } from './gemini';
 export { middlewareConfig } from './middleware';
 export { paginationConfig } from './pagination';

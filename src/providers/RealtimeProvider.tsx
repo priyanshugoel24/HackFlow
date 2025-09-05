@@ -1,19 +1,14 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { getAblyClient } from '@/lib/ably/ably';
+import { RealtimeContextType, RealtimeProviderProps } from '@/interfaces/ProviderInterfaces';
 import Ably from 'ably';
-
-interface RealtimeContextType {
-  ably: Ably.Realtime | null;
-  isConnected: boolean;
-  connectionState: string;
-}
 
 const RealtimeContext = createContext<RealtimeContextType | undefined>(undefined);
 
-export function RealtimeProvider({ children }: { children: ReactNode }) {
+export function RealtimeProvider({ children }: RealtimeProviderProps) {
   const { data: session } = useSession();
   const [ably, setAbly] = useState<Ably.Realtime | null>(null);
   const [isConnected, setIsConnected] = useState(false);

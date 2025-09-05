@@ -536,13 +536,14 @@ export default function TeamPageClient({ initialTeam, teamSlug }: TeamPageClient
         <ProjectModal
           open={showProjectModal}
           setOpen={setShowProjectModal}
+          teamId={team?.id}
           onSuccess={fetchTeam}
-          teamId={team.id}
-        />              <InviteMemberModal
+        />        <InviteMemberModal
           open={showInviteModal}
           setOpen={setShowInviteModal}
           teamSlug={teamSlug}
-          onSuccess={fetchTeam}
+          onInviteSent={fetchTeam}
+          triggerButton={false}
         />
 
       <Dialog open={showHackathonModal} onOpenChange={setShowHackathonModal}>

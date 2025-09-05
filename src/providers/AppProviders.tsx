@@ -4,10 +4,7 @@ import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { RealtimeProvider } from './RealtimeProvider';
 import { Toaster } from 'sonner';
-
-interface AppProvidersProps {
-  children: React.ReactNode;
-}
+import { AppProvidersProps } from '@/interfaces/ProviderInterfaces';
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (

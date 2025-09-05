@@ -13,6 +13,10 @@ export const gemini = {
     }
   ): Promise<string> {
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY environment variable is not set");
+      }
+
       const model = genAI.getGenerativeModel({
         model: options?.model || geminiConfig.MODEL,
         generationConfig: {
@@ -21,12 +25,24 @@ export const gemini = {
         },
       });
 
+      console.log("Generating content with model:", options?.model || geminiConfig.MODEL);
       const result = await model.generateContent(prompt);
       const response = result.response;
-      return response.text();
+      const text = response.text();
+      
+      if (!text || text.trim().length === 0) {
+        throw new Error("Gemini returned empty response");
+      }
+      
+      console.log("Gemini response length:", text.length);
+      return text;
     } catch (error) {
       console.error("Gemini API Error:", error);
-      throw new Error("Gemini failed to generate content.");
+      if (error instanceof Error) {
+        throw new Error(`Gemini failed to generate content: ${error.message}`);
+      } else {
+        throw new Error("Gemini failed to generate content: Unknown error");
+      }
     }
   },
 

@@ -296,8 +296,7 @@ const VirtualizedContextCard = memo(function VirtualizedContextCard({
 const ContextCardList = memo(function ContextCardList({ 
   projectSlug, 
   initialCards = [], 
-  project: initialProject,
-  teamSlug 
+  project: initialProject
 }: ContextCardListProps) {
   // Add hydration flag to prevent hydration mismatches
   const [isClient, setIsClient] = useState(false);
@@ -625,8 +624,6 @@ const ContextCardList = memo(function ContextCardList({
             open={modalOpen} 
             setOpen={setModalOpen} 
             projectSlug={projectSlug}
-            project={project || undefined}
-            teamSlug={teamSlug}
             onSuccess={handleCardCreated}
           />
         </ErrorBoundary>
@@ -669,7 +666,7 @@ const ContextCardList = memo(function ContextCardList({
         >
           <ContextCardModal 
             open={!!selectedCard}
-            setOpen={(val) => {
+            setOpen={(val: boolean) => {
               if (!val) {
                 setSelectedCard(null);
                 // Ensure add card modal doesn't appear after closing existing card modal
@@ -677,8 +674,6 @@ const ContextCardList = memo(function ContextCardList({
               }
             }}
             projectSlug={projectSlug}
-            project={project || undefined}
-            teamSlug={teamSlug}
             existingCard={selectedCard ? {
               ...selectedCard,
               why: selectedCard.why || undefined,

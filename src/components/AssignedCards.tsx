@@ -2,7 +2,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
 import dynamic from 'next/dynamic';
 import { ContextCardWithRelations } from "@/interfaces/ContextCardWithRelations";
-import { ProjectWithRelations } from "@/interfaces/ProjectWithRelations";
 import { useSession } from "next-auth/react";
 import { paginationConfig } from '@/config/pagination';
 import axios from "axios";
@@ -229,7 +228,6 @@ const AssignedCards = memo(function AssignedCards({
               if (!val) setSelectedCard(null);
             }}
             projectSlug={selectedCard.project?.slug || ""}
-            project={selectedCard.project as ProjectWithRelations}
             existingCard={{
               ...selectedCard,
               why: selectedCard.why ?? undefined,

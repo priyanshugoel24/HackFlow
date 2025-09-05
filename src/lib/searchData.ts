@@ -1,42 +1,6 @@
 // lib/searchData.ts
 import { prisma } from "@/lib/prisma";
-
-// Type definitions for search results
-type CardResult = {
-  id: string;
-  title: string;
-  projectId: string;
-  project?: {
-    slug: string;
-    name: string;
-    team?: {
-      slug: string;
-      name: string;
-    };
-  };
-};
-
-type ProjectResult = {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string | null;
-  tags: string[];
-  team?: {
-    slug: string;
-    name: string;
-  } | null;
-};
-
-type TeamResult = {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string | null;
-  _count: {
-    projects: number;
-  };
-};
+import { CardResult, ProjectResult, TeamResult } from "@/interfaces/SearchLibTypes";
 
 export async function getGlobalSearchData() {
   const results: Array<{ type: string; [key: string]: unknown }> = [];

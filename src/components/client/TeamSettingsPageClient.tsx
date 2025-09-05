@@ -274,7 +274,8 @@ export default function TeamSettingsPageClient({ team: initialTeam, teamSlug }: 
           open={showInviteModal}
           setOpen={setShowInviteModal}
           teamSlug={teamSlug}
-          onSuccess={fetchTeam}
+          onInviteSent={fetchTeam}
+          triggerButton={false}
         />
 
         {/* Danger Zone */}

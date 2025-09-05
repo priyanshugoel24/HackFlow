@@ -2,22 +2,13 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-
-type Theme = 'dark' | 'light' | 'system';
-
-interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  resolvedTheme: Theme;
-}
+import { Theme, ThemeContextType, ThemeProviderProps } from '@/interfaces/ProviderInterfaces';
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: ThemeProviderProps) {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
 
